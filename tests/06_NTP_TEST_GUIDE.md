@@ -62,7 +62,7 @@ else:
 
 2. **프로젝트 폴더로 이동**
    ```cmd
-   cd C:\Users\outrobot\OneDrive\사업\아웃로봇\신성테크\소스코드_전달\pillBox
+   cd C:\Users\사용자이름\경로1\경로2\pillBox
    ```
 
 3. **테스트 파일 업로드**
