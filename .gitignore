@@ -52,6 +52,5 @@ Thumbs.db
 *.temp
 
 # ESP32 specific
-*.bin
 *.elf
 *.map
