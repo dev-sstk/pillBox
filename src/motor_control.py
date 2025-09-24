@@ -27,7 +27,7 @@ class InputShiftRegister:
         self.pload_pin.value(1)
         
     def read_byte(self):
-        """1바이트 데이터 읽기"""
+        """1바이트 데이터 읽기 (test_74hc165.py와 동일한 로직)"""
         bytes_val = 0
 
         # 병렬 입력을 래치
@@ -36,7 +36,7 @@ class InputShiftRegister:
         self.pload_pin.value(1)  # Stop loading
         time.sleep_us(self.PULSE_WIDTH_USEC)
 
-        # 직렬 데이터 읽기
+        # 직렬 데이터 읽기 (test_74hc165.py와 동일한 순서)
         for i in range(self.DATA_WIDTH):
             bit_val = self.data_pin.value()
             bytes_val |= (bit_val << ((self.DATA_WIDTH - 1) - i))
@@ -58,10 +58,14 @@ class LimitSwitch:
         self.bit_position = bit_position
         
     def is_pressed(self):
-        """리미트 스위치가 눌렸는지 확인"""
+        """리미트 스위치가 눌렸는지 확인 (최적화된 버전)"""
         data = self.input_shift_register.read_byte()
         # HIGH=눌리지 않음, LOW=눌림
-        return (data & (1 << self.bit_position)) == 0
+        is_pressed = (data & (1 << self.bit_position)) == 0
+        # 로그 출력 제거로 성능 향상 (필요시 주석 해제)
+        # if is_pressed:
+        #     print(f"  🔘 리미트 스위치 {self.bit_position} 감지! (데이터: 0b{data:08b})")
+        return is_pressed
 
 class StepperMotorController:
     """74HC595D + ULN2003 스테퍼모터 제어 클래스"""
@@ -98,7 +102,7 @@ class StepperMotorController:
         
         # 스테퍼모터 설정 (28BYJ-48)
         self.steps_per_rev = 2048  # 28BYJ-48의 스텝 수
-        self.steps_per_compartment = 204  # 1칸당 스텝 수 (2048/10칸)
+        self.steps_per_compartment = 136  # 1칸당 스텝 수 (2048/15칸)
         
         # 각 모터별 독립적인 스텝 상태
         self.motor_steps = [0, 0, 0, 0]  # 모터 0,1,2,3의 현재 스텝
@@ -119,8 +123,8 @@ class StepperMotorController:
         # 4개 모터의 현재 상태 (각 모터당 8비트)
         self.motor_states = [0, 0, 0, 0]
         
-        # 속도 설정 (기본값: 0.2ms = 5000Hz)
-        self.step_delay_us = 200  # 스텝 간 지연 시간 (마이크로초)
+        # 속도 설정 (적절한 속도: 0.01ms = 100000Hz)
+        self.step_delay_us = 10  # 스텝 간 지연 시간 (마이크로초)
         
         # 비블로킹 제어를 위한 변수들
         self.motor_running = [False, False, False, False]  # 각 모터별 실행 상태
@@ -163,7 +167,7 @@ class StepperMotorController:
         self.st_cp.value(0)
     
     def update_motor_output(self):
-        """모든 모터 상태를 74HC595D에 출력"""
+        """모든 모터 상태를 74HC595D에 출력 (test_74hc595_stepper.py와 동일)"""
         combined_data = 0
 
         # 모터0 → 하위 4비트 (Q0~Q3)
@@ -186,18 +190,18 @@ class StepperMotorController:
         self.shift_out(lower_byte)
     
     def set_motor_step(self, motor_index, step_value):
-        """특정 모터의 스텝 설정"""
+        """특정 모터의 스텝 설정 (test_74hc595_stepper.py와 동일)"""
         if 0 <= motor_index <= 3:
             self.motor_states[motor_index] = self.stepper_sequence[step_value % 8]
             self.update_motor_output()
     
     def step_motor(self, motor_index, direction=1, steps=1):
-        """스테퍼모터 회전"""
+        """스테퍼모터 회전 (test_74hc595_stepper.py와 동일)"""
         if 0 <= motor_index <= 3:
             for _ in range(steps):
                 # 리미트 스위치 확인
                 if self.is_limit_switch_pressed(motor_index):
-                    print(f"모터 {motor_index} 리미트 스위치 감지! 회전 중단")
+                    print(f"  🔘 모터 {motor_index} 리미트 스위치 감지! 회전 중단")
                     return False
                 
                 # 각 모터의 독립적인 스텝 계산
@@ -206,9 +210,20 @@ class StepperMotorController:
                 
                 # 모터 스텝 설정
                 self.set_motor_step(motor_index, current_step)
+    
+    def step_motor_continuous(self, motor_index, direction=1, steps=1):
+        """스테퍼모터 회전 (리미트 스위치 감지되어도 계속 회전) - 최적화된 성능"""
+        if 0 <= motor_index <= 3:
+            for _ in range(steps):
+                # 각 모터의 독립적인 스텝 계산
+                self.motor_steps[motor_index] = (self.motor_steps[motor_index] + direction) % 8
+                current_step = self.motor_steps[motor_index]
                 
-                # 회전 속도 조절
-                time.sleep_us(self.step_delay_us)
+                # 모터 스텝 설정
+                self.set_motor_step(motor_index, current_step)
+                
+                # 최적화된 회전 속도 조절 (UI 우선순위보다 빠르게)
+                time.sleep_us(5)  # 10μs → 5μs로 단축 (2배 빠름)
             
             return True
     
@@ -263,7 +278,7 @@ class StepperMotorController:
     
     def move_to_compartment(self, motor_index, compartment):
         """특정 칸으로 이동"""
-        if 0 <= motor_index <= 3 and 0 <= compartment <= 9:
+        if 0 <= motor_index <= 3 and 0 <= compartment <= 14:
             current_pos = self.motor_positions[motor_index]
             steps_needed = (compartment - current_pos) * self.steps_per_compartment
             
@@ -319,7 +334,7 @@ class PillBoxMotorSystem:
         
         # 필박스 설정
         self.num_disks = 3  # 3개 디스크
-        self.compartments_per_disk = 10  # 디스크당 10칸
+        self.compartments_per_disk = 15  # 디스크당 15칸
         
         print("✅ PillBoxMotorSystem 초기화 완료")
     

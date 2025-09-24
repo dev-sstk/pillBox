@@ -1,6 +1,6 @@
 """
-필박스 통합 테스트
-전체 시스템의 통합 테스트를 수행
+필박스 메인 실행 파일
+스타트업 스크린만 표시하는 간단한 버전
 """
 
 import sys
@@ -12,14 +12,12 @@ from machine import Pin, SPI
 from st77xx import St7735
 
 # ESP32에서 실행 시 경로 설정
-# 루트를 sys.path에 추가
 sys.path.append("/")
-# screens/ 폴더를 sys.path에 추가
 sys.path.append("/screens")
 
-from pillbox_app import PillBoxApp
-from audio_system import AudioSystem
-from ui_style import UIStyle
+from screen_manager import ScreenManager
+from screens.startup_screen import StartupScreen
+from screens.wifi_scan_screen import WifiScanScreen
 
 def set_st7735_offset(offset_x=0, offset_y=0):
     """ST7735 오프셋 설정 (test_lvgl.py 방식)"""
@@ -77,6 +75,14 @@ def init_display():
 def setup_lvgl():
     """LVGL 환경 설정 (올바른 순서)"""
     try:
+        # 이미 초기화된 경우 체크
+        if lv.is_initialized():
+            print("⚠️ LVGL이 이미 초기화됨, 재초기화 시도...")
+            # 기존 리소스 정리
+            cleanup_lvgl()
+            # 추가 대기
+            time.sleep(0.1)
+        
         # 1단계: LVGL 초기화
         lv.init()
         print("✅ LVGL 초기화 완료")
@@ -91,6 +97,10 @@ def setup_lvgl():
             event_loop = lv_utils.event_loop()
             print("✅ LVGL 이벤트 루프 시작")
         
+        # 초기화 후 메모리 정리
+        import gc
+        gc.collect()
+        
         return True
         
     except Exception as e:
@@ -99,444 +109,265 @@ def setup_lvgl():
         sys.print_exception(e)
         return False
 
-def test_ui_style_system():
-    """UI 스타일 시스템 테스트"""
-    print("=" * 60)
-    print("UI 스타일 시스템 테스트")
-    print("=" * 60)
-    
+def cleanup_lvgl():
+    """LVGL 리소스 정리"""
     try:
-        # UI 스타일 생성
-        ui_style = UIStyle()
+        print("🧹 LVGL 리소스 정리 중...")
         
-        # 색상 테스트
-        print("색상 테스트:")
-        colors = ['primary', 'secondary', 'text', 'background', 'alert']
-        for color_name in colors:
-            color_value = ui_style.get_color(color_name)
-            print(f"  {color_name}: #{color_value:06X}")
-        
-        # 폰트 테스트
-        print("\n폰트 테스트:")
-        fonts = ['title', 'subtitle', 'body', 'caption', 'korean']
-        for font_name in fonts:
-            font_obj = ui_style.get_font(font_name)
-            print(f"  {font_name}: {font_obj}")
-        
-        # 스타일 객체 테스트
-        print("\n스타일 객체 테스트:")
-        styles = ['screen_bg', 'card', 'button', 'text_title', 'text_body']
-        for style_name in styles:
-            style_obj = ui_style.get_style(style_name)
-            print(f"  {style_name}: {'✅' if style_obj else '❌'}")
-        
-        return True
-        
-    except Exception as e:
-        print(f"❌ UI 스타일 시스템 테스트 실패: {e}")
-        import sys
-        sys.print_exception(e)
-        return False
-
-def test_audio_system_integration():
-    """오디오 시스템 통합 테스트"""
-    print("=" * 60)
-    print("오디오 시스템 통합 테스트")
-    print("=" * 60)
-    
-    try:
-        # 오디오 시스템 생성
-        audio_system = AudioSystem()
-        
-        # 시스템 정보 출력
-        info = audio_system.get_audio_info()
-        print("오디오 시스템 정보:")
-        for key, value in info.items():
-            print(f"  {key}: {value}")
-        
-        # 화면별 오디오 재생 시뮬레이션
-        screen_flow = [
-            ("startup", "wav_startup_hello.wav"),
-            ("wifi_scan", "wav_wifi_scan_prompt.wav"),
-            ("dose_count", "wav_dose_count_prompt.wav"),
-            ("dose_time", "wav_dose_time_prompt.wav"),
-            ("main", "wav_main_screen.wav"),
-            ("notification", "wav_take_pill_prompt.wav")
-        ]
-        
-        print("\n화면 플로우 오디오 재생 시뮬레이션:")
-        for screen_name, audio_file in screen_flow:
-            print(f"  {screen_name} 화면: {audio_file}")
-            audio_system.play_voice(audio_file)
-            time.sleep(0.1)
-        
-        # 버튼 상호작용 시뮬레이션
-        print("\n버튼 상호작용 시뮬레이션:")
-        interactions = [
-            ("버튼 클릭", "wav_button_click.wav"),
-            ("선택", "wav_select.wav"),
-            ("조정", "wav_adjust.wav"),
-            ("성공", "wav_success.wav"),
-            ("오류", "wav_error.wav")
-        ]
-        
-        for action, audio_file in interactions:
-            print(f"  {action}: {audio_file}")
-            audio_system.play_effect(audio_file)
-            time.sleep(0.05)
-        
-        return True
-        
-    except Exception as e:
-        print(f"❌ 오디오 시스템 통합 테스트 실패: {e}")
-        import sys
-        sys.print_exception(e)
-        return False
-
-def test_screen_navigation():
-    """화면 네비게이션 테스트"""
-    print("=" * 60)
-    print("화면 네비게이션 테스트")
-    print("=" * 60)
-    
-    try:
-        # 필박스 앱 생성
-        app = PillBoxApp()
-        
-        # 화면 관리자 가져오기
-        screen_manager = app.get_screen_manager()
-        
-        # 화면 네비게이션 시뮬레이션
-        navigation_flow = [
-            "startup",
-            "wifi_scan", 
-            "wifi_password",
-            "dose_count",
-            "dose_time",
-            "main",
-            "settings",
-            "pill_loading",
-            "pill_dispense",
-            "notification"
-        ]
-        
-        print("화면 네비게이션 시뮬레이션:")
-        for screen_name in navigation_flow:
-            print(f"  화면 전환: {screen_name}")
-            screen_manager.show_screen(screen_name)
-            time.sleep(0.1)
-        
-        # 뒤로가기 테스트
-        print("\n뒤로가기 테스트:")
-        for i in range(3):
-            print(f"  뒤로가기 {i+1}")
-            screen_manager.go_back()
-            time.sleep(0.1)
-        
-        return True
-        
-    except Exception as e:
-        print(f"❌ 화면 네비게이션 테스트 실패: {e}")
-        import sys
-        sys.print_exception(e)
-        return False
-
-def test_complete_user_flow():
-    """완전한 사용자 플로우 테스트"""
-    print("=" * 60)
-    print("완전한 사용자 플로우 테스트")
-    print("=" * 60)
-    
-    try:
-        # 필박스 앱 생성
-        app = PillBoxApp()
-        audio_system = app.get_audio_system()
-        screen_manager = app.get_screen_manager()
-        
-        # 사용자 시나리오 시뮬레이션
-        scenarios = [
-            {
-                "name": "초기 설정",
-                "screens": ["startup", "wifi_scan", "wifi_password", "dose_count", "dose_time"],
-                "audios": ["wav_startup_hello.wav", "wav_wifi_scan_prompt.wav", "wav_dose_count_prompt.wav"]
-            },
-            {
-                "name": "일상 사용",
-                "screens": ["main", "notification"],
-                "audios": ["wav_main_screen.wav", "wav_take_pill_prompt.wav"]
-            },
-            {
-                "name": "설정 관리",
-                "screens": ["settings", "pill_loading", "pill_dispense"],
-                "audios": ["wav_settings_prompt.wav", "wav_pill_loading_prompt.wav"]
-            }
-        ]
-        
-        for scenario in scenarios:
-            print(f"\n{scenario['name']} 시나리오:")
-            
-            # 화면 전환
-            for screen in scenario["screens"]:
-                print(f"  화면: {screen}")
-                screen_manager.show_screen(screen)
-                time.sleep(0.1)
-            
-            # 오디오 재생
-            for audio in scenario["audios"]:
-                print(f"  오디오: {audio}")
-                audio_system.play_voice(audio)
-                time.sleep(0.1)
-        
-        return True
-        
-    except Exception as e:
-        print(f"❌ 완전한 사용자 플로우 테스트 실패: {e}")
-        import sys
-        sys.print_exception(e)
-        return False
-
-def test_system_performance():
-    """시스템 성능 테스트"""
-    print("=" * 60)
-    print("시스템 성능 테스트")
-    print("=" * 60)
-    
-    try:
-        # 메모리 사용량 테스트
+        # 강제 메모리 정리
         import gc
         gc.collect()
-        initial_memory = gc.mem_free()
-        print(f"초기 메모리: {initial_memory} bytes")
         
-        # 필박스 앱 생성
-        app = PillBoxApp()
-        gc.collect()
-        after_app_memory = gc.mem_free()
-        print(f"앱 생성 후 메모리: {after_app_memory} bytes")
-        print(f"앱 메모리 사용량: {initial_memory - after_app_memory} bytes")
+        # LVGL 정리 (가능한 경우)
+        try:
+            # 현재 화면의 모든 자식 객체 정리
+            if hasattr(lv, 'scr_act'):
+                current_screen = lv.scr_act()
+                if current_screen:
+                    # 모든 자식 객체 삭제
+                    while current_screen.get_child_cnt() > 0:
+                        child = current_screen.get_child(0)
+                        if child:
+                            child.delete()
+                    print("✅ 화면 자식 객체 정리 완료")
+            
+            # 디스플레이 버퍼 정리
+            if hasattr(lv, 'display_get_default'):
+                disp = lv.display_get_default()
+                if disp:
+                    # 디스플레이 버퍼 강제 정리
+                    try:
+                        disp.set_draw_buffers(None, None)
+                    except:
+                        pass
+                    print("✅ 디스플레이 버퍼 정리 완료")
+            
+            print("✅ LVGL 리소스 정리 완료")
+        except Exception as e:
+            print(f"⚠️ LVGL 정리 중 일부 오류 (무시됨): {e}")
         
-        # 화면 전환 성능 테스트
-        screen_manager = app.get_screen_manager()
-        start_time = time.ticks_ms()
+        # 강제 가비지 컬렉션 여러 번 실행
+        for i in range(3):
+            gc.collect()
+            time.sleep(0.01)  # 짧은 대기
         
-        test_screens = ["startup", "wifi_scan", "dose_count", "main", "settings"]
-        for screen in test_screens:
-            screen_manager.show_screen(screen)
-        
-        end_time = time.ticks_ms()
-        total_time = time.ticks_diff(end_time, start_time)
-        print(f"화면 전환 총 시간: {total_time}ms")
-        print(f"화면당 평균 시간: {total_time / len(test_screens)}ms")
-        
-        # 오디오 시스템 성능 테스트
-        audio_system = app.get_audio_system()
-        start_time = time.ticks_ms()
-        
-        test_audios = ["wav_button_click.wav", "wav_select.wav", "wav_success.wav"]
-        for audio in test_audios:
-            audio_system.play_effect(audio)
-        
-        end_time = time.ticks_ms()
-        total_time = time.ticks_diff(end_time, start_time)
-        print(f"오디오 재생 총 시간: {total_time}ms")
-        print(f"오디오당 평균 시간: {total_time / len(test_audios)}ms")
-        
-        # 최종 메모리 사용량
-        gc.collect()
-        final_memory = gc.mem_free()
-        print(f"최종 메모리: {final_memory} bytes")
-        print(f"총 메모리 사용량: {initial_memory - final_memory} bytes")
-        
-        return True
+        print("✅ 메모리 정리 완료")
         
     except Exception as e:
-        print(f"❌ 시스템 성능 테스트 실패: {e}")
-        import sys
-        sys.print_exception(e)
-        return False
+        print(f"⚠️ 리소스 정리 중 오류 (무시됨): {e}")
 
-def run_pillbox_app():
-    """실제 필박스 애플리케이션 실행"""
+def run_screen_test(screen_name):
+    """특정 화면 테스트 실행"""
     print("=" * 60)
-    print("필박스 애플리케이션 시작")
+    print(f"필박스 {screen_name} 화면 테스트")
     print("=" * 60)
     
     try:
+        # 이전 리소스 정리
+        cleanup_lvgl()
+        
         # LVGL 환경 설정
         if not setup_lvgl():
             print("❌ LVGL 환경 설정 실패")
             return False
         
-        # 필박스 앱 생성 및 실행
-        app = PillBoxApp()
+        # 화면 관리자 생성
+        screen_manager = ScreenManager()
         
-        # 화면 등록
-        print("📱 화면 등록 시작...")
-        from screens.startup_screen import StartupScreen
-        from screens.wifi_scan_screen import WifiScanScreen
-        from screens.wifi_password_screen import WifiPasswordScreen
-        from screens.dose_count_screen import DoseCountScreen
-        from screens.dose_time_screen import DoseTimeScreen
-        from screens.main_screen import MainScreen
-        from screens.notification_screen import NotificationScreen
-        from screens.settings_screen import SettingsScreen
-        from screens.pill_loading_screen import PillLoadingScreen
-        from screens.pill_dispense_screen import PillDispenseScreen
+        # 화면 생성 전 추가 메모리 정리
+        print("🧹 화면 생성 전 메모리 정리...")
+        import gc
+        for i in range(10):  # 10회 가비지 컬렉션
+            gc.collect()
+            time.sleep(0.02)  # 더 긴 대기 시간
         
-        # 각 화면을 개별적으로 등록하여 오류 추적
-        try:
-            print("📱 startup 화면 등록...")
-            app.screen_manager.register_screen("startup", StartupScreen(app.screen_manager))
-            print("✅ startup 화면 등록 완료")
-        except Exception as e:
-            print(f"❌ startup 화면 등록 실패: {e}")
-            return False
-            
-        try:
-            print("📱 wifi_scan 화면 등록...")
-            app.screen_manager.register_screen("wifi_scan", WifiScanScreen(app.screen_manager))
-            print("✅ wifi_scan 화면 등록 완료")
-        except Exception as e:
-            print(f"❌ wifi_scan 화면 등록 실패: {e}")
-            return False
-            
-        try:
-            print("📱 wifi_password 화면 등록...")
-            app.screen_manager.register_screen("wifi_password", WifiPasswordScreen(app.screen_manager, "Example_SSID"))
-            print("✅ wifi_password 화면 등록 완료")
-        except Exception as e:
-            print(f"❌ wifi_password 화면 등록 실패: {e}")
-            return False
-            
-        try:
-            print("📱 dose_count 화면 등록...")
-            app.screen_manager.register_screen("dose_count", DoseCountScreen(app.screen_manager))
-            print("✅ dose_count 화면 등록 완료")
-        except Exception as e:
-            print(f"❌ dose_count 화면 등록 실패: {e}")
-            return False
-            
-        try:
-            print("📱 dose_time 화면 등록...")
-            app.screen_manager.register_screen("dose_time", DoseTimeScreen(app.screen_manager, dose_count=2))
-            print("✅ dose_time 화면 등록 완료")
-        except Exception as e:
-            print(f"❌ dose_time 화면 등록 실패: {e}")
-            return False
-            
-        try:
-            print("📱 main_screen 화면 등록...")
-            app.screen_manager.register_screen("main_screen", MainScreen(app.screen_manager))
-            print("✅ main_screen 화면 등록 완료")
-        except Exception as e:
-            print(f"❌ main_screen 화면 등록 실패: {e}")
-            return False
-            
-        try:
-            print("📱 notification 화면 등록...")
-            app.screen_manager.register_screen("notification", NotificationScreen(app.screen_manager, {"time": "10:00", "pills": ["Test Pill"]}))
-            print("✅ notification 화면 등록 완료")
-        except Exception as e:
-            print(f"❌ notification 화면 등록 실패: {e}")
-            return False
-            
-        try:
-            print("📱 settings 화면 등록...")
-            app.screen_manager.register_screen("settings", SettingsScreen(app.screen_manager))
-            print("✅ settings 화면 등록 완료")
-        except Exception as e:
-            print(f"❌ settings 화면 등록 실패: {e}")
-            return False
-            
-        try:
-            print("📱 pill_loading 화면 등록...")
-            app.screen_manager.register_screen("pill_loading", PillLoadingScreen(app.screen_manager))
-            print("✅ pill_loading 화면 등록 완료")
-        except Exception as e:
-            print(f"❌ pill_loading 화면 등록 실패: {e}")
-            return False
-            
-        try:
-            print("📱 pill_dispense 화면 등록...")
-            app.screen_manager.register_screen("pill_dispense", PillDispenseScreen(app.screen_manager))
-            print("✅ pill_dispense 화면 등록 완료")
-        except Exception as e:
-            print(f"❌ pill_dispense 화면 등록 실패: {e}")
+        # 화면 생성 및 등록
+        print(f"📱 {screen_name} 화면 생성 중...")
+        
+        if screen_name == "startup":
+            from screens.startup_screen import StartupScreen
+            screen = StartupScreen(screen_manager)
+        elif screen_name == "wifi_scan":
+            from screens.wifi_scan_screen import WifiScanScreen
+            screen = WifiScanScreen(screen_manager)
+            # 와이파이 관련 화면들도 함께 등록 (연동을 위해)
+            if 'wifi_password' not in screen_manager.screens:
+                from screens.wifi_password_screen import WifiPasswordScreen
+                wifi_password_screen = WifiPasswordScreen(screen_manager, "Example_SSID")
+                screen_manager.register_screen('wifi_password', wifi_password_screen)
+                print("✅ wifi_password 화면도 함께 등록됨")
+        elif screen_name == "wifi_password":
+            from screens.wifi_password_screen import WifiPasswordScreen
+            screen = WifiPasswordScreen(screen_manager, "Example_SSID")
+        elif screen_name == "dose_count":
+            from screens.dose_count_screen import DoseCountScreen
+            screen = DoseCountScreen(screen_manager)
+        elif screen_name == "dose_time":
+            from screens.dose_time_screen import DoseTimeScreen
+            # 테스트를 위해 기본값 1회로 설정 (실제로는 dose_count에서 전달받아야 함)
+            screen = DoseTimeScreen(screen_manager, dose_count=1)
+        elif screen_name == "main":
+            from screens.main_screen import MainScreen
+            screen = MainScreen(screen_manager)
+        elif screen_name == "notification":
+            from screens.mock_screen import NotificationMockScreen
+            screen = NotificationMockScreen(screen_manager, {"time": "10:00", "pills": ["Test Pill"]})
+        elif screen_name == "settings":
+            from screens.mock_screen import SettingsMockScreen
+            screen = SettingsMockScreen(screen_manager)
+        elif screen_name == "pill_loading":
+            from screens.pill_loading_screen import PillLoadingScreen
+            screen = PillLoadingScreen(screen_manager)
+        elif screen_name == "pill_dispense":
+            from screens.mock_screen import PillDispenseMockScreen
+            screen = PillDispenseMockScreen(screen_manager)
+        else:
+            print(f"❌ 알 수 없는 화면: {screen_name}")
             return False
         
-        # 시작 화면으로 이동
-        print("📱 시작 화면으로 이동...")
-        app.screen_manager.set_current_screen("startup")
+        screen_manager.register_screen(screen_name, screen)
+        print(f"✅ {screen_name} 화면 등록 완료")
         
-        print("✅ 필박스 애플리케이션 시작됨")
-        print("Ctrl+C로 종료하세요")
+        # 화면 표시
+        print(f"📱 {screen_name} 화면 표시 중...")
+        screen_manager.set_current_screen(screen_name)
+        
+        print(f"✅ {screen_name} 화면 실행됨")
+        print("📱 화면이 표시되었습니다!")
+        print("🎮 버튼 조작법:")
+        print("   - A: 위/이전")
+        print("   - B: 아래/다음") 
+        print("   - C: 뒤로가기")
+        print("   - D: 선택/확인")
+        print("💡 실제 ESP32-C6 하드웨어에서 버튼으로 조작하세요")
+        print("💡 Ctrl+C로 종료하세요")
+        
+        # 자동 시뮬레이션 제거 - 물리 버튼으로만 조작
+        
+        # 버튼 인터페이스 초기화
+        print("🔘 버튼 인터페이스 초기화 중...")
+        try:
+            from button_interface import ButtonInterface
+            button_interface = ButtonInterface()
+            
+            # 버튼 콜백 설정 (ScreenManager의 핸들러 사용)
+            button_interface.set_callback('A', screen_manager.handle_button_a)
+            button_interface.set_callback('B', screen_manager.handle_button_b)
+            button_interface.set_callback('C', screen_manager.handle_button_c)
+            button_interface.set_callback('D', screen_manager.handle_button_d)
+            
+            print("✅ 버튼 인터페이스 초기화 완료")
+        except Exception as e:
+            print(f"⚠️ 버튼 인터페이스 초기화 실패: {e}")
+            print("💡 실제 ESP32-C6 하드웨어에서만 버튼 입력이 가능합니다")
+            button_interface = None
         
         # 메인 루프 실행
-        app.start()
+        try:
+            while True:
+                # 화면 업데이트
+                screen_manager.update()
+                
+                # LVGL 이벤트 처리
+                lv.timer_handler()
+                
+                # 버튼 입력 처리
+                if button_interface:
+                    # 실제 하드웨어 버튼 처리
+                    button_interface.update()
+                else:
+                    # 버튼 인터페이스가 없는 경우 무시
+                    pass
+                
+                # 짧은 대기
+                time.sleep(0.1)
         
+        except KeyboardInterrupt:
+            print(f"\n🛑 {screen_name} 화면 테스트 중단됨")
+            # 중단 시에도 리소스 정리
+            cleanup_lvgl()
         return True
         
     except Exception as e:
-        print(f"❌ 필박스 애플리케이션 실행 실패: {e}")
+        print(f"❌ {screen_name} 화면 실행 실패: {e}")
         import sys
         sys.print_exception(e)
         return False
 
+
+def show_screen_menu():
+    """화면 선택 메뉴 표시"""
+    print("=" * 60)
+    print("필박스 화면 테스트 메뉴")
+    print("=" * 60)
+    print("테스트할 화면을 선택하세요:")
+    print()
+    print("1.  스타트업 화면 (Startup Screen)")
+    print("2.  Wi-Fi 스캔 화면 (Wi-Fi Scan Screen)")
+    print("3.  Wi-Fi 비밀번호 화면 (Wi-Fi Password Screen)")
+    print("4.  복용 횟수 설정(Dose Count Screen)")
+    print("5.  복용 시간 설정(Dose Time Screen)")
+    print("6.  알약 로딩 화면 (Pill Loading Screen) - 알약 충전")
+    print("7.  메인 화면 (Main Screen) - Coming Soon")
+    print("8.  알림 화면 (Notification Screen) - Coming Soon")
+    print("9.  설정 화면 (Settings Screen) - Coming Soon")
+    print("10. 알약 배출 화면 (Pill Dispense Screen) - Coming Soon")
+    print("11. 종료")
+    print("=" * 60)
+    
+
+
 def main():
-    """메인 함수"""
+    """메인 함수 - 화면 테스트 메뉴"""
     print("=" * 60)
-    print("필박스 시스템")
+    print("필박스 화면 테스트 시스템")
     print("=" * 60)
-    print("1. 필박스 애플리케이션 실행")
-    print("2. UI 스타일 시스템 테스트")
-    print("3. 오디오 시스템 통합 테스트")
-    print("4. 화면 네비게이션 테스트")
-    print("5. 완전한 사용자 플로우 테스트")
-    print("6. 시스템 성능 테스트")
-    print("7. 모든 테스트 실행")
-    print("8. 종료")
+    print("각 화면을 개별적으로 테스트할 수 있습니다!")
+    print("Modern UI 스타일이 적용된 화면들을 확인하세요!")
+    print()
     
     while True:
         try:
-            choice = input("\n선택 (1-8): ").strip()
+            show_screen_menu()
+            choice = input("선택 (1-12): ").strip()
             
             if choice == '1':
-                run_pillbox_app()
+                run_screen_test("startup")
             elif choice == '2':
-                test_ui_style_system()
+                run_screen_test("wifi_scan")
             elif choice == '3':
-                test_audio_system_integration()
+                run_screen_test("wifi_password")
             elif choice == '4':
-                test_screen_navigation()
+                run_screen_test("dose_count")
             elif choice == '5':
-                test_complete_user_flow()
+                run_screen_test("dose_time")
             elif choice == '6':
-                test_system_performance()
+                run_screen_test("pill_loading")
             elif choice == '7':
-                print("모든 테스트 실행 중...")
-                test_ui_style_system()
-                print("\n" + "="*60)
-                test_audio_system_integration()
-                print("\n" + "="*60)
-                test_screen_navigation()
-                print("\n" + "="*60)
-                test_complete_user_flow()
-                print("\n" + "="*60)
-                test_system_performance()
-                print("\n✅ 모든 통합 테스트 완료")
+                run_screen_test("main")
             elif choice == '8':
-                print("시스템 종료")
+                run_screen_test("notification")
+            elif choice == '9':
+                run_screen_test("settings")
+            elif choice == '10':
+                run_screen_test("pill_dispense")
+            elif choice == '11':
+                print("🛑 프로그램을 종료합니다")
                 break
             else:
-                print("잘못된 선택입니다. 1-8 중 선택하세요.")
+                print("❌ 잘못된 선택입니다. 1-11 중 선택하세요.")
+                time.sleep(1)
                 
         except KeyboardInterrupt:
-            print("\n테스트 중단됨")
+            print("\n🛑 프로그램이 중단되었습니다")
+            cleanup_lvgl()
             break
         except Exception as e:
-            print(f"오류 발생: {e}")
+            print(f"❌ 오류 발생: {e}")
             import sys
             sys.print_exception(e)
+            cleanup_lvgl()
+            time.sleep(2)
 
 if __name__ == "__main__":
     main()

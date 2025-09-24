@@ -107,7 +107,7 @@ class SettingsScreen:
     def on_button_c(self):
         """버튼 C (Back) 처리"""
         print("설정 화면 뒤로가기")
-        self.screen_manager.show_screen('main_screen')
+        self.screen_manager.show_screen('main')
     
     def on_button_d(self):
         """버튼 D (Select) 처리"""

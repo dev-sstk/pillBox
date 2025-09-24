@@ -92,3 +92,23 @@ class ScreenManager:
             'available_screens': list(self.screens.keys()),
             'screen_stack': self.screen_stack.copy()
         }
+    
+    def handle_button_a(self):
+        """버튼 A 처리"""
+        if self.current_screen and hasattr(self.current_screen, 'on_button_a'):
+            self.current_screen.on_button_a()
+    
+    def handle_button_b(self):
+        """버튼 B 처리"""
+        if self.current_screen and hasattr(self.current_screen, 'on_button_b'):
+            self.current_screen.on_button_b()
+    
+    def handle_button_c(self):
+        """버튼 C 처리"""
+        if self.current_screen and hasattr(self.current_screen, 'on_button_c'):
+            self.current_screen.on_button_c()
+    
+    def handle_button_d(self):
+        """버튼 D 처리"""
+        if self.current_screen and hasattr(self.current_screen, 'on_button_d'):
+            self.current_screen.on_button_d()
