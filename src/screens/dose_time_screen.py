@@ -254,11 +254,22 @@ class DoseTimeScreen:
                 print(f"  📱 모든 복용 시간 설정 완료!")
                 print(f"  📱 설정된 시간들: {self.dose_times}")
                 
-                # 메인 화면으로 이동
-                if 'main' in self.screen_manager.screens:
-                    self.screen_manager.show_screen('main')
+                # 필 로딩 설정 화면으로 이동
+                if 'pill_loading' in self.screen_manager.screens:
+                    self.screen_manager.show_screen('pill_loading')
                 else:
-                    print("  📱 메인 화면이 없어서 현재 화면에 머물기")
+                    # 필 로딩 화면이 없으면 동적으로 생성
+                    print("  📱 pill_loading 화면이 등록되지 않음. 동적 생성 중...")
+                    try:
+                        from screens.pill_loading_screen import PillLoadingScreen
+                        pill_loading_screen = PillLoadingScreen(self.screen_manager)
+                        self.screen_manager.register_screen('pill_loading', pill_loading_screen)
+                        print("  ✅ pill_loading 화면 생성 및 등록 완료")
+                        self.screen_manager.show_screen('pill_loading')
+                        print("  📱 필 로딩 화면으로 전환 완료")
+                    except Exception as e:
+                        print(f"  ❌ 필 로딩 화면 생성 실패: {e}")
+                        print("  📱 필 로딩 화면 생성 실패로 현재 화면에 머물기")
             
         except Exception as e:
             print(f"  ❌ 다음 단계 처리 실패: {e}")

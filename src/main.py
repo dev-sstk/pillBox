@@ -181,52 +181,71 @@ def run_screen_test(screen_name):
             gc.collect()
             time.sleep(0.02)  # 더 긴 대기 시간
         
-        # 화면 생성 및 등록
-        print(f"📱 {screen_name} 화면 생성 중...")
-        
-        if screen_name == "startup":
-            from screens.startup_screen import StartupScreen
-            screen = StartupScreen(screen_manager)
-        elif screen_name == "wifi_scan":
-            from screens.wifi_scan_screen import WifiScanScreen
-            screen = WifiScanScreen(screen_manager)
-            # 와이파이 관련 화면들도 함께 등록 (연동을 위해)
-            if 'wifi_password' not in screen_manager.screens:
-                from screens.wifi_password_screen import WifiPasswordScreen
-                wifi_password_screen = WifiPasswordScreen(screen_manager, "Example_SSID")
-                screen_manager.register_screen('wifi_password', wifi_password_screen)
-                print("✅ wifi_password 화면도 함께 등록됨")
-        elif screen_name == "wifi_password":
-            from screens.wifi_password_screen import WifiPasswordScreen
-            screen = WifiPasswordScreen(screen_manager, "Example_SSID")
-        elif screen_name == "dose_count":
-            from screens.dose_count_screen import DoseCountScreen
-            screen = DoseCountScreen(screen_manager)
-        elif screen_name == "dose_time":
-            from screens.dose_time_screen import DoseTimeScreen
-            # 테스트를 위해 기본값 1회로 설정 (실제로는 dose_count에서 전달받아야 함)
-            screen = DoseTimeScreen(screen_manager, dose_count=1)
-        elif screen_name == "main":
-            from screens.main_screen import MainScreen
-            screen = MainScreen(screen_manager)
-        elif screen_name == "notification":
-            from screens.mock_screen import NotificationMockScreen
-            screen = NotificationMockScreen(screen_manager, {"time": "10:00", "pills": ["Test Pill"]})
-        elif screen_name == "settings":
-            from screens.mock_screen import SettingsMockScreen
-            screen = SettingsMockScreen(screen_manager)
-        elif screen_name == "pill_loading":
-            from screens.pill_loading_screen import PillLoadingScreen
-            screen = PillLoadingScreen(screen_manager)
-        elif screen_name == "pill_dispense":
-            from screens.mock_screen import PillDispenseMockScreen
-            screen = PillDispenseMockScreen(screen_manager)
+        # 화면 캐싱 방식: 이미 등록된 화면이 있으면 재사용
+        if screen_name in screen_manager.screens:
+            print(f"♻️ {screen_name} 화면 재사용 (캐싱됨)")
+            screen = screen_manager.screens[screen_name]
         else:
-            print(f"❌ 알 수 없는 화면: {screen_name}")
-            return False
-        
-        screen_manager.register_screen(screen_name, screen)
-        print(f"✅ {screen_name} 화면 등록 완료")
+            # 화면 생성 및 등록
+            print(f"📱 {screen_name} 화면 생성 중...")
+            
+            if screen_name == "startup":
+                from screens.startup_screen import StartupScreen
+                screen = StartupScreen(screen_manager)
+            elif screen_name == "wifi_scan":
+                from screens.wifi_scan_screen import WifiScanScreen
+                screen = WifiScanScreen(screen_manager)
+                # 와이파이 관련 화면들도 함께 등록 (연동을 위해)
+                if 'wifi_password' not in screen_manager.screens:
+                    from screens.wifi_password_screen import WifiPasswordScreen
+                    wifi_password_screen = WifiPasswordScreen(screen_manager, "Example_SSID")
+                    screen_manager.register_screen('wifi_password', wifi_password_screen)
+                    print("✅ wifi_password 화면도 함께 등록됨")
+            elif screen_name == "wifi_password":
+                from screens.wifi_password_screen import WifiPasswordScreen
+                screen = WifiPasswordScreen(screen_manager, "Example_SSID")
+            elif screen_name == "dose_count":
+                from screens.dose_count_screen import DoseCountScreen
+                screen = DoseCountScreen(screen_manager)
+            elif screen_name == "dose_time":
+                from screens.dose_time_screen import DoseTimeScreen
+                # 테스트를 위해 기본값 1회로 설정 (실제로는 dose_count에서 전달받아야 함)
+                screen = DoseTimeScreen(screen_manager, dose_count=1)
+            elif screen_name == "main":
+                from screens.main_screen_ui import MainScreen
+                screen = MainScreen(screen_manager)
+                
+                # 약품 배출 테스트 함수들을 바로 사용할 수 있도록 전역 변수로 설정
+                global main_screen_instance
+                main_screen_instance = screen
+                print("✅ 약품 배출 테스트 함수들이 전역 변수로 설정됨")
+                print("💡 사용법:")
+                print("   main_screen_instance.test_auto()        # 자동 배출 테스트")
+                print("   main_screen_instance.test_manual(0)     # 수동 배출 테스트")
+                print("   main_screen_instance.test_slide(1)      # 슬라이드 테스트")
+                print("   main_screen_instance.test_disk(0)       # 디스크 테스트")
+                print("   main_screen_instance.test_all()         # 모든 테스트")
+                print("   main_screen_instance.show_status()      # 상태 확인")
+                print("   main_screen_instance.reset_schedule()   # 일정 초기화")
+            elif screen_name == "notification":
+                from screens.mock_screen import NotificationMockScreen
+                screen = NotificationMockScreen(screen_manager, {"time": "10:00", "pills": ["Test Pill"]})
+            elif screen_name == "settings":
+                from screens.settings_screen import SettingsScreen
+                screen = SettingsScreen(screen_manager)
+            elif screen_name == "pill_loading":
+                from screens.pill_loading_screen import PillLoadingScreen
+                screen = PillLoadingScreen(screen_manager)
+            elif screen_name == "pill_dispense":
+                from screens.mock_screen import PillDispenseMockScreen
+                screen = PillDispenseMockScreen(screen_manager)
+            else:
+                print(f"❌ 알 수 없는 화면: {screen_name}")
+                return False
+            
+            # 화면 등록
+            screen_manager.register_screen(screen_name, screen)
+            print(f"✅ {screen_name} 화면 생성 및 등록 완료")
         
         # 화면 표시
         print(f"📱 {screen_name} 화면 표시 중...")
@@ -308,7 +327,7 @@ def show_screen_menu():
     print("4.  복용 횟수 설정(Dose Count Screen)")
     print("5.  복용 시간 설정(Dose Time Screen)")
     print("6.  알약 로딩 화면 (Pill Loading Screen) - 알약 충전")
-    print("7.  메인 화면 (Main Screen) - Coming Soon")
+    print("7.  메인 화면 (Main Screen) - 약품 배출 기능 + 테스트")
     print("8.  알림 화면 (Notification Screen) - Coming Soon")
     print("9.  설정 화면 (Settings Screen) - Coming Soon")
     print("10. 알약 배출 화면 (Pill Dispense Screen) - Coming Soon")

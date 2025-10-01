@@ -123,8 +123,8 @@ class StepperMotorController:
         # 4개 모터의 현재 상태 (각 모터당 8비트)
         self.motor_states = [0, 0, 0, 0]
         
-        # 속도 설정 (적절한 속도: 0.01ms = 100000Hz)
-        self.step_delay_us = 10  # 스텝 간 지연 시간 (마이크로초)
+        # 속도 설정 (고속: 0.001ms = 1000000Hz) - 모터 우선순위 모드
+        self.step_delay_us = 1  # 스텝 간 지연 시간 (마이크로초) - 최고속
         
         # 비블로킹 제어를 위한 변수들
         self.motor_running = [False, False, False, False]  # 각 모터별 실행 상태
@@ -148,11 +148,20 @@ class StepperMotorController:
     def is_limit_switch_pressed(self, motor_index):
         """특정 모터의 리미트 스위치가 눌렸는지 확인"""
         if 0 <= motor_index <= 3:
-            return self.limit_switches[motor_index].is_pressed()
+            is_pressed = self.limit_switches[motor_index].is_pressed()
+            # 실제로 눌렸을 때만 True 반환 (디버깅 로그 추가)
+            if is_pressed:
+                print(f"  🔘 모터 {motor_index} 리미트 스위치 실제로 눌림!")
+            return is_pressed
         return False
     
     def shift_out(self, data):
         """74HC595D에 8비트 데이터 전송"""
+        # 디버깅: 첫 번째 전송에서만 출력
+        if not hasattr(self, '_shift_debug_printed'):
+            print(f"  🔍 74HC595D 전송: 0x{data:02X} ({bin(data)})")
+            self._shift_debug_printed = True
+        
         for i in range(8):
             # MSB first
             bit = (data >> (7 - i)) & 1
@@ -186,6 +195,13 @@ class StepperMotorController:
         upper_byte = (combined_data >> 8) & 0xFF
         lower_byte = combined_data & 0xFF
 
+        # 디버깅: 모터 상태 출력 (첫 번째 호출에서만)
+        if not hasattr(self, '_debug_printed'):
+            print(f"  🔍 모터 상태: {[hex(self.motor_states[i]) for i in range(4)]}")
+            print(f"  🔍 모터 스텝: {self.motor_steps}")
+            print(f"  🔍 출력 데이터: 0x{upper_byte:02X} 0x{lower_byte:02X}")
+            self._debug_printed = True
+
         self.shift_out(upper_byte)
         self.shift_out(lower_byte)
     
@@ -201,7 +217,7 @@ class StepperMotorController:
             for _ in range(steps):
                 # 리미트 스위치 확인
                 if self.is_limit_switch_pressed(motor_index):
-                    print(f"  🔘 모터 {motor_index} 리미트 스위치 감지! 회전 중단")
+                    print(f"모터 {motor_index} 리미트 스위치 감지! 회전 중단")
                     return False
                 
                 # 각 모터의 독립적인 스텝 계산
@@ -210,11 +226,16 @@ class StepperMotorController:
                 
                 # 모터 스텝 설정
                 self.set_motor_step(motor_index, current_step)
+            
+            # 항상 성공으로 반환 (리미트 스위치 비활성화)
+            return True
     
     def step_motor_continuous(self, motor_index, direction=1, steps=1):
         """스테퍼모터 회전 (리미트 스위치 감지되어도 계속 회전) - 최적화된 성능"""
         if 0 <= motor_index <= 3:
-            for _ in range(steps):
+            print(f"    🔧 모터 {motor_index} 연속 회전 시작: {steps}스텝")
+            
+            for i in range(steps):
                 # 각 모터의 독립적인 스텝 계산
                 self.motor_steps[motor_index] = (self.motor_steps[motor_index] + direction) % 8
                 current_step = self.motor_steps[motor_index]
@@ -222,9 +243,14 @@ class StepperMotorController:
                 # 모터 스텝 설정
                 self.set_motor_step(motor_index, current_step)
                 
+                # 진행 상황 출력 (50스텝마다)
+                if i % 50 == 0 or i == steps - 1:
+                    print(f"      📍 모터 {motor_index} 스텝 {i+1}/{steps}: 시퀀스={current_step}, 상태=0x{self.motor_states[motor_index]:02X}")
+                
                 # 최적화된 회전 속도 조절 (UI 우선순위보다 빠르게)
-                time.sleep_us(5)  # 10μs → 5μs로 단축 (2배 빠름)
+                time.sleep_us(1000)  # 1ms로 증가하여 더 확실한 동작
             
+            print(f"    ✅ 모터 {motor_index} 연속 회전 완료")
             return True
     
     def stop_motor(self, motor_index):
@@ -303,10 +329,49 @@ class StepperMotorController:
         return False
     
     def next_compartment(self, motor_index):
-        """다음 칸으로 이동"""
+        """다음 칸으로 이동 - 리미트 스위치 기반"""
         if 0 <= motor_index <= 3:
-            next_comp = (self.motor_positions[motor_index] + 1) % 10
-            return self.move_to_compartment(motor_index, next_comp)
+            print(f"  🔄 모터 {motor_index} 리미트 스위치 기반 이동 시작")
+            
+            # 리미트 스위치 기반 이동: 리미트 스위치가 눌렸다가 떼면 1칸으로 인식
+            step_count = 0
+            
+            print(f"  📍 모터 {motor_index} 리미트 스위치 대기 중...")
+            
+            # 리미트 스위치가 눌릴 때까지 모터 회전
+            while not self.is_limit_switch_pressed(motor_index):
+                # 1스텝씩 이동
+                self.motor_steps[motor_index] = (self.motor_steps[motor_index] + 1) % 8
+                current_step = self.motor_steps[motor_index]
+                self.motor_states[motor_index] = self.stepper_sequence[current_step]
+                self.update_motor_output()
+                
+                # 속도 조절
+                time.sleep_us(1000)  # 1ms 지연
+                step_count += 1
+                
+                # 진행 상황 출력 (20스텝마다)
+                if step_count % 20 == 0:
+                    print(f"    📍 모터 {motor_index} 진행: {step_count}스텝 (리미트 대기)")
+            
+            print(f"  🔘 모터 {motor_index} 리미트 스위치 감지! 계속 회전...")
+            
+            # 리미트 스위치가 떼질 때까지 계속 회전
+            while self.is_limit_switch_pressed(motor_index):
+                # 1스텝씩 이동
+                self.motor_steps[motor_index] = (self.motor_steps[motor_index] + 1) % 8
+                current_step = self.motor_steps[motor_index]
+                self.motor_states[motor_index] = self.stepper_sequence[current_step]
+                self.update_motor_output()
+                
+                # 속도 조절
+                time.sleep_us(1000)  # 1ms 지연
+                step_count += 1
+            
+            # 1칸 이동 완료 (리미트 스위치 눌렸다가 떼짐)
+            print(f"  ✅ 모터 {motor_index} 1칸 이동 완료 ({step_count}스텝, 리미트 스위치 기반)")
+            self.motor_positions[motor_index] = (self.motor_positions[motor_index] + 1) % 10
+            return True
         return False
     
     def get_motor_position(self, motor_index):
@@ -324,6 +389,54 @@ class StepperMotorController:
             'limit_switches': self.check_limit_switches()
         }
         return info
+    
+    def test_motor_simple(self, motor_index, steps=10):
+        """간단한 모터 테스트 - 리미트 스위치 없이"""
+        if 0 <= motor_index <= 3:
+            print(f"  🧪 모터 {motor_index} 간단 테스트 시작 ({steps}스텝)")
+            
+            # 디버깅 플래그 리셋
+            if hasattr(self, '_debug_printed'):
+                delattr(self, '_debug_printed')
+            if hasattr(self, '_shift_debug_printed'):
+                delattr(self, '_shift_debug_printed')
+            
+            # 모터 3 특별 디버깅
+            if motor_index == 3:
+                print(f"  🔍 모터 3 하드웨어 연결 확인:")
+                print(f"    - 74HC595D 핀: DI={self.di}, SH_CP={self.sh_cp}, ST_CP={self.st_cp}")
+                print(f"    - 초기 상태: {[hex(self.motor_states[i]) for i in range(4)]}")
+                print(f"    - 초기 스텝: {self.motor_steps}")
+                print(f"    - 스텝 시퀀스: {[hex(seq) for seq in self.stepper_sequence]}")
+                print(f"    - 모터 3는 두 번째 74HC595D의 상위 4비트 (Q4~Q7)")
+                print(f"    - 예상 출력: 0xC0 0x00 (모터 3만 활성화)")
+                print(f"    - 1000스텝 테스트: 약 {1000/8}회 완전 회전 예상")
+            
+            for step in range(steps):
+                # 1스텝씩 이동
+                self.motor_steps[motor_index] = (self.motor_steps[motor_index] + 1) % 8
+                current_step = self.motor_steps[motor_index]
+                self.motor_states[motor_index] = self.stepper_sequence[current_step]
+                self.update_motor_output()
+                
+                # 속도 조절
+                time.sleep_us(1000)  # 1ms 지연
+                
+                # 진행 상황 출력 (1000스텝일 때는 100스텝마다)
+                if steps >= 1000:
+                    if step % 100 == 0:
+                        print(f"    📍 모터 {motor_index} 스텝: {step+1}/{steps} (시퀀스: {current_step}, 상태: 0x{self.motor_states[motor_index]:02X})")
+                else:
+                    if step % 2 == 0:
+                        print(f"    📍 모터 {motor_index} 스텝: {step+1}/{steps} (시퀀스: {current_step}, 상태: 0x{self.motor_states[motor_index]:02X})")
+                    
+                    # 모터 3 특별 디버깅
+                    if motor_index == 3:
+                        print(f"      🔍 모터 3 상태: {[hex(self.motor_states[i]) for i in range(4)]}")
+            
+            print(f"  ✅ 모터 {motor_index} 테스트 완료")
+            return True
+        return False
 
 class PillBoxMotorSystem:
     """필박스 모터 시스템 관리 클래스"""
@@ -428,3 +541,250 @@ class PillBoxMotorSystem:
         """비상 정지"""
         print("비상 정지 실행!")
         self.motor_controller.stop_all_motors()
+
+    def control_dispense_slide(self, level):
+        """배출구 슬라이드 제어 (디스크 모터와 동일한 로직)"""
+        try:
+            if level < 0 or level > 3:
+                print(f"❌ 잘못된 슬라이드 레벨: {level} (0-3 범위)")
+                return False
+            
+            # 배출구 슬라이드 모터 (모터 3) 제어
+            motor_index = 3
+            
+            if level == 0:
+                # 닫기: 0도 (원점)
+                steps = 0
+                print("🚪 배출구 슬라이드 닫기 (0도)")
+            elif level == 1:
+                # 1단: 120도 (28BYJ-48 기준 정확한 스텝수)
+                steps = 1365  # 4096 ÷ 360° × 120° = 1365스텝
+                print("🚪 배출구 슬라이드 1단 (120도 - 1365스텝)")
+            elif level == 2:
+                # 2단: 240도 (28BYJ-48 기준 정확한 스텝수)
+                steps = 2731  # 4096 ÷ 360° × 240° = 2731스텝
+                print("🚪 배출구 슬라이드 2단 (240도 - 2731스텝)")
+            elif level == 3:
+                # 3단: 360도 (28BYJ-48 기준 정확한 스텝수)
+                steps = 4096  # 4096 ÷ 360° × 360° = 4096스텝 (한 바퀴)
+                print("🚪 배출구 슬라이드 3단 (360도 - 4096스텝)")
+            
+            # 배출구 모터 우선순위 모드 - 디스크 모터와 동일한 부드러운 동작
+            print(f"  🔄 모터 {motor_index}를 {steps}스텝으로 이동... (우선순위 모드)")
+            print(f"  ⚡ 모터 {motor_index} 우선순위 모드 활성화")
+            print(f"  🔍 배출구 모터 디버깅:")
+            print(f"    - 모터 인덱스: {motor_index}")
+            print(f"    - 이동할 스텝: {steps}")
+            print(f"    - 현재 모터 상태: {[hex(self.motor_controller.motor_states[i]) for i in range(4)]}")
+            
+            # 디스크 모터와 동일한 부드러운 동작: 1스텝씩 연속 처리
+            success = True
+            for i in range(steps):
+                if i % 100 == 0 or i == steps - 1:  # 100스텝마다 진행 상황 출력
+                    print(f"    📍 배출구 슬라이드 {i+1}/{steps}스텝 진행 중...")
+                
+                # 1스텝씩 부드럽게 이동 (디스크 모터와 동일한 방식)
+                self.motor_controller.motor_steps[motor_index] = (self.motor_controller.motor_steps[motor_index] + 1) % 8
+                current_step = self.motor_controller.motor_steps[motor_index]
+                self.motor_controller.motor_states[motor_index] = self.motor_controller.stepper_sequence[current_step]
+                self.motor_controller.update_motor_output()
+                
+                # 부드러운 속도 조절 (디스크 모터와 동일)
+                time.sleep_us(2000)  # 2ms 지연으로 부드러운 동작
+            
+            print(f"  🔍 배출구 모터 이동 후:")
+            print(f"    - 이동 후 모터 상태: {[hex(self.motor_controller.motor_states[i]) for i in range(4)]}")
+            print(f"    - 모터 스텝: {self.motor_controller.motor_steps}")
+            
+            if not success:
+                print(f"    ❌ 배출구 슬라이드 {steps}스텝 이동 실패")
+                return False
+            
+            print(f"  ✅ 배출구 슬라이드 {steps}스텝 이동 완료")
+            return True
+            
+        except Exception as e:
+            print(f"❌ 배출구 슬라이드 제어 실패: {e}")
+            return False
+    
+    def control_dispense_slide_close(self, level):
+        """배출구 슬라이드 닫힘 제어 (열린 각도와 동일하게 역회전)"""
+        try:
+            if level < 0 or level > 3:
+                print(f"❌ 잘못된 슬라이드 레벨: {level} (0-3 범위)")
+                return False
+            
+            # 배출구 슬라이드 모터 (모터 3) 제어
+            motor_index = 3
+            
+            if level == 0:
+                # 닫기: 0도 (원점)
+                steps = 0
+                print("🚪 배출구 슬라이드 닫기 (0도)")
+            elif level == 1:
+                # 1단: 120도 역회전 (28BYJ-48 기준 정확한 스텝수)
+                steps = 1365  # 4096 ÷ 360° × 120° = 1365스텝
+                print("🚪 배출구 슬라이드 1단 역회전 (120도 - 1365스텝)")
+            elif level == 2:
+                # 2단: 240도 역회전 (28BYJ-48 기준 정확한 스텝수)
+                steps = 2731  # 4096 ÷ 360° × 240° = 2731스텝
+                print("🚪 배출구 슬라이드 2단 역회전 (240도 - 2731스텝)")
+            elif level == 3:
+                # 3단: 360도 역회전 (28BYJ-48 기준 정확한 스텝수)
+                steps = 4096  # 4096 ÷ 360° × 360° = 4096스텝 (한 바퀴)
+                print("🚪 배출구 슬라이드 3단 역회전 (360도 - 4096스텝)")
+            
+            # 배출구 모터 우선순위 모드 - 역회전으로 닫기
+            print(f"  🔄 모터 {motor_index}를 {steps}스텝으로 역회전... (우선순위 모드)")
+            print(f"  ⚡ 모터 {motor_index} 우선순위 모드 활성화 (역회전)")
+            print(f"  🔍 배출구 모터 역회전 디버깅:")
+            print(f"    - 모터 인덱스: {motor_index}")
+            print(f"    - 역회전할 스텝: {steps}")
+            print(f"    - 현재 모터 상태: {[hex(self.motor_controller.motor_states[i]) for i in range(4)]}")
+            
+            # 디스크 모터와 동일한 부드러운 동작: 1스텝씩 역회전 처리
+            success = True
+            for i in range(steps):
+                if i % 100 == 0 or i == steps - 1:  # 100스텝마다 진행 상황 출력
+                    print(f"    📍 배출구 슬라이드 역회전 {i+1}/{steps}스텝 진행 중...")
+                
+                # 1스텝씩 역회전으로 부드럽게 이동 (방향: -1)
+                self.motor_controller.motor_steps[motor_index] = (self.motor_controller.motor_steps[motor_index] - 1) % 8
+                current_step = self.motor_controller.motor_steps[motor_index]
+                self.motor_controller.motor_states[motor_index] = self.motor_controller.stepper_sequence[current_step]
+                self.motor_controller.update_motor_output()
+                
+                # 부드러운 속도 조절 (디스크 모터와 동일)
+                time.sleep_us(2000)  # 2ms 지연으로 부드러운 동작
+            
+            print(f"  🔍 배출구 모터 역회전 후:")
+            print(f"    - 역회전 후 모터 상태: {[hex(self.motor_controller.motor_states[i]) for i in range(4)]}")
+            print(f"    - 모터 스텝: {self.motor_controller.motor_steps}")
+            
+            if not success:
+                print(f"    ❌ 배출구 슬라이드 {steps}스텝 역회전 실패")
+                return False
+            
+            print(f"  ✅ 배출구 슬라이드 {steps}스텝 역회전 완료")
+            return True
+            
+        except Exception as e:
+            print(f"❌ 배출구 슬라이드 닫힘 제어 실패: {e}")
+            return False
+    
+    def get_dispense_slide_position(self):
+        """배출구 슬라이드 현재 위치 반환"""
+        try:
+            motor_index = 3
+            current_steps = self.motor_controller.motor_steps[motor_index]
+            
+            # 스텝 수에 따른 레벨 계산 (400스텝/회전 모터 기준)
+            if current_steps < 67:  # 0-66 스텝
+                return 0  # 닫힘
+            elif current_steps < 133:  # 67-132 스텝
+                return 1  # 1단 (120도)
+            elif current_steps < 267:  # 133-266 스텝
+                return 2  # 2단
+            else:  # 267+ 스텝
+                return 3  # 3단 (360도)
+                
+        except Exception as e:
+            print(f"❌ 배출구 슬라이드 위치 확인 실패: {e}")
+            return 0
+    
+    def test_motor3_only(self, steps=200):
+        """모터 3 전용 테스트 (배출구 슬라이드)"""
+        print(f"🔧 모터 3 전용 테스트 시작 ({steps}스텝)")
+        
+        try:
+            motor_index = 3
+            
+            # 모터 3 초기화
+            self.motor_controller.motor_states[motor_index] = 0x00
+            self.motor_controller.motor_steps[motor_index] = 0
+            self.motor_controller.update_motor_output()
+            
+            print(f"  🔍 모터 3 초기 상태:")
+            print(f"    - 모터 상태: {[hex(self.motor_controller.motor_states[i]) for i in range(4)]}")
+            print(f"    - 모터 스텝: {self.motor_controller.motor_steps}")
+            print(f"    - 74HC595D 핀: DI={self.motor_controller.di}, SH_CP={self.motor_controller.sh_cp}, ST_CP={self.motor_controller.st_cp}")
+            print(f"    - 모터 3는 두 번째 74HC595D의 상위 4비트 (Q4~Q7)")
+            print(f"    - 예상 출력: 0xC0 0x00 (모터 3만 활성화)")
+            
+            # 단계별 이동
+            for step in range(steps):
+                # 1스텝씩 이동
+                self.motor_controller.motor_steps[motor_index] = (self.motor_controller.motor_steps[motor_index] + 1) % 8
+                current_step = self.motor_controller.motor_steps[motor_index]
+                self.motor_controller.motor_states[motor_index] = self.motor_controller.stepper_sequence[current_step]
+                self.motor_controller.update_motor_output()
+                
+                # 속도 조절 (모터 3은 더 느리게)
+                time.sleep_us(2000)  # 2ms 지연
+                
+                # 진행 상황 출력 (5스텝마다)
+                if step % 5 == 0:
+                    print(f"    📍 모터 3 스텝: {step+1}/{steps} (시퀀스: {current_step}, 상태: 0x{self.motor_controller.motor_states[motor_index]:02X})")
+                    print(f"    🔍 전체 모터 상태: {[hex(self.motor_controller.motor_states[i]) for i in range(4)]}")
+            
+            print(f"  ✅ 모터 3 테스트 완료")
+            return True
+            
+        except Exception as e:
+            print(f"  ❌ 모터 3 테스트 실패: {e}")
+            return False
+    
+    def rotate_disk(self, disk_num, steps):
+        """디스크 회전 (실제 하드웨어 제어) - 우선순위 모드"""
+        try:
+            print(f"  🔄 디스크 {disk_num} 회전: {steps} 스텝 (우선순위 모드)")
+            
+            # 디스크 번호는 1-3, 모터 번호는 0-2
+            motor_num = disk_num - 1
+            
+            if 0 <= motor_num < 3:
+                # 모터 우선순위 모드 - 다른 작업 중단
+                print(f"  ⚡ 모터 {motor_num} 우선순위 모드 활성화")
+                
+                # 실제 하드웨어 제어: 리미트 스위치 기반 1칸씩 이동
+                for i in range(steps):
+                    print(f"    📍 디스크 {disk_num} {i+1}/{steps}칸 이동 중...")
+                    
+                    # 다음 칸으로 이동 (리미트 스위치 기반) - 블로킹 모드
+                    success = self.motor_controller.next_compartment(motor_num)
+                    
+                    if not success:
+                        print(f"    ❌ 디스크 {disk_num} {i+1}칸 이동 실패")
+                        return False
+                    
+                    # 각 칸 이동 후 잠시 대기 (약이 떨어질 시간)
+                    time.sleep_ms(500)
+                
+                print(f"  ✅ 디스크 {disk_num} {steps}칸 회전 완료")
+                return True
+            else:
+                print(f"  ❌ 잘못된 디스크 번호: {disk_num}")
+                return False
+                
+        except Exception as e:
+            print(f"  ❌ 디스크 회전 실패: {e}")
+            return False
+    
+    def test_motor_hardware(self, motor_index, steps=10):
+        """모터 하드웨어 테스트 - 리미트 스위치 없이"""
+        try:
+            print(f"  🧪 모터 {motor_index} 하드웨어 테스트 시작")
+            
+            # 간단한 테스트 실행
+            success = self.motor_controller.test_motor_simple(motor_index, steps)
+            
+            if success:
+                print(f"  ✅ 모터 {motor_index} 하드웨어 테스트 성공")
+            else:
+                print(f"  ❌ 모터 {motor_index} 하드웨어 테스트 실패")
+            
+            return success
+            
+        except Exception as e:
+            print(f"  ❌ 모터 하드웨어 테스트 실패: {e}")
+            return False

@@ -150,16 +150,11 @@ class WifiScanScreen:
         
         # 버튼 힌트 (화면에 직접) - 모던 UI 색상
         self.hints_text = lv.label(self.screen_obj)
-        # ASCII 기호로 테스트 (노토산스 폰트에서 지원)
-        self.hints_text.set_text("A:^  B:v  C:<  D:OK")
+        # LVGL 심볼 사용 (기본 폰트에서 지원)
+        self.hints_text.set_text(f"A:{lv.SYMBOL.UP} B:{lv.SYMBOL.DOWN} C: -  D:{lv.SYMBOL.OK}")
         self.hints_text.set_style_text_color(lv.color_hex(0x8E8E93), 0)  # 모던 라이트 그레이
-        # 노토산스 폰트 사용
-        if hasattr(lv, "font_notosans_kr_regular"):
-            self.hints_text.set_style_text_font(lv.font_notosans_kr_regular, 0)
-            print(f"  📱 버튼 힌트 생성 완료 (노토산스 폰트 사용)")
-        else:
-            # 폰트를 설정하지 않음 (기본값 사용)
-            print(f"  📱 버튼 힌트 생성 완료 (기본 폰트 사용)")
+        # 기본 폰트 사용 (LVGL 심볼 지원을 위해)
+        print(f"  📱 버튼 힌트 생성 완료 (기본 폰트 사용)")
         self.hints_text.align(lv.ALIGN.BOTTOM_MID, 0, -2)  # 4픽셀 더 아래로 이동 (-6 -> -2)
         # 버튼 힌트 텍스트 위치 고정 (움직이지 않도록)
         self.hints_text.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
@@ -768,6 +763,24 @@ class WifiScanScreen:
                 print(f"  📱 선택된 네트워크: {selected_network['ssid']}")
                 print(f"  📱 보안 타입: {selected_network.get('security', 'Unknown')}")
 
+                # 현재 연결된 네트워크인지 확인
+                from wifi_manager import wifi_manager
+                connection_status = wifi_manager.get_connection_status()
+                is_currently_connected = (connection_status['connected'] and 
+                                        connection_status['ssid'] == selected_network['ssid'])
+                
+                print(f"  📱 현재 연결 상태 확인:")
+                print(f"    - 연결됨: {connection_status['connected']}")
+                print(f"    - 현재 SSID: {connection_status['ssid']}")
+                print(f"    - 선택한 SSID: {selected_network['ssid']}")
+                print(f"    - 같은 네트워크: {is_currently_connected}")
+                
+                # 이미 연결된 네트워크라면 패스워드 입력 없이 바로 다음 화면으로
+                if is_currently_connected:
+                    print(f"  ✅ 이미 연결된 네트워크입니다. 바로 다음 화면으로 이동합니다.")
+                    self._go_to_next_screen()
+                    return
+
                 # 보안이 있는 네트워크인지 확인
                 security = selected_network.get('security', 'Unknown').lower()
                 print(f"  📱 보안 확인: {security}")
@@ -778,42 +791,35 @@ class WifiScanScreen:
                     print(f"  🔒 보안 네트워크 감지: {security}")
                     print(f"  📱 패스워드 화면 존재 확인: {'wifi_password' in self.screen_manager.screens}")
                     
-                    if 'wifi_password' in self.screen_manager.screens:
-                        print(f"  📱 패스워드 화면 객체 가져오기...")
-                        wifi_password_screen = self.screen_manager.screens['wifi_password']
-                        
-                        print(f"  📱 네트워크 정보 설정...")
-                        # 네트워크 정보 설정
-                        wifi_password_screen.selected_network = selected_network['ssid']
-                        wifi_password_screen.selected_network_info = selected_network
-                        print(f"  ✅ 네트워크 정보 설정 완료")
-                        
-                        # 화면 전환
-                        print(f"  📱 패스워드 화면으로 전환: {selected_network['ssid']}")
-                        self.screen_manager.show_screen('wifi_password')
-                        print(f"  ✅ 화면 전환 완료")
-                    else:
-                        print(f"  ❌ 패스워드 화면이 등록되지 않음")
+                    print(f"  📱 패스워드 화면 준비 중...")
+                    
+                    # 패스워드 화면이 등록되어 있지 않으면 동적 생성
+                    if 'wifi_password' not in self.screen_manager.screens:
                         print(f"  📱 비밀번호 화면 동적 생성 중...")
                         try:
                             from screens.wifi_password_screen import WifiPasswordScreen
                             wifi_password_screen = WifiPasswordScreen(self.screen_manager, selected_network['ssid'])
                             self.screen_manager.register_screen('wifi_password', wifi_password_screen)
                             print(f"  ✅ 비밀번호 화면 생성 및 등록 완료")
-                            
-                            # 네트워크 정보 설정
-                            wifi_password_screen.selected_network = selected_network['ssid']
-                            wifi_password_screen.selected_network_info = selected_network
-                            print(f"  ✅ 네트워크 정보 설정 완료")
-                            
-                            # 화면 전환
-                            print(f"  📱 패스워드 화면으로 전환: {selected_network['ssid']}")
-                            self.screen_manager.show_screen('wifi_password')
-                            print(f"  ✅ 화면 전환 완료")
                         except Exception as e:
                             print(f"  ❌ 비밀번호 화면 생성 실패: {e}")
                             import sys
                             sys.print_exception(e)
+                            return
+                    else:
+                        print(f"  📱 패스워드 화면 객체 가져오기...")
+                        wifi_password_screen = self.screen_manager.screens['wifi_password']
+                    
+                    print(f"  📱 네트워크 정보 설정...")
+                    # 네트워크 정보 설정
+                    wifi_password_screen.selected_network = selected_network['ssid']
+                    wifi_password_screen.selected_network_info = selected_network
+                    print(f"  ✅ 네트워크 정보 설정 완료")
+                    
+                    # 화면 전환
+                    print(f"  📱 패스워드 화면으로 전환: {selected_network['ssid']}")
+                    self.screen_manager.show_screen('wifi_password')
+                    print(f"  ✅ 화면 전환 완료")
                 else:
                     # 보안이 없는 네트워크 - 직접 연결 시도
                     print(f"  🔓 오픈 네트워크: {security}")
@@ -844,6 +850,28 @@ class WifiScanScreen:
                     except:
                         pass
     
+    def _go_to_next_screen(self):
+        """다음 화면으로 이동 (복용 횟수 설정)"""
+        print("📱 복용 횟수 설정 화면으로 이동")
+        
+        # dose_count 화면이 등록되어 있지 않으면 동적 생성
+        if 'dose_count' not in self.screen_manager.screens:
+            print("📱 복용 횟수 설정 화면 동적 생성 중...")
+            try:
+                from screens.dose_count_screen import DoseCountScreen
+                dose_count_screen = DoseCountScreen(self.screen_manager)
+                self.screen_manager.register_screen('dose_count', dose_count_screen)
+                print("✅ 복용 횟수 설정 화면 생성 및 등록 완료")
+            except Exception as e:
+                print(f"❌ 복용 횟수 설정 화면 생성 실패: {e}")
+                import sys
+                sys.print_exception(e)
+                return
+        
+        # 화면 전환
+        print("📱 복용 횟수 설정 화면으로 이동")
+        self.screen_manager.show_screen('dose_count')
+
     def _connect_to_open_network(self, network):
         """오픈 네트워크에 직접 연결"""
         print(f"🔓 오픈 네트워크 연결 시도: {network['ssid']}")
@@ -859,23 +887,8 @@ class WifiScanScreen:
         print("✅ 오픈 네트워크 연결 성공!")
         time.sleep(1)
         
-        # dose_count 화면이 등록되어 있으면 이동, 없으면 동적 생성
-        if 'dose_count' in self.screen_manager.screens:
-            print("  📱 복용 횟수 설정 화면으로 이동")
-            self.screen_manager.show_screen('dose_count')
-        else:
-            print("  📱 복용 횟수 설정 화면 동적 생성 중...")
-            try:
-                from screens.dose_count_screen import DoseCountScreen
-                dose_count_screen = DoseCountScreen(self.screen_manager)
-                self.screen_manager.register_screen('dose_count', dose_count_screen)
-                print("  ✅ 복용 횟수 설정 화면 생성 및 등록 완료")
-                self.screen_manager.show_screen('dose_count')
-                print("  📱 복용 횟수 설정 화면으로 이동")
-            except Exception as e:
-                print(f"  ❌ 복용 횟수 설정 화면 생성 실패: {e}")
-                import sys
-                sys.print_exception(e)
+        # 다음 화면으로 이동
+        self._go_to_next_screen()
     
     def _scan_wifi_networks(self):
         """WiFi 네트워크 스캔"""

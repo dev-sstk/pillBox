@@ -105,13 +105,13 @@ class ButtonInterface:
         """버튼 눌림 처리"""
         # A, B, C, D 버튼 매핑
         button_id = None
-        if button_name == 'SW3':  # Up
+        if button_name == 'SW1':  # SW1 → A
             button_id = 'A'
-        elif button_name == 'SW4':  # Down
+        elif button_name == 'SW2':  # SW2 → B
             button_id = 'B'
-        elif button_name == 'SW1':  # Menu/Back
+        elif button_name == 'SW3':  # SW3 → C
             button_id = 'C'
-        elif button_name == 'SW2':  # Select/Next
+        elif button_name == 'SW4':  # SW4 → D
             button_id = 'D'
         
         if button_id:
@@ -139,10 +139,10 @@ class ButtonInterface:
         """버튼 상태 반환"""
         # A, B, C, D를 실제 핀 번호로 매핑
         pin_mapping = {
-            'A': 2,  # SW3 (Up)
-            'B': 3,  # SW4 (Down)
-            'C': 0,  # SW1 (Menu/Back)
-            'D': 1   # SW2 (Select/Next)
+            'A': 0,  # SW1 → A
+            'B': 1,  # SW2 → B
+            'C': 2,  # SW3 → C
+            'D': 3   # SW4 → D
         }
         
         if button_id in pin_mapping:
@@ -154,10 +154,10 @@ class ButtonInterface:
     def get_all_button_states(self):
         """모든 버튼 상태 반환"""
         return {
-            'A': self.get_button_state('A'),  # SW3 (Up)
-            'B': self.get_button_state('B'),  # SW4 (Down)
-            'C': self.get_button_state('C'),  # SW1 (Menu/Back)
-            'D': self.get_button_state('D')   # SW2 (Select/Next)
+            'A': self.get_button_state('A'),  # SW1 → A
+            'B': self.get_button_state('B'),  # SW2 → B
+            'C': self.get_button_state('C'),  # SW3 → C
+            'D': self.get_button_state('D')   # SW4 → D
         }
     
     def get_raw_button_states(self):
@@ -176,10 +176,10 @@ class ButtonInterface:
     def get_button_info(self):
         """버튼 정보 반환"""
         return {
-            'A': 'SW3 (Up / Value +)',
-            'B': 'SW4 (Down / Value -)', 
-            'C': 'SW1 (Menu / Back / Cancel)',
-            'D': 'SW2 (Select / Next / Confirm)'
+            'A': 'SW1 (Button A)',
+            'B': 'SW2 (Button B)', 
+            'C': 'SW3 (Button C)',
+            'D': 'SW4 (Button D)'
         }
     
     def test_buttons(self):

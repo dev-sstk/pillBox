@@ -308,4 +308,21 @@ class StartupScreen:
         
         # 잠시 대기 후 화면 전환
         time.sleep(0.5)
+        
+        # wifi_scan 화면이 등록되어 있는지 확인
+        if 'wifi_scan' not in self.screen_manager.screens:
+            print("📱 wifi_scan 화면이 등록되지 않음. 동적 생성 중...")
+            try:
+                from screens.wifi_scan_screen import WifiScanScreen
+                wifi_scan_screen = WifiScanScreen(self.screen_manager)
+                self.screen_manager.register_screen('wifi_scan', wifi_scan_screen)
+                print("✅ wifi_scan 화면 생성 및 등록 완료")
+            except Exception as e:
+                print(f"❌ wifi_scan 화면 생성 실패: {e}")
+                import sys
+                sys.print_exception(e)
+                return
+        
+        # 화면 전환
+        print("📱 Wi-Fi 스캔 화면으로 전환")
         self.screen_manager.show_screen('wifi_scan')

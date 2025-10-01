@@ -309,7 +309,7 @@ class PillLoadingScreen:
             
             # 롤러 위젯 생성 (화면에 직접)
             self.disk_roller = lv.roller(self.screen_obj)
-            self.disk_roller.set_options(roller_options_str, lv.roller.MODE.NORMAL)
+            self.disk_roller.set_options(roller_options_str, lv.roller.MODE.INFINITE)
             self.disk_roller.set_size(120, 60)
             self.disk_roller.align(lv.ALIGN.CENTER, 0, 0)  # 화면 중앙에 배치
             
@@ -361,17 +361,17 @@ class PillLoadingScreen:
             
             # LVGL 심볼 사용 시 안전하게 처리
             try:
-                up_symbol = getattr(lv.SYMBOL, 'UP', '^')
-                down_symbol = getattr(lv.SYMBOL, 'DOWN', 'v')
                 prev_symbol = getattr(lv.SYMBOL, 'PREV', '<')
+                next_symbol = getattr(lv.SYMBOL, 'NEXT', '>')
                 ok_symbol = getattr(lv.SYMBOL, 'OK', '✓')
+                down_symbol = getattr(lv.SYMBOL, 'DOWN', 'v')
                 
-                button_text = f"A:{up_symbol} B:{down_symbol} C:{prev_symbol} D:{ok_symbol}"
+                button_text = f"A:{prev_symbol} B:{next_symbol} C:{ok_symbol} D:{down_symbol}"
                 self.hints_text.set_text(button_text)
                 print(f"  ✅ 버튼 힌트 텍스트 설정 완료: {button_text}")
             except Exception as symbol_error:
                 print(f"  ⚠️ 심볼 사용 실패, 텍스트로 대체: {symbol_error}")
-                self.hints_text.set_text("A:^ B:v C:< D:✓")
+                self.hints_text.set_text("A:< B:> C:✓ D:v")
             
             self.hints_text.set_style_text_color(lv.color_hex(0x8E8E93), 0)  # 모던 라이트 그레이
             
@@ -599,90 +599,46 @@ class PillLoadingScreen:
         pass
     
     def on_button_a(self):
-        """버튼 A 처리 - 디스크 선택 위로 또는 디스크 왼쪽 회전"""
+        """버튼 A 처리 - 이전 화면으로 (복용 시간 설정 화면으로)"""
         if self.current_mode == 'selection':
-            print("알약 충전 디스크 위로 이동")
+            print("이전 화면으로 이동 (복용 시간 설정 화면)")
             
-            if self.selected_disk_index > 0:
-                prev_index = self.selected_disk_index - 1
-                print(f"  📱 롤러 선택 업데이트: 인덱스 {prev_index}")
-                
-                # 롤러 직접 조작 (애니메이션과 함께)
-                try:
-                    self.disk_roller.set_selected(prev_index, lv.ANIM.ON)
-                    print(f"  📱 롤러 애니메이션과 함께 설정 완료")
-                except AttributeError:
-                    self.disk_roller.set_selected(prev_index, 1)
-                    print(f"  📱 롤러 애니메이션 없이 설정 완료")
-                
-                # 강제 업데이트
-                try:
-                    lv.timer_handler()
-                except:
-                    pass
-                
-                self.selected_disk_index = prev_index
-                print(f"  ✅ 롤러 선택 업데이트 완료: {self.disk_options[self.selected_disk_index]}")
+            # 복용 시간 설정 화면으로 이동
+            if hasattr(self.screen_manager, 'screens') and 'dose_time' in self.screen_manager.screens:
+                self.screen_manager.show_screen('dose_time')
             else:
-                print(f"  📱 이미 첫 번째 옵션 (디스크 1)")
+                print("  📱 복용 시간 설정 화면이 없어서 현재 화면에 머물기")
         
         elif self.current_mode == 'loading':
             print("디스크 회전 기능 비활성화 - 리미트 스위치 기반 충전만 사용")
     
     def on_button_b(self):
-        """버튼 B 처리 - 디스크 선택 아래로 또는 디스크 오른쪽 회전"""
+        """버튼 B 처리 - 다음 화면으로 (메인 화면으로)"""
         if self.current_mode == 'selection':
-            print("알약 충전 디스크 아래로 이동")
+            print("다음 화면으로 이동 (메인 화면)")
             
-            if self.selected_disk_index < len(self.disk_options) - 1:
-                next_index = self.selected_disk_index + 1
-                print(f"  📱 롤러 선택 업데이트: 인덱스 {next_index}")
-                
-                # 롤러 직접 조작 (애니메이션과 함께)
-                try:
-                    self.disk_roller.set_selected(next_index, lv.ANIM.ON)
-                    print(f"  📱 롤러 애니메이션과 함께 설정 완료")
-                except AttributeError:
-                    self.disk_roller.set_selected(next_index, 1)
-                    print(f"  📱 롤러 애니메이션 없이 설정 완료")
-                
-                # 강제 업데이트
-                try:
-                    lv.timer_handler()
-                except:
-                    pass
-                
-                self.selected_disk_index = next_index
-                print(f"  ✅ 롤러 선택 업데이트 완료: {self.disk_options[self.selected_disk_index]}")
+            # 메인 화면으로 이동
+            if hasattr(self.screen_manager, 'screens') and 'main' in self.screen_manager.screens:
+                self.screen_manager.show_screen('main')
             else:
-                print(f"  📱 이미 마지막 옵션 (디스크 3)")
+                # 메인 화면이 없으면 동적으로 생성
+                print("  📱 main 화면이 등록되지 않음. 동적 생성 중...")
+                try:
+                    from screens.main_screen_ui import MainScreen
+                    main_screen = MainScreen(self.screen_manager)
+                    self.screen_manager.register_screen('main', main_screen)
+                    print("  ✅ main 화면 생성 및 등록 완료")
+                    self.screen_manager.show_screen('main')
+                    print("  📱 메인 화면으로 전환 완료")
+                except Exception as e:
+                    print(f"  ❌ 메인 화면 생성 실패: {e}")
+                    print("  📱 메인 화면 생성 실패로 현재 화면에 머물기")
         
         elif self.current_mode == 'loading':
             print("디스크 회전 기능 비활성화 - 리미트 스위치 기반 충전만 사용")
     
     def on_button_c(self):
-        """버튼 C 처리 - 뒤로가기 또는 충전 완료"""
-        if self.current_mode == 'selection':
-            print("알약 충전 화면 뒤로가기")
-            
-            # 설정 화면으로 돌아가기
-            if hasattr(self.screen_manager, 'screens') and 'settings' in self.screen_manager.screens:
-                self.screen_manager.show_screen('settings')
-            else:
-                print("  📱 설정 화면이 없어서 메인 화면으로 돌아갑니다")
-                if hasattr(self.screen_manager, 'screens') and 'main' in self.screen_manager.screens:
-                    self.screen_manager.show_screen('main')
-                else:
-                    print("  📱 메인 화면도 없습니다")
-        
-        elif self.current_mode == 'loading':
-            print("디스크 충전 완료")
-            
-            # 디스크 선택 화면으로 돌아가기
-            self._return_to_selection_mode()
-    
-    def on_button_d(self):
-        """버튼 D 처리 - 디스크 선택 또는 알약 충전"""
+        """버튼 C 처리 - 디스크 선택 (알약 충전 서브 화면으로)"""
         if self.current_mode == 'selection':
             selected_disk = self.get_selected_disk()
             print(f"디스크 {selected_disk} 선택 - 충전 모드로 전환")
@@ -693,6 +649,38 @@ class PillLoadingScreen:
             
             # 서브 화면 생성
             self._create_loading_sub_screen()
+        
+        elif self.current_mode == 'loading':
+            print("디스크 충전 완료")
+            
+            # 디스크 선택 화면으로 돌아가기
+            self._return_to_selection_mode()
+    
+    def on_button_d(self):
+        """버튼 D 처리 - 디스크 선택 (디스크1, 2, 3 이동)"""
+        if self.current_mode == 'selection':
+            print("알약 충전 디스크 아래로 이동")
+            
+            # 무한 회전을 위해 인덱스 순환
+            next_index = (self.selected_disk_index + 1) % len(self.disk_options)
+            print(f"  📱 롤러 선택 업데이트: 인덱스 {next_index}")
+            
+            # 롤러 직접 조작 (애니메이션과 함께)
+            try:
+                self.disk_roller.set_selected(next_index, lv.ANIM.ON)
+                print(f"  📱 롤러 애니메이션과 함께 설정 완료")
+            except AttributeError:
+                self.disk_roller.set_selected(next_index, 1)
+                print(f"  📱 롤러 애니메이션 없이 설정 완료")
+            
+            # 강제 업데이트
+            try:
+                lv.timer_handler()
+            except:
+                pass
+            
+            self.selected_disk_index = next_index
+            print(f"  ✅ 롤러 선택 업데이트 완료: {self.disk_options[self.selected_disk_index]}")
             
         elif self.current_mode == 'loading':
             print("알약 충전 실행 - 리미트 스위치 기반")
@@ -738,13 +726,13 @@ class PillLoadingScreen:
             self.title_text.set_text("알약 충전")
         if hasattr(self, 'hints_text'):
             try:
-                up_symbol = getattr(lv.SYMBOL, 'UP', '^')
-                down_symbol = getattr(lv.SYMBOL, 'DOWN', 'v')
                 prev_symbol = getattr(lv.SYMBOL, 'PREV', '<')
+                next_symbol = getattr(lv.SYMBOL, 'NEXT', '>')
                 ok_symbol = getattr(lv.SYMBOL, 'OK', '✓')
-                self.hints_text.set_text(f"A:{up_symbol} B:{down_symbol} C:{prev_symbol} D:{ok_symbol}")
+                down_symbol = getattr(lv.SYMBOL, 'DOWN', 'v')
+                self.hints_text.set_text(f"A:{prev_symbol} B:{next_symbol} C:{ok_symbol} D:{down_symbol}")
             except:
-                self.hints_text.set_text("A:^ B:v C:< D:✓")
+                self.hints_text.set_text("A:< B:> C:✓ D:v")
         
         # 화면 강제 업데이트
         try:
