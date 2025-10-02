@@ -92,11 +92,11 @@ class StepperMotorController:
         # 입력 시프트 레지스터 초기화 (리미트 스위치용)
         self.input_shift_register = InputShiftRegister(sh_cp_pin, st_cp_pin, data_out_pin)
         
-        # 리미트 스위치 초기화 (74HC165D 비트 4, 5, 6, 7 사용)
+        # 리미트 스위치 초기화 (74HC165D 비트 4, 5, 6, 7 사용, 0-2 역순)
         self.limit_switches = [
-            LimitSwitch(self.input_shift_register, 4),  # 모터 0 리미트 스위치 (LIMIT SW1)
+            LimitSwitch(self.input_shift_register, 6),  # 모터 0 리미트 스위치 (LIMIT SW1 역순)
             LimitSwitch(self.input_shift_register, 5),  # 모터 1 리미트 스위치 (LIMIT SW2)
-            LimitSwitch(self.input_shift_register, 6),  # 모터 2 리미트 스위치 (LIMIT SW3)
+            LimitSwitch(self.input_shift_register, 4),  # 모터 2 리미트 스위치 (LIMIT SW3 역순)
             LimitSwitch(self.input_shift_register, 7),  # 모터 3 리미트 스위치 (LIMIT SW4)
         ]
         
@@ -131,7 +131,37 @@ class StepperMotorController:
         self.motor_direction = [1, 1, 1, 1]  # 각 모터별 방향
         self.last_step_times = [0, 0, 0, 0]  # 각 모터별 마지막 스텝 시간
         
+        # 초기화 시 ULN2003A 출력 HIGH 상태로 설정
+        self.initialize_uln2003_high()
+        
         print("✅ StepperMotorController 초기화 완료")
+    
+    def initialize_uln2003_high(self):
+        """ULN2003A 출력 1C,2C,3C,4C HIGH 상태로 초기화"""
+        print("⚡ ULN2003A 출력 초기화: 1C,2C,3C,4C HIGH 설정")
+        
+        # 모든 모터의 상태를 HIGH (0x0F)로 설정
+        # 0x0F = 0b00001111 (1C,2C,3C,4C 모두 HIGH)
+        for i in range(4):
+            self.motor_states[i] = 0x0F
+        
+        # 74HC595D에 출력
+        self.update_motor_output()
+        print("✅ ULN2003A 출력 초기화 완료: 모든 출력 HIGH")
+    
+    def set_motor_idle_high(self, motor_index):
+        """특정 모터를 미사용 시 HIGH 상태로 설정"""
+        if 0 <= motor_index <= 3:
+            self.motor_states[motor_index] = 0x0F  # 1C,2C,3C,4C 모두 HIGH
+            self.update_motor_output()
+            print(f"모터 {motor_index} 미사용 시 HIGH 상태 설정")
+    
+    def set_all_motors_idle_high(self):
+        """모든 모터를 미사용 시 HIGH 상태로 설정"""
+        for i in range(4):
+            self.motor_states[i] = 0x0F  # 1C,2C,3C,4C 모두 HIGH
+        self.update_motor_output()
+        print("모든 모터 미사용 시 HIGH 상태 설정")
     
     def check_limit_switches(self):
         """모든 리미트 스위치 상태 확인"""
@@ -220,8 +250,8 @@ class StepperMotorController:
                     print(f"모터 {motor_index} 리미트 스위치 감지! 회전 중단")
                     return False
                 
-                # 각 모터의 독립적인 스텝 계산
-                self.motor_steps[motor_index] = (self.motor_steps[motor_index] + direction) % 8
+                # 각 모터의 독립적인 스텝 계산 (회전 방향 반대)
+                self.motor_steps[motor_index] = (self.motor_steps[motor_index] - direction) % 8
                 current_step = self.motor_steps[motor_index]
                 
                 # 모터 스텝 설정
@@ -236,8 +266,8 @@ class StepperMotorController:
             print(f"    🔧 모터 {motor_index} 연속 회전 시작: {steps}스텝")
             
             for i in range(steps):
-                # 각 모터의 독립적인 스텝 계산
-                self.motor_steps[motor_index] = (self.motor_steps[motor_index] + direction) % 8
+                # 각 모터의 독립적인 스텝 계산 (회전 방향 반대)
+                self.motor_steps[motor_index] = (self.motor_steps[motor_index] - direction) % 8
                 current_step = self.motor_steps[motor_index]
                 
                 # 모터 스텝 설정
@@ -254,18 +284,18 @@ class StepperMotorController:
             return True
     
     def stop_motor(self, motor_index):
-        """모터 정지 (모든 코일 OFF)"""
+        """모터 정지 (ULN2003A 출력 HIGH 상태로 설정)"""
         if 0 <= motor_index <= 3:
-            self.motor_states[motor_index] = 0
+            self.motor_states[motor_index] = 0x0F  # 1C,2C,3C,4C 모두 HIGH
             self.update_motor_output()
-            print(f"모터 {motor_index} 정지")
+            print(f"모터 {motor_index} 정지 (HIGH 상태)")
     
     def stop_all_motors(self):
-        """모든 모터 정지"""
+        """모든 모터 정지 (ULN2003A 출력 HIGH 상태로 설정)"""
         for i in range(4):
-            self.motor_states[i] = 0
+            self.motor_states[i] = 0x0F  # 1C,2C,3C,4C 모두 HIGH
         self.update_motor_output()
-        print("모든 모터 정지")
+        print("모든 모터 정지 (HIGH 상태)")
     
     def set_speed(self, delay_ms):
         """모터 속도 설정"""
@@ -338,10 +368,10 @@ class StepperMotorController:
             
             print(f"  📍 모터 {motor_index} 리미트 스위치 대기 중...")
             
-            # 리미트 스위치가 눌릴 때까지 모터 회전
+            # 리미트 스위치가 눌릴 때까지 모터 회전 (회전 방향 반대)
             while not self.is_limit_switch_pressed(motor_index):
-                # 1스텝씩 이동
-                self.motor_steps[motor_index] = (self.motor_steps[motor_index] + 1) % 8
+                # 1스텝씩 이동 (역방향)
+                self.motor_steps[motor_index] = (self.motor_steps[motor_index] - 1) % 8
                 current_step = self.motor_steps[motor_index]
                 self.motor_states[motor_index] = self.stepper_sequence[current_step]
                 self.update_motor_output()
@@ -356,10 +386,10 @@ class StepperMotorController:
             
             print(f"  🔘 모터 {motor_index} 리미트 스위치 감지! 계속 회전...")
             
-            # 리미트 스위치가 떼질 때까지 계속 회전
+            # 리미트 스위치가 떼질 때까지 계속 회전 (회전 방향 반대)
             while self.is_limit_switch_pressed(motor_index):
-                # 1스텝씩 이동
-                self.motor_steps[motor_index] = (self.motor_steps[motor_index] + 1) % 8
+                # 1스텝씩 이동 (역방향)
+                self.motor_steps[motor_index] = (self.motor_steps[motor_index] - 1) % 8
                 current_step = self.motor_steps[motor_index]
                 self.motor_states[motor_index] = self.stepper_sequence[current_step]
                 self.update_motor_output()
@@ -413,8 +443,8 @@ class StepperMotorController:
                 print(f"    - 1000스텝 테스트: 약 {1000/8}회 완전 회전 예상")
             
             for step in range(steps):
-                # 1스텝씩 이동
-                self.motor_steps[motor_index] = (self.motor_steps[motor_index] + 1) % 8
+                # 1스텝씩 이동 (역방향)
+                self.motor_steps[motor_index] = (self.motor_steps[motor_index] - 1) % 8
                 current_step = self.motor_steps[motor_index]
                 self.motor_states[motor_index] = self.stepper_sequence[current_step]
                 self.update_motor_output()
@@ -538,9 +568,14 @@ class PillBoxMotorSystem:
         print("모터 테스트 완료")
     
     def emergency_stop(self):
-        """비상 정지"""
+        """비상 정지 (모든 모터 HIGH 상태로 설정)"""
         print("비상 정지 실행!")
         self.motor_controller.stop_all_motors()
+    
+    def set_motors_idle_high(self):
+        """모든 모터를 미사용 시 HIGH 상태로 설정"""
+        print("모든 모터 미사용 시 HIGH 상태 설정")
+        self.motor_controller.set_all_motors_idle_high()
 
     def control_dispense_slide(self, level):
         """배출구 슬라이드 제어 (디스크 모터와 동일한 로직)"""
@@ -577,13 +612,13 @@ class PillBoxMotorSystem:
             print(f"    - 이동할 스텝: {steps}")
             print(f"    - 현재 모터 상태: {[hex(self.motor_controller.motor_states[i]) for i in range(4)]}")
             
-            # 디스크 모터와 동일한 부드러운 동작: 1스텝씩 연속 처리
+            # 디스크 모터와 동일한 부드러운 동작: 1스텝씩 연속 처리 (배출구 열기: 정방향)
             success = True
             for i in range(steps):
                 if i % 100 == 0 or i == steps - 1:  # 100스텝마다 진행 상황 출력
                     print(f"    📍 배출구 슬라이드 {i+1}/{steps}스텝 진행 중...")
                 
-                # 1스텝씩 부드럽게 이동 (디스크 모터와 동일한 방식)
+                # 1스텝씩 부드럽게 이동 (정방향)
                 self.motor_controller.motor_steps[motor_index] = (self.motor_controller.motor_steps[motor_index] + 1) % 8
                 current_step = self.motor_controller.motor_steps[motor_index]
                 self.motor_controller.motor_states[motor_index] = self.motor_controller.stepper_sequence[current_step]
@@ -642,7 +677,7 @@ class PillBoxMotorSystem:
             print(f"    - 역회전할 스텝: {steps}")
             print(f"    - 현재 모터 상태: {[hex(self.motor_controller.motor_states[i]) for i in range(4)]}")
             
-            # 디스크 모터와 동일한 부드러운 동작: 1스텝씩 역회전 처리
+            # 디스크 모터와 동일한 부드러운 동작: 1스텝씩 역회전 처리 (배출구 닫기: 역방향)
             success = True
             for i in range(steps):
                 if i % 100 == 0 or i == steps - 1:  # 100스텝마다 진행 상황 출력
@@ -711,10 +746,10 @@ class PillBoxMotorSystem:
             print(f"    - 모터 3는 두 번째 74HC595D의 상위 4비트 (Q4~Q7)")
             print(f"    - 예상 출력: 0xC0 0x00 (모터 3만 활성화)")
             
-            # 단계별 이동
+            # 단계별 이동 (회전 방향 반대)
             for step in range(steps):
-                # 1스텝씩 이동
-                self.motor_controller.motor_steps[motor_index] = (self.motor_controller.motor_steps[motor_index] + 1) % 8
+                # 1스텝씩 이동 (역방향)
+                self.motor_controller.motor_steps[motor_index] = (self.motor_controller.motor_steps[motor_index] - 1) % 8
                 current_step = self.motor_controller.motor_steps[motor_index]
                 self.motor_controller.motor_states[motor_index] = self.motor_controller.stepper_sequence[current_step]
                 self.motor_controller.update_motor_output()

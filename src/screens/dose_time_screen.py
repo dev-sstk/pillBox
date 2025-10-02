@@ -166,23 +166,31 @@ class DoseTimeScreen:
             print(f"  ❌ B 버튼 처리 실패: {e}")
     
     def on_button_c(self):
-        """C 버튼: 뒤로가기 또는 시간/분 모드 전환"""
+        """C 버튼: 뒤로가기 - 복용 횟수 화면으로 되돌아가기"""
         try:
-            if self.editing_hour:
-                # 시간 편집 중이면 분 편집으로 전환
-                self.editing_hour = False
-                self._update_roller_options()
-                print(f"  📱 분 설정으로 전환")
+            print(f"  📱 뒤로가기 - 복용 횟수 화면으로 이동")
+            
+            # 복용 횟수 화면으로 되돌아가기
+            if 'dose_count' in self.screen_manager.screens:
+                self.screen_manager.show_screen('dose_count')
+                print(f"  ✅ 복용 횟수 화면으로 이동 완료")
             else:
-                # 분 편집 중이면 시간 편집으로 돌아가기
-                self.editing_hour = True
-                self._update_roller_options()
-                print(f"  📱 시간 설정으로 전환")
+                print(f"  ❌ 복용 횟수 화면이 등록되지 않음")
+                # 복용 횟수 화면이 없으면 동적으로 생성
+                try:
+                    from screens.dose_count_screen import DoseCountScreen
+                    dose_count_screen = DoseCountScreen(self.screen_manager)
+                    self.screen_manager.register_screen('dose_count', dose_count_screen)
+                    self.screen_manager.show_screen('dose_count')
+                    print(f"  ✅ 복용 횟수 화면 생성 및 이동 완료")
+                except Exception as e:
+                    print(f"  ❌ 복용 횟수 화면 생성 실패: {e}")
+                    
         except Exception as e:
             print(f"  ❌ C 버튼 처리 실패: {e}")
     
     def on_button_d(self):
-        """D 버튼: 선택/확인"""
+        """D 버튼: 선택/확인 - 시간/분 모드 전환 또는 다음 단계"""
         try:
             if self.editing_hour:
                 # 시간 설정 완료, 분 설정으로 이동

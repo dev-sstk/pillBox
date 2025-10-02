@@ -18,6 +18,7 @@ sys.path.append("/screens")
 from screen_manager import ScreenManager
 from screens.startup_screen import StartupScreen
 from screens.wifi_scan_screen import WifiScanScreen
+from motor_control import PillBoxMotorSystem
 
 def set_st7735_offset(offset_x=0, offset_y=0):
     """ST7735 오프셋 설정 (test_lvgl.py 방식)"""
@@ -201,6 +202,12 @@ def run_screen_test(screen_name):
                     wifi_password_screen = WifiPasswordScreen(screen_manager, "Example_SSID")
                     screen_manager.register_screen('wifi_password', wifi_password_screen)
                     print("✅ wifi_password 화면도 함께 등록됨")
+                # WiFi 연결 후 복용 횟수 선택 화면으로 이동하기 위해 미리 등록
+                if 'dose_count' not in screen_manager.screens:
+                    from screens.dose_count_screen import DoseCountScreen
+                    dose_count_screen = DoseCountScreen(screen_manager)
+                    screen_manager.register_screen('dose_count', dose_count_screen)
+                    print("✅ dose_count 화면도 함께 등록됨")
             elif screen_name == "wifi_password":
                 from screens.wifi_password_screen import WifiPasswordScreen
                 screen = WifiPasswordScreen(screen_manager, "Example_SSID")
@@ -336,6 +343,23 @@ def show_screen_menu():
     
 
 
+def init_motor_system():
+    """스테퍼 모터 시스템 초기화"""
+    try:
+        print("🔧 스테퍼 모터 시스템 초기화 중...")
+        motor_system = PillBoxMotorSystem()
+        
+        # 초기화 시 ULN2003A 출력 1C,2C,3C,4C HIGH 설정
+        print("⚡ ULN2003A 출력 초기화: 1C,2C,3C,4C HIGH 설정")
+        motor_system.motor_controller.initialize_uln2003_high()
+        
+        print("✅ 스테퍼 모터 시스템 초기화 완료")
+        return motor_system
+        
+    except Exception as e:
+        print(f"❌ 스테퍼 모터 시스템 초기화 실패: {e}")
+        return None
+
 def main():
     """메인 함수 - 화면 테스트 메뉴"""
     print("=" * 60)
@@ -344,6 +368,11 @@ def main():
     print("각 화면을 개별적으로 테스트할 수 있습니다!")
     print("Modern UI 스타일이 적용된 화면들을 확인하세요!")
     print()
+    
+    # 스테퍼 모터 시스템 초기화
+    motor_system = init_motor_system()
+    if motor_system is None:
+        print("⚠️ 모터 시스템 초기화 실패, 모터 기능 없이 실행")
     
     while True:
         try:

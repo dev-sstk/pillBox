@@ -32,9 +32,9 @@ class ButtonInterface:
             1: 'SW2',  # Select (D 버튼 역할)
             2: 'SW3',  # Up (A 버튼 역할)
             3: 'SW4',  # Down (B 버튼 역할)
-            4: 'LIMIT_SW1',  # 리미트 스위치 1
+            4: 'LIMIT_SW3',  # 리미트 스위치 3 (역순)
             5: 'LIMIT_SW2',  # 리미트 스위치 2
-            6: 'LIMIT_SW3',  # 리미트 스위치 3
+            6: 'LIMIT_SW1',  # 리미트 스위치 1 (역순)
             7: 'LIMIT_SW4'   # 리미트 스위치 4
         }
         
@@ -215,9 +215,9 @@ class ButtonInterface:
             "SW2(Select)",    # Pin 1
             "SW3(Up)",        # Pin 2
             "SW4(Down)",      # Pin 3
-            "LIMIT SW1",      # Pin 4
+            "LIMIT SW3",      # Pin 4 (역순)
             "LIMIT SW2",      # Pin 5
-            "LIMIT SW3",      # Pin 6
+            "LIMIT SW1",      # Pin 6 (역순)
             "LIMIT SW4"       # Pin 7
         ]
         
