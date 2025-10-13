@@ -5,6 +5,7 @@
 
 import time
 import math
+import json
 import lvgl as lv
 from ui_style import UIStyle
 
@@ -70,8 +71,15 @@ class PillLoadingScreen:
         
         # 디스크 상태 관리
         self.disk_states = {}
+        self.disk_states_file = "/disk_states.json"  # 저장 파일 경로
+        
+        # 저장된 상태 불러오기 (있으면)
+        self._load_disk_states()
+        
+        # 불러온 상태가 없으면 새로 생성
         for i in range(3):
-            self.disk_states[i] = DiskState(i + 1)
+            if i not in self.disk_states:
+                self.disk_states[i] = DiskState(i + 1)
         
         # UI 스타일 초기화
         try:
@@ -329,9 +337,9 @@ class PillLoadingScreen:
                 self.disk_roller.set_style_text_font(lv.font_notosans_kr_regular, 0)
                 print("  ✅ 롤러에 한국어 폰트 적용 완료")
             
-            # 롤러 선택된 항목 스타일
+            # 롤러 선택된 항목 스타일 - 로고 색상(민트)
             try:
-                self.disk_roller.set_style_bg_color(lv.color_hex(0x007AFF), lv.PART.SELECTED)  # iOS 블루
+                self.disk_roller.set_style_bg_color(lv.color_hex(0x00C9A7), lv.PART.SELECTED)  # 민트색 (로고와 동일)
                 self.disk_roller.set_style_bg_opa(255, lv.PART.SELECTED)
                 self.disk_roller.set_style_text_color(lv.color_hex(0xFFFFFF), lv.PART.SELECTED)  # 흰색 텍스트
                 self.disk_roller.set_style_radius(6, lv.PART.SELECTED)
@@ -419,7 +427,13 @@ class PillLoadingScreen:
             # 아크 설정 (270도에서 시작하여 시계방향으로)
             print(f"  📱 아크 설정...")
             self.progress_arc.set_bg_angles(0, 360)
-            self.progress_arc.set_angles(0, 0)  # 초기값 0%
+            
+            # 현재 충전 상태를 반영한 각도 설정
+            progress = self.current_disk_state.get_loading_progress()
+            arc_angle = int((progress / 100) * 360)
+            self.progress_arc.set_angles(0, arc_angle)  # 저장된 상태 반영
+            print(f"  📱 아크 초기 각도: {arc_angle}도 (진행률: {progress:.0f}%)")
+            
             self.progress_arc.set_rotation(270)  # 12시 방향에서 시작
             print(f"  ✅ 아크 각도 설정 완료")
             
@@ -429,6 +443,15 @@ class PillLoadingScreen:
             self.progress_arc.set_style_arc_color(lv.color_hex(0xE0E0E0), 0)  # 배경 회색
             self.progress_arc.set_style_arc_width(6, lv.PART.INDICATOR)  # 진행 아크 두께
             self.progress_arc.set_style_arc_color(lv.color_hex(0x00C9A7), lv.PART.INDICATOR)  # 진행 민트색
+            
+            # 아크 끝부분 동그라미(knob) 스타일 - 민트색으로 설정
+            try:
+                self.progress_arc.set_style_bg_color(lv.color_hex(0x00C9A7), lv.PART.KNOB)  # 민트색
+                self.progress_arc.set_style_bg_opa(255, lv.PART.KNOB)
+                print(f"  ✅ 아크 knob 스타일 설정 완료 (민트색)")
+            except AttributeError:
+                print(f"  ⚠️ lv.PART.KNOB 지원 안됨, 건너뛰기")
+            
             print(f"  ✅ 아크 스타일 설정 완료")
             
             # 진행률 텍스트 라벨 (아크 중앙에)
@@ -527,6 +550,13 @@ class PillLoadingScreen:
                 if hasattr(self, 'detail_label'):
                     loaded_count = self.current_disk_state.loaded_count
                     self.detail_label.set_text(f"{loaded_count}/15칸")
+            
+            # ⚡ LVGL 화면 갱신 제거 (모터 성능 우선)
+            # import lvgl as lv
+            # lv.timer_handler()
+            
+            # ⚡ 파일 저장 제거 (매 칸마다 저장하지 않음, 3칸 완료 후에만 저장)
+            # self._save_disk_states()
             
         except Exception as e:
             print(f"  ❌ 아크 프로그레스 바 업데이트 실패: {e}")
@@ -750,66 +780,58 @@ class PillLoadingScreen:
                 print("  ❌ 모터 시스템이 초기화되지 않음")
                 return False
             
+            # ⚡ 충전 시작 전 모든 모터 코일 OFF (전력 소모 방지)
+            print(f"  ⚡ 충전 시작 전 모든 모터 코일 OFF")
+            self.motor_system.motor_controller.stop_all_motors()
+            
             if self.current_disk_state.start_loading():
                 print(f"  📱 모터 회전 시작 (리미트 스위치 엣지 감지 3번까지)")
                 
-                # 리미트 스위치가 3번 감지될 때까지 계속 회전
-                while self.current_disk_state.is_loading:
-                    try:
-                        # 리미트 스위치 상태 추적을 위한 변수
-                        prev_limit_state = False
-                        current_limit_state = False
+                # 리미트 스위치 상태 추적 변수 (한 번만 초기화)
+                prev_limit_state = False
+                current_limit_state = False
+                
+                try:
+                    # 단일 루프로 3칸 모두 처리
+                    while self.current_disk_state.is_loading:
+                        # 1스텝씩 회전 (리미트 스위치 감지되어도 계속 회전) - 반시계방향
+                        self.motor_system.motor_controller.step_motor_continuous(disk_index, 1, 1)
                         
-                        # 리미트 스위치 엣지 감지 (눌렸다가 떼어지는 순간) - 모터 우선순위
-                        ui_update_counter = 0  # UI 업데이트 카운터
+                        # 현재 리미트 스위치 상태 확인 (엣지 감지 정확성 위해 매 스텝 체크)
+                        current_limit_state = self.motor_system.motor_controller.is_limit_switch_pressed(disk_index)
                         
-                        while self.current_disk_state.is_loading:
-                            # 1스텝씩 회전 (리미트 스위치 감지되어도 계속 회전) - 최우선 (반시계방향)
-                            self.motor_system.motor_controller.step_motor_continuous(disk_index, -1, 1)
+                        # 엣지 감지: 이전에 눌려있었고 지금 떼어진 상태
+                        if prev_limit_state and not current_limit_state:
+                            # 리미트 스위치 엣지 감지 시 충전 완료 (데이터만 업데이트, UI는 주기적으로)
+                            loading_complete = self.current_disk_state.complete_loading()
                             
-                            # 현재 리미트 스위치 상태 확인
-                            current_limit_state = self.motor_system.motor_controller.is_limit_switch_pressed(disk_index)
+                            # ⚡ UI 업데이트 제거 - 200스텝마다 갱신으로 충분 (끊김 완전 제거)
+                            # self._update_disk_visualization()
                             
-                            # 엣지 감지: 이전에 눌려있었고 지금 떼어진 상태
-                            if prev_limit_state and not current_limit_state:
-                                print("  📱 리미트 스위치 엣지 감지 (눌렸다가 떼어짐), 카운트...")
-                                
-                                # 리미트 스위치 엣지 감지 시 충전 완료
-                                loading_complete = self.current_disk_state.complete_loading()
-                                
-                                # UI 업데이트는 엣지 감지 시에만 (모터 성능 우선)
-                                self._update_disk_visualization()
-                                
-                                # 3칸 충전이 완료되면 루프 종료
-                                if loading_complete:
-                                    print("  📱 3칸 충전 완료!")
-                                    break
-                                
-                                # 다음 칸을 위해 리미트 스위치가 완전히 떼어질 때까지 대기
-                                print("  📱 리미트 스위치가 완전히 떼어질 때까지 대기...")
-                                while self.motor_system.motor_controller.is_limit_switch_pressed(disk_index):
-                                    # 리미트 스위치 대기 중에도 모터는 계속 회전 (UI 업데이트 없음, 반시계방향)
-                                    self.motor_system.motor_controller.step_motor_continuous(disk_index, -1, 1)
-                                    time.sleep_ms(2)  # 더 짧은 지연으로 모터 성능 향상
-                                
-                                print("  📱 리미트 스위치 완전히 떼어짐, 다음 칸으로 이동...")
-                                break  # 내부 루프 종료, 다음 칸으로
-                            
-                            # 상태 업데이트
-                            prev_limit_state = current_limit_state
-                            
-                            # 모터 성능 우선 - UI 업데이트 최소화
-                            ui_update_counter += 1
-                            if ui_update_counter >= 100:  # 100번마다 UI 업데이트 (선택사항)
-                                ui_update_counter = 0
-                                # self._update_disk_visualization()  # 주석 처리로 UI 업데이트 비활성화
-                            
-                            # 최소 지연으로 모터 성능 최적화
-                            time.sleep_ms(1)  # 5ms → 1ms로 단축
-                    
-                    except Exception as e:
-                        print(f"  ❌ 모터 제어 중 오류: {e}")
-                        break
+                            # 3칸 충전이 완료되면 루프 종료
+                            if loading_complete:
+                                # ✅ 3칸 완료 후 UI 최종 업데이트 & 파일 저장
+                                self._update_disk_visualization()  # 최종 상태 반영
+                                self._save_disk_states()
+                                break
+                        
+                        # 상태 업데이트 (매번 업데이트, 리셋 안함!)
+                        prev_limit_state = current_limit_state
+                        
+                        # ⚡ 최고 성능 - UI 업데이트 완전 제거 (끊김 0%)
+                        # 모터 회전 중에는 UI 업데이트 안함, 3칸 완료 후에만 최종 업데이트
+                        # 이렇게 하면 완전히 끊김 없는 부드러운 회전 가능
+                        pass
+                
+                except Exception as e:
+                    print(f"  ❌ 모터 제어 중 오류: {e}")
+                    # 오류 발생 시에도 모터 정지
+                    self.motor_system.motor_controller.stop_motor(disk_index)
+                    return False
+                
+                # ⚡ 충전 완료 후 모터 코일 OFF (전력 소모 방지)
+                print(f"  ⚡ 충전 완료, 모터 {disk_index} 코일 OFF")
+                self.motor_system.motor_controller.stop_motor(disk_index)
                 
                 # 완전히 충전된 경우 확인
                 if not self.current_disk_state.can_load_more():
@@ -818,7 +840,7 @@ class PillLoadingScreen:
                     print("  📱 완료 버튼(C)을 눌러 디스크 선택 화면으로 돌아가세요")
                     return True
                 
-                return False
+                return True
             else:
                 print("  📱 실제 모터: 더 이상 충전할 수 없습니다")
                 return False
@@ -833,6 +855,8 @@ class PillLoadingScreen:
             if disk_index in self.disk_states:
                 self.disk_states[disk_index] = DiskState(disk_index + 1)
                 print(f"  📱 디스크 {disk_index + 1} 상태 초기화 완료")
+                # 초기화 후 파일에 저장
+                self._save_disk_states()
                 return True
             else:
                 print(f"  ❌ 디스크 {disk_index + 1} 상태 초기화 실패: 인덱스 오류")
@@ -902,6 +926,8 @@ class PillLoadingScreen:
                 if 0 <= count <= 15:
                     self.disk_states[disk_index].loaded_count = count
                     print(f"  📱 디스크 {disk_index + 1} 충전 칸 수를 {count}로 설정")
+                    # 설정 후 파일에 저장
+                    self._save_disk_states()
                     return True
                 else:
                     print(f"  ❌ 잘못된 칸 수: {count} (0-15 범위)")
@@ -940,7 +966,44 @@ class PillLoadingScreen:
             for i in range(3):
                 self.disk_states[i] = DiskState(i + 1)
             print("  📱 모든 디스크 상태 초기화 완료")
+            # 초기화 후 파일에 저장
+            self._save_disk_states()
             return True
         except Exception as e:
             print(f"  ❌ 모든 디스크 상태 초기화 실패: {e}")
             return False
+    
+    def _save_disk_states(self):
+        """디스크 충전 상태를 파일에 저장"""
+        try:
+            config = {
+                'disk_0_loaded': self.disk_states[0].loaded_count,
+                'disk_1_loaded': self.disk_states[1].loaded_count,
+                'disk_2_loaded': self.disk_states[2].loaded_count,
+                'saved_at': time.time()
+            }
+            
+            with open(self.disk_states_file, 'w') as f:
+                json.dump(config, f)
+            
+            print(f"  💾 디스크 충전 상태 저장됨: {self.disk_states[0].loaded_count}, {self.disk_states[1].loaded_count}, {self.disk_states[2].loaded_count}")
+            
+        except Exception as e:
+            print(f"  ❌ 디스크 충전 상태 저장 실패: {e}")
+    
+    def _load_disk_states(self):
+        """저장된 디스크 충전 상태 불러오기"""
+        try:
+            with open(self.disk_states_file, 'r') as f:
+                config = json.load(f)
+            
+            # 불러온 상태로 디스크 생성
+            for i in range(3):
+                self.disk_states[i] = DiskState(i + 1)
+                loaded_count = config.get(f'disk_{i}_loaded', 0)
+                self.disk_states[i].loaded_count = loaded_count
+            
+            print(f"  📂 디스크 충전 상태 불러옴: {self.disk_states[0].loaded_count}, {self.disk_states[1].loaded_count}, {self.disk_states[2].loaded_count}")
+            
+        except Exception as e:
+            print(f"  ⚠️ 저장된 디스크 충전 상태 없음: {e}")

@@ -17,9 +17,9 @@ class WiFiManager:
         self.wifi = network.WLAN(network.STA_IF)
         self.wifi.active(True)
         
-        # WiFi 초기화 대기 (중요! 이 시간이 없으면 스캔 실패)
-        print("📡 WiFi 초기화 중... (2초 대기)")
-        time.sleep(2)
+        # WiFi 초기화 대기 (빠른 부팅을 위해 짧게)
+        print("📡 WiFi 초기화 중... (0.5초 대기)")
+        time.sleep(0.5)
         
         # WiFi 설정 저장 파일
         self.config_file = "/wifi_config.json"
@@ -44,10 +44,10 @@ class WiFiManager:
         self.time_synced = False
         self.timezone_offset = 9 * 3600  # 한국 시간 (UTC+9)
         
-        # 자동 연결 시도
-        self._load_saved_config()
+        # 자동 연결은 StartupScreen에서 처리 (부팅 속도 향상)
+        # self._load_saved_config()  # 제거됨
         
-        print("✅ WiFiManager 초기화 완료")
+        print("✅ WiFiManager 초기화 완료 (자동 연결 안함)")
     
     def scan_networks(self, force=False):
         """WiFi 네트워크 스캔"""
@@ -249,6 +249,27 @@ class WiFiManager:
         except Exception as e:
             print(f"⚠️ 저장된 WiFi 설정 없음: {e}")
     
+    def try_auto_connect(self, timeout=5000):
+        """저장된 WiFi 설정으로 자동 연결 시도 (Public 메서드)"""
+        try:
+            with open(self.config_file, 'r') as f:
+                config = json.load(f)
+            
+            ssid = config.get('ssid', '')
+            password = config.get('password', '')
+            
+            if ssid:
+                print(f"📂 저장된 WiFi 설정 발견: {ssid}")
+                # 자동 연결 시도
+                return self.connect_to_network(ssid, password, timeout=timeout)
+            else:
+                print("⚠️ 저장된 WiFi 설정 없음")
+                return False
+            
+        except Exception as e:
+            print(f"⚠️ 저장된 WiFi 설정 없음: {e}")
+            return False
+    
     def forget_network(self):
         """저장된 WiFi 설정 삭제"""
         try:
@@ -258,6 +279,25 @@ class WiFiManager:
             print("🗑️ WiFi 설정 삭제됨")
         except Exception as e:
             print(f"❌ WiFi 설정 삭제 실패: {e}")
+    
+    def get_saved_password(self, ssid):
+        """저장된 비밀번호 확인"""
+        try:
+            with open(self.config_file, 'r') as f:
+                config = json.load(f)
+            
+            saved_ssid = config.get('ssid', '')
+            saved_password = config.get('password', '')
+            
+            # 요청한 SSID와 저장된 SSID가 일치하면 비밀번호 반환
+            if saved_ssid == ssid:
+                print(f"💾 저장된 비밀번호 발견: {ssid}")
+                return saved_password
+            else:
+                return None
+        except Exception as e:
+            print(f"⚠️ 저장된 비밀번호 확인 실패: {e}")
+            return None
     
     def get_network_list(self):
         """스캔된 네트워크 목록 반환 (신호 강도 포함)"""

@@ -163,18 +163,10 @@ class DoseCountScreen:
     
     def _create_button_hints_area(self):
         """하단 버튼힌트 컨테이너 생성"""
-        # 버튼힌트 컨테이너 (화면 하단에 직접 배치)
-        self.hints_container = lv.obj(self.screen_obj)
-        self.hints_container.set_size(140, 18)
-        self.hints_container.align(lv.ALIGN.BOTTOM_MID, 0, -2)
-        self.hints_container.set_style_bg_opa(0, 0)
-        self.hints_container.set_style_border_width(0, 0)
-        self.hints_container.set_style_pad_all(0, 0)
-        
-        # 버튼힌트 텍스트 (lv 기본 폰트 사용)
-        self.hints_text = lv.label(self.hints_container)
+        # 버튼힌트 (WiFi 스캔 화면과 동일한 방식으로 화면에 직접 배치)
+        self.hints_text = lv.label(self.screen_obj)
         self.hints_text.set_text(f"A:{lv.SYMBOL.UP} B:{lv.SYMBOL.DOWN} C:{lv.SYMBOL.PREV} D:{lv.SYMBOL.OK}")
-        self.hints_text.align(lv.ALIGN.CENTER, 0, 0)
+        self.hints_text.align(lv.ALIGN.BOTTOM_MID, 0, -2)  # WiFi 스캔 화면과 동일
         self.hints_text.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
         self.hints_text.set_style_text_color(lv.color_hex(0x8E8E93), 0)
         # lv 기본 폰트 사용 (한국어 폰트 적용하지 않음)
@@ -239,9 +231,9 @@ class DoseCountScreen:
                 self.dose_roller.set_style_text_font(korean_font, 0)
                 print("  ✅ 롤러에 한국어 폰트 적용 완료")
             
-            # 롤러 선택된 항목 스타일 (선택된 행) - 더 명확하게
+            # 롤러 선택된 항목 스타일 (선택된 행) - 로고 색상(민트)
             try:
-                self.dose_roller.set_style_bg_color(lv.color_hex(0x007AFF), lv.PART.SELECTED)  # iOS 블루
+                self.dose_roller.set_style_bg_color(lv.color_hex(0x00C9A7), lv.PART.SELECTED)  # 민트색 (로고와 동일)
                 self.dose_roller.set_style_bg_opa(255, lv.PART.SELECTED)
                 self.dose_roller.set_style_text_color(lv.color_hex(0xFFFFFF), lv.PART.SELECTED)  # 흰색 텍스트
                 self.dose_roller.set_style_radius(6, lv.PART.SELECTED)

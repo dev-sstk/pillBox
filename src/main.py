@@ -175,12 +175,12 @@ def run_screen_test(screen_name):
         # 화면 관리자 생성
         screen_manager = ScreenManager()
         
-        # 화면 생성 전 추가 메모리 정리
+        # 화면 생성 전 추가 메모리 정리 (최적화: 10회 → 3회)
         print("🧹 화면 생성 전 메모리 정리...")
         import gc
-        for i in range(10):  # 10회 가비지 컬렉션
+        for i in range(3):  # 3회 가비지 컬렉션
             gc.collect()
-            time.sleep(0.02)  # 더 긴 대기 시간
+            time.sleep(0.01)  # 짧은 대기 시간
         
         # 화면 캐싱 방식: 이미 등록된 화면이 있으면 재사용
         if screen_name in screen_manager.screens:
@@ -321,28 +321,6 @@ def run_screen_test(screen_name):
         return False
 
 
-def show_screen_menu():
-    """화면 선택 메뉴 표시"""
-    print("=" * 60)
-    print("필박스 화면 테스트 메뉴")
-    print("=" * 60)
-    print("테스트할 화면을 선택하세요:")
-    print()
-    print("1.  스타트업 화면 (Startup Screen)")
-    print("2.  Wi-Fi 스캔 화면 (Wi-Fi Scan Screen)")
-    print("3.  Wi-Fi 비밀번호 화면 (Wi-Fi Password Screen)")
-    print("4.  복용 횟수 설정(Dose Count Screen)")
-    print("5.  복용 시간 설정(Dose Time Screen)")
-    print("6.  알약 로딩 화면 (Pill Loading Screen) - 알약 충전")
-    print("7.  메인 화면 (Main Screen) - 약품 배출 기능 + 테스트")
-    print("8.  알림 화면 (Notification Screen) - Coming Soon")
-    print("9.  설정 화면 (Settings Screen) - Coming Soon")
-    print("10. 알약 배출 화면 (Pill Dispense Screen) - Coming Soon")
-    print("11. 종료")
-    print("=" * 60)
-    
-
-
 def init_motor_system():
     """스테퍼 모터 시스템 초기화"""
     try:
@@ -358,61 +336,29 @@ def init_motor_system():
         return None
 
 def main():
-    """메인 함수 - 화면 테스트 메뉴"""
+    """메인 함수 - 필박스 자동 시작"""
     print("=" * 60)
-    print("필박스 화면 테스트 시스템")
+    print("필박스 시스템 시작")
     print("=" * 60)
-    print("각 화면을 개별적으로 테스트할 수 있습니다!")
-    print("Modern UI 스타일이 적용된 화면들을 확인하세요!")
-    print()
     
     # 스테퍼 모터 시스템 초기화
     motor_system = init_motor_system()
     if motor_system is None:
         print("⚠️ 모터 시스템 초기화 실패, 모터 기능 없이 실행")
     
-    while True:
-        try:
-            show_screen_menu()
-            choice = input("선택 (1-12): ").strip()
-            
-            if choice == '1':
-                run_screen_test("startup")
-            elif choice == '2':
-                run_screen_test("wifi_scan")
-            elif choice == '3':
-                run_screen_test("wifi_password")
-            elif choice == '4':
-                run_screen_test("dose_count")
-            elif choice == '5':
-                run_screen_test("dose_time")
-            elif choice == '6':
-                run_screen_test("pill_loading")
-            elif choice == '7':
-                run_screen_test("main")
-            elif choice == '8':
-                run_screen_test("notification")
-            elif choice == '9':
-                run_screen_test("settings")
-            elif choice == '10':
-                run_screen_test("pill_dispense")
-            elif choice == '11':
-                print("🛑 프로그램을 종료합니다")
-                break
-            else:
-                print("❌ 잘못된 선택입니다. 1-11 중 선택하세요.")
-                time.sleep(1)
-                
-        except KeyboardInterrupt:
-            print("\n🛑 프로그램이 중단되었습니다")
-            cleanup_lvgl()
-            break
-        except Exception as e:
-            print(f"❌ 오류 발생: {e}")
-            import sys
-            sys.print_exception(e)
-            cleanup_lvgl()
-            time.sleep(2)
+    try:
+        # 자동으로 startup 화면부터 시작
+        print("📱 스타트업 화면 자동 시작...")
+        run_screen_test("startup")
+        
+    except KeyboardInterrupt:
+        print("\n🛑 프로그램이 중단되었습니다")
+        cleanup_lvgl()
+    except Exception as e:
+        print(f"❌ 오류 발생: {e}")
+        import sys
+        sys.print_exception(e)
+        cleanup_lvgl()
 
 if __name__ == "__main__":
     main()

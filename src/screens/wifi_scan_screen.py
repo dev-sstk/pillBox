@@ -173,13 +173,16 @@ class WifiScanScreen:
             self.wifi_list.set_size(140, 80)  # 높이 조정 (70 -> 80)
             self.wifi_list.align(lv.ALIGN.CENTER, 0, 5)  # 아래로 5픽셀 이동하여 제목과 겹치지 않게
             
-            # 리스트 스타일 설정 - 민트색 배경과 버튼 힌트 색상 테두리
-            self.wifi_list.set_style_bg_color(lv.color_hex(0x00C9A7), 0)  # 민트색 배경 (primary 색상)
+            # 리스트 스타일 설정 - 로고 색상(민트) 배경과 테두리
+            self.wifi_list.set_style_bg_color(lv.color_hex(0x00C9A7), 0)  # 민트색 배경 (로고와 동일)
             self.wifi_list.set_style_bg_opa(255, 0)  # 불투명 배경
-            self.wifi_list.set_style_border_width(1, 0)
-            self.wifi_list.set_style_border_color(lv.color_hex(0x8E8E93), 0)  # 버튼 힌트와 같은 색상 테두리
-            self.wifi_list.set_style_radius(12, 0)  # 둥근 모서리
-            self.wifi_list.set_style_pad_all(6, 0)  # 내부 패딩 조정
+            self.wifi_list.set_style_border_width(2, 0)  # 테두리 두께 증가 (1 -> 2)
+            self.wifi_list.set_style_border_color(lv.color_hex(0x00C9A7), 0)  # 민트색 테두리 (로고와 동일)
+            self.wifi_list.set_style_radius(10, 0)  # 둥근 모서리 (알약 충전 디스크와 동일)
+            self.wifi_list.set_style_pad_left(5, 0)  # 왼쪽 패딩
+            self.wifi_list.set_style_pad_right(5, 0)  # 오른쪽 패딩
+            self.wifi_list.set_style_pad_top(6, 0)  # 위쪽 패딩
+            self.wifi_list.set_style_pad_bottom(6, 0)  # 아래쪽 패딩
             # 스크롤 정책 설정 (세로 스크롤만 허용)
             self.wifi_list.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
             self.wifi_list.set_scroll_dir(lv.DIR.VER)  # 세로 방향만 스크롤
@@ -769,39 +772,30 @@ class WifiScanScreen:
                 
                 # WPA2-PSK, WPA3-SAE 등 다양한 보안 타입 지원
                 if any(sec_type in security for sec_type in ['wpa2', 'wpa3', 'wep', 'wpa', 'psk', 'sae']):
-                    # 보안이 있는 네트워크 - 패스워드 화면으로 이동
+                    # 보안이 있는 네트워크 - 저장된 비밀번호 확인
                     print(f"  🔒 보안 네트워크 감지: {security}")
-                    print(f"  📱 패스워드 화면 존재 확인: {'wifi_password' in self.screen_manager.screens}")
                     
-                    print(f"  📱 패스워드 화면 준비 중...")
+                    # 저장된 비밀번호 확인
+                    saved_password = wifi_manager.get_saved_password(selected_network['ssid'])
                     
-                    # 패스워드 화면이 등록되어 있지 않으면 동적 생성
-                    if 'wifi_password' not in self.screen_manager.screens:
-                        print(f"  📱 비밀번호 화면 동적 생성 중...")
-                        try:
-                            from screens.wifi_password_screen import WifiPasswordScreen
-                            wifi_password_screen = WifiPasswordScreen(self.screen_manager, selected_network['ssid'])
-                            self.screen_manager.register_screen('wifi_password', wifi_password_screen)
-                            print(f"  ✅ 비밀번호 화면 생성 및 등록 완료")
-                        except Exception as e:
-                            print(f"  ❌ 비밀번호 화면 생성 실패: {e}")
-                            import sys
-                            sys.print_exception(e)
-                            return
-                    else:
-                        print(f"  📱 패스워드 화면 객체 가져오기...")
-                        wifi_password_screen = self.screen_manager.screens['wifi_password']
+                    if saved_password is not None:
+                        # 저장된 비밀번호가 있으면 자동 연결
+                        print(f"  💾 저장된 비밀번호 사용하여 자동 연결 시도: {selected_network['ssid']}")
+                        success = wifi_manager.connect_to_network(selected_network['ssid'], saved_password)
+                        
+                        if success:
+                            print(f"  ✅ 저장된 비밀번호로 연결 성공!")
+                            time.sleep(1)
+                            self._go_to_next_screen()
+                        else:
+                            print(f"  ❌ 저장된 비밀번호로 연결 실패! 비밀번호 입력 화면으로 이동")
+                            # 저장된 비밀번호가 틀렸으면 비밀번호 입력 화면으로
+                            self._show_password_screen(selected_network)
+                        return
                     
-                    print(f"  📱 네트워크 정보 설정...")
-                    # 네트워크 정보 설정
-                    wifi_password_screen.selected_network = selected_network['ssid']
-                    wifi_password_screen.selected_network_info = selected_network
-                    print(f"  ✅ 네트워크 정보 설정 완료")
-                    
-                    # 화면 전환
-                    print(f"  📱 패스워드 화면으로 전환: {selected_network['ssid']}")
-                    self.screen_manager.show_screen('wifi_password')
-                    print(f"  ✅ 화면 전환 완료")
+                    # 저장된 비밀번호가 없으면 패스워드 화면으로 이동
+                    print(f"  📱 저장된 비밀번호 없음, 패스워드 화면으로 이동")
+                    self._show_password_screen(selected_network)
                 else:
                     # 보안이 없는 네트워크 - 직접 연결 시도
                     print(f"  🔓 오픈 네트워크: {security}")
@@ -812,6 +806,39 @@ class WifiScanScreen:
                 print(f"  📱 잘못된 선택 인덱스: {selected_index}")
         else:
             print(f"  ❌ 조건 불만족 - wifi_list_items 또는 current_selected_index 없음")
+    
+    def _show_password_screen(self, selected_network):
+        """비밀번호 입력 화면 표시"""
+        print(f"  📱 패스워드 화면 존재 확인: {'wifi_password' in self.screen_manager.screens}")
+        print(f"  📱 패스워드 화면 준비 중...")
+        
+        # 패스워드 화면이 등록되어 있지 않으면 동적 생성
+        if 'wifi_password' not in self.screen_manager.screens:
+            print(f"  📱 비밀번호 화면 동적 생성 중...")
+            try:
+                from screens.wifi_password_screen import WifiPasswordScreen
+                wifi_password_screen = WifiPasswordScreen(self.screen_manager, selected_network['ssid'])
+                self.screen_manager.register_screen('wifi_password', wifi_password_screen)
+                print(f"  ✅ 비밀번호 화면 생성 및 등록 완료")
+            except Exception as e:
+                print(f"  ❌ 비밀번호 화면 생성 실패: {e}")
+                import sys
+                sys.print_exception(e)
+                return
+        else:
+            print(f"  📱 패스워드 화면 객체 가져오기...")
+            wifi_password_screen = self.screen_manager.screens['wifi_password']
+        
+        print(f"  📱 네트워크 정보 설정...")
+        # 네트워크 정보 설정
+        wifi_password_screen.selected_network = selected_network['ssid']
+        wifi_password_screen.selected_network_info = selected_network
+        print(f"  ✅ 네트워크 정보 설정 완료")
+        
+        # 화면 전환
+        print(f"  📱 패스워드 화면으로 전환: {selected_network['ssid']}")
+        self.screen_manager.show_screen('wifi_password')
+        print(f"  ✅ 화면 전환 완료")
     
     def _update_selection_highlight(self):
         """선택된 항목 하이라이트 업데이트"""
@@ -858,19 +885,18 @@ class WifiScanScreen:
         """오픈 네트워크에 직접 연결"""
         print(f"🔓 오픈 네트워크 연결 시도: {network['ssid']}")
         
-        # TODO: 실제 WiFi 연결 로직
-        # wifi_manager.connect_to_network(network['ssid'], None)
+        # 실제 WiFi 연결 로직
+        from wifi_manager import wifi_manager
+        success = wifi_manager.connect_to_network(network['ssid'], "")
         
-        # 시뮬레이션
-        import time
-        time.sleep(1)
-        
-        # 연결 성공 시뮬레이션
-        print("✅ 오픈 네트워크 연결 성공!")
-        time.sleep(1)
-        
-        # 다음 화면으로 이동
-        self._go_to_next_screen()
+        if success:
+            print("✅ 오픈 네트워크 연결 성공!")
+            time.sleep(1)
+            # 다음 화면으로 이동
+            self._go_to_next_screen()
+        else:
+            print("❌ 오픈 네트워크 연결 실패!")
+            # 연결 실패 시 현재 화면에 머물기
     
     def _scan_wifi_networks(self):
         """WiFi 네트워크 스캔"""

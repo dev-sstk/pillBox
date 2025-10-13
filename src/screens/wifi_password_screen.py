@@ -408,19 +408,32 @@ class WifiPasswordScreen:
                 print("✅ 보안 WiFi 연결 성공!")
                 time.sleep(1)
                 
-                # dose_count 화면이 없으면 wifi_scan으로 돌아가기
-                if 'dose_count' in self.screen_manager.screens:
-                    self.screen_manager.show_screen('dose_count')
-                else:
-                    print("dose_count 화면이 없어서 wifi_scan으로 돌아갑니다")
-                    self.screen_manager.show_screen('wifi_scan')
+                # dose_count 화면으로 이동 (없으면 생성)
+                if 'dose_count' not in self.screen_manager.screens:
+                    print("📱 복용 횟수 설정 화면 동적 생성 중...")
+                    try:
+                        from screens.dose_count_screen import DoseCountScreen
+                        dose_count_screen = DoseCountScreen(self.screen_manager)
+                        self.screen_manager.register_screen('dose_count', dose_count_screen)
+                        print("✅ 복용 횟수 설정 화면 생성 및 등록 완료")
+                    except Exception as e:
+                        print(f"❌ 복용 횟수 설정 화면 생성 실패: {e}")
+                        import sys
+                        sys.print_exception(e)
+                        # 실패 시 wifi_scan으로 돌아가기
+                        self.screen_manager.show_screen('wifi_scan')
+                        return
+                
+                # 복용 횟수 설정 화면으로 이동
+                print("📱 복용 횟수 설정 화면으로 이동")
+                self.screen_manager.show_screen('dose_count')
             else:
                 print("❌ WiFi 연결 실패!")
-                # 연결 실패 시 현재 화면에 머물기
+                # 연결 실패 시 현재 화면에 머물기 (팝업 제거)
                 
         except Exception as e:
             print(f"❌ WiFi 연결 오류: {e}")
-            # 연결 오류 시 현재 화면에 머물기
+            # 연결 오류 시 현재 화면에 머물기 (팝업 제거)
     
     def get_title(self):
         """화면 제목"""

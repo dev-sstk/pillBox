@@ -17,21 +17,16 @@ class StartupScreen:
         self.screen_name = 'startup'
         self.screen_obj = None
         self.start_time = time.ticks_ms()
-        self.auto_advance_time = 5000  # 5초 후 자동 진행
+        self.auto_advance_time = 1000  # 1초 후 자동 진행
         
         # UI 스타일 시스템 초기화
         self.ui_style = UIStyle()
         
-        # 로딩 상태 관리
-        self.loading_progress = 0
-        self.loading_steps = [
-            "시스템 초기화 중...",
-            "디스플레이 설정 중...",
-            "오디오 준비 중...",
-            "Wi-Fi 연결 준비 중...",
-            "준비 완료!"
-        ]
-        self.current_step = 0
+        # WiFi 자동 연결 상태
+        self.wifi_auto_connect_started = False
+        self.wifi_auto_connect_done = False
+        self.wifi_connected = False
+        self.wifi_connected_time = 0  # WiFi 연결 성공 시각 기록
         
         # 화면 생성
         self._create_modern_screen()
@@ -93,7 +88,7 @@ class StartupScreen:
         # 로고 컨테이너 (화면 정중앙)
         self.logo_container = lv.obj(self.main_container)
         self.logo_container.set_size(120, 80)
-        self.logo_container.align(lv.ALIGN.CENTER, 0, -10)  # 화면 정중앙으로 이동
+        self.logo_container.align(lv.ALIGN.CENTER, 0, 0)  # 완전히 중앙에 배치
         self.logo_container.set_style_bg_opa(0, 0)
         self.logo_container.set_style_border_width(0, 0)
         self.logo_container.set_style_pad_all(0, 0)
@@ -131,68 +126,9 @@ class StartupScreen:
         # 부제목 제거됨
     
     def _create_loading_area(self):
-        """로딩 영역 생성 - 버전 텍스트 바로 위에 배치"""
-        # 로딩 컨테이너 (하단으로 이동)
-        self.loading_container = lv.obj(self.main_container)
-        self.loading_container.set_size(120, 40)
-        self.loading_container.align(lv.ALIGN.BOTTOM_MID, 0, -10)  # 하단에서 10px 위
-        self.loading_container.set_style_bg_opa(0, 0)
-        self.loading_container.set_style_border_width(0, 0)
-        self.loading_container.set_style_pad_all(0, 0)
-        
-        # 로딩 컨테이너 스크롤바 비활성화
-        self.loading_container.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
-        self.loading_container.set_scroll_dir(lv.DIR.NONE)
-        
-        # 로딩 상태 텍스트 (작은 사이즈)
-        self.loading_text = self.ui_style.create_label(
-            self.loading_container,
-            self.loading_steps[0],
-            'text_caption',  # 작은 폰트 (12px 효과)
-            self.ui_style.get_color('text_secondary')
-        )
-        self.loading_text.align(lv.ALIGN.CENTER, 0, -8)
-        
-        # 로딩 텍스트 스크롤바 비활성화
-        self.loading_text.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
-        self.loading_text.set_scroll_dir(lv.DIR.NONE)
-        
-        # 작은 사이즈 효과 적용
-        try:
-            self.loading_text.set_style_text_color(lv.color_hex(0x666666), 0)  # 작은 텍스트 톤
-            self.loading_text.set_style_text_letter_space(-2, 0)  # 더 좁은 간격
-            # 폰트 크기 직접 조정
-            self.loading_text.set_style_text_font(self.ui_style.get_font('text_small'), 0)
-        except:
-            pass
-        
-        # 프로그레스 바
-        self.progress_bar = lv.bar(self.loading_container)
-        self.progress_bar.set_size(100, 6)  # 높이를 더 작게
-        self.progress_bar.align(lv.ALIGN.CENTER, 0, 5)
-        self.progress_bar.set_range(0, 100)
-        self.progress_bar.set_value(0, 0)  # 애니메이션 없이 설정
-        self.progress_bar.set_style_bg_color(lv.color_hex(self.ui_style.get_color('card')), 0)
-        self.progress_bar.set_style_bg_opa(255, 0)
-        self.progress_bar.set_style_radius(3, 0)
-        
-        # 프로그레스 바 스크롤바 비활성화
-        self.progress_bar.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
-        self.progress_bar.set_scroll_dir(lv.DIR.NONE)
-        
-        # 애니메이션 시간 설정 (ESP32 LVGL 호환)
-        try:
-            self.progress_bar.set_style_anim_time(500, 0)
-        except AttributeError:
-            print("⚠️ set_style_anim_time 지원 안됨, 건너뛰기")
-        
-        # 프로그레스 바 색상 설정 (ESP32 LVGL 호환)
-        try:
-            self.progress_bar.set_style_bg_color(lv.color_hex(self.ui_style.get_color('primary')), lv.PART.INDICATOR)
-            self.progress_bar.set_style_radius(3, lv.PART.INDICATOR)
-        except AttributeError:
-            # ESP32 LVGL에서는 다른 방식으로 설정
-            print("⚠️ lv.PART.INDICATOR 지원 안됨, 기본 스타일 사용")
+        """로딩 영역 생성 - 제거됨"""
+        # 로딩 텍스트와 프로그레스 바 제거
+        pass
     
     def _create_info_area(self):
         """하단 정보 영역 생성 - 버전 텍스트 제거로 간소화"""
@@ -244,41 +180,55 @@ class StartupScreen:
         # 로딩 진행 업데이트
         self._update_loading_progress(elapsed_time)
         
-        # 자동 진행 (5초 후)
-        if elapsed_time >= self.auto_advance_time:
-            print(f"⏰ {elapsed_time}ms 경과, Wi-Fi 설정 화면으로 자동 이동")
+        # WiFi 연결 완료되면 즉시 전환
+        if self.wifi_auto_connect_done:
+            # WiFi 연결 시도 완료 (성공/실패 관계없이 즉시 전환)
+            print(f"✅ WiFi 연결 시도 완료, Wi-Fi 스캔 화면으로 이동")
             self._go_to_wifi_setup()
     
     def _start_loading_animation(self):
         """로딩 애니메이션 시작"""
-        self.loading_progress = 0
-        self.current_step = 0
-        self.progress_bar.set_value(0, 0)  # 애니메이션 없이 설정
-        self.loading_text.set_text(self.loading_steps[0])
-        print("🔄 로딩 애니메이션 시작")
+        print("🔄 로딩 애니메이션 시작 (텍스트/프로그레스 바 없음)")
     
     def _stop_loading_animation(self):
         """로딩 애니메이션 정지"""
         print("⏹️ 로딩 애니메이션 정지")
     
+    def _try_wifi_auto_connect(self):
+        """WiFi 자동 연결 시도"""
+        if self.wifi_auto_connect_started:
+            return
+        
+        self.wifi_auto_connect_started = True
+        print("📡 WiFi 자동 연결 시도 시작...")
+        
+        try:
+            # wifi_manager 전역 인스턴스 가져오기
+            from wifi_manager import wifi_manager
+            
+            # 저장된 WiFi 설정으로 자동 연결 시도 (타임아웃 800ms로 단축)
+            success = wifi_manager.try_auto_connect(timeout=800)
+            
+            if success:
+                print("✅ WiFi 자동 연결 성공!")
+                self.wifi_connected = True
+                self.wifi_connected_time = time.ticks_ms()  # 연결 성공 시각 기록
+            else:
+                print("⚠️ WiFi 자동 연결 실패 (저장된 설정 없거나 연결 실패)")
+                # 연결 실패해도 계속 진행
+            
+            self.wifi_auto_connect_done = True
+            
+        except Exception as e:
+            print(f"❌ WiFi 자동 연결 오류: {e}")
+            self.wifi_auto_connect_done = True
+    
     def _update_loading_progress(self, elapsed_time):
         """로딩 진행률 업데이트"""
-        # 5초 동안 100% 완료
-        progress = min(100, (elapsed_time / self.auto_advance_time) * 100)
-        
-        # 프로그레스 바 업데이트
-        if hasattr(self, 'progress_bar'):
-            self.progress_bar.set_value(int(progress), 1)  # 애니메이션과 함께 설정
-        
-        # 단계별 텍스트 업데이트
-        step_progress = progress / 20  # 5단계로 나누기
-        new_step = min(4, int(step_progress))
-        
-        if new_step != self.current_step and new_step < len(self.loading_steps):
-            self.current_step = new_step
-            if hasattr(self, 'loading_text'):
-                self.loading_text.set_text(self.loading_steps[self.current_step])
-                print(f"📱 로딩 단계: {self.loading_steps[self.current_step]}")
+        # 즉시 WiFi 연결 시도 (WiFi 연결 자체가 딜레이가 되어 로고 표시 시간 확보)
+        if not self.wifi_auto_connect_started:
+            print(f"📱 WiFi 연결 시도 즉시 시작")
+            self._try_wifi_auto_connect()
     
     def on_button_a(self):
         """버튼 A 처리"""
@@ -300,14 +250,8 @@ class StartupScreen:
     
     def _go_to_wifi_setup(self):
         """Wi-Fi 설정 화면으로 이동"""
-        # 로딩 완료 표시
-        if hasattr(self, 'loading_text'):
-            self.loading_text.set_text("준비 완료!")
-        if hasattr(self, 'progress_bar'):
-            self.progress_bar.set_value(100, 1)  # 애니메이션과 함께 설정
-        
-        # 잠시 대기 후 화면 전환
-        time.sleep(0.5)
+        # 짧은 대기 후 화면 전환
+        time.sleep(0.2)
         
         # wifi_scan 화면이 등록되어 있는지 확인
         if 'wifi_scan' not in self.screen_manager.screens:

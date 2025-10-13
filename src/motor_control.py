@@ -92,12 +92,14 @@ class StepperMotorController:
         # 입력 시프트 레지스터 초기화 (리미트 스위치용)
         self.input_shift_register = InputShiftRegister(sh_cp_pin, st_cp_pin, data_out_pin)
         
-        # 리미트 스위치 초기화 (74HC165D 비트 4, 5, 6, 7 사용, 0-2 역순)
+        # 리미트 스위치 초기화 (실제 하드웨어 연결에 맞춰 매핑)
+        # 테스트 결과: 모터 0→LIMIT2, 모터 1→LIMIT3, 모터 2→LIMIT4
         self.limit_switches = [
-            LimitSwitch(self.input_shift_register, 6),  # 모터 0 리미트 스위치 (LIMIT SW1 역순)
-            LimitSwitch(self.input_shift_register, 5),  # 모터 1 리미트 스위치 (LIMIT SW2)
-            LimitSwitch(self.input_shift_register, 4),  # 모터 2 리미트 스위치 (LIMIT SW3 역순)
-            LimitSwitch(self.input_shift_register, 7),  # 모터 3 리미트 스위치 (LIMIT SW4)
+            LimitSwitch(self.input_shift_register, 5),  # 모터 0 → LIMIT SW2 (Pin 5)
+            LimitSwitch(self.input_shift_register, 6),  # 모터 1 → LIMIT SW3 (Pin 6)
+            LimitSwitch(self.input_shift_register, 7),  # 모터 2 → LIMIT SW4 (Pin 7)
+            None,  # 모터 3 리미트 스위치 (사용 안함)
+            # LimitSwitch(self.input_shift_register, 4),  # LIMIT SW1 (Pin 4) - 사용 안함
         ]
         
         # 스테퍼모터 설정 (28BYJ-48)
@@ -162,19 +164,26 @@ class StepperMotorController:
         raw_data = self.input_shift_register.read_byte()
         
         for i, limit_switch in enumerate(self.limit_switches):
-            is_pressed = limit_switch.is_pressed()
-            states.append(is_pressed)
-            if is_pressed:
-                print(f"모터 {i} 리미트 스위치 눌림!")
+            if limit_switch is None:
+                states.append(False)  # 리미트 스위치 없으면 False
+            else:
+                is_pressed = limit_switch.is_pressed()
+                states.append(is_pressed)
+                if is_pressed:
+                    print(f"모터 {i} 리미트 스위치 눌림!")
         return states
     
     def is_limit_switch_pressed(self, motor_index):
         """특정 모터의 리미트 스위치가 눌렸는지 확인"""
         if 0 <= motor_index <= 3:
+            # 모터 3은 리미트 스위치 없음
+            if self.limit_switches[motor_index] is None:
+                return False
+            
             is_pressed = self.limit_switches[motor_index].is_pressed()
-            # 실제로 눌렸을 때만 True 반환 (디버깅 로그 추가)
-            if is_pressed:
-                print(f"  🔘 모터 {motor_index} 리미트 스위치 실제로 눌림!")
+            # 디버깅 로그 제거로 성능 향상 (print는 1-2ms 소요)
+            # if is_pressed:
+            #     print(f"  🔘 모터 {motor_index} 리미트 스위치 실제로 눌림!")
             return is_pressed
         return False
     
@@ -256,7 +265,8 @@ class StepperMotorController:
     def step_motor_continuous(self, motor_index, direction=1, steps=1):
         """스테퍼모터 회전 (리미트 스위치 감지되어도 계속 회전) - 최적화된 성능"""
         if 0 <= motor_index <= 3:
-            print(f"    🔧 모터 {motor_index} 연속 회전 시작: {steps}스텝")
+            # 디버깅 로그 제거로 성능 향상
+            # print(f"    🔧 모터 {motor_index} 연속 회전 시작: {steps}스텝")
             
             for i in range(steps):
                 # 각 모터의 독립적인 스텝 계산 (회전 방향 반대)
@@ -266,14 +276,15 @@ class StepperMotorController:
                 # 모터 스텝 설정
                 self.set_motor_step(motor_index, current_step)
                 
-                # 진행 상황 출력 (50스텝마다)
-                if i % 50 == 0 or i == steps - 1:
-                    print(f"      📍 모터 {motor_index} 스텝 {i+1}/{steps}: 시퀀스={current_step}, 상태=0x{self.motor_states[motor_index]:02X}")
+                # 진행 상황 출력 제거 (성능 향상)
+                # if i % 50 == 0 or i == steps - 1:
+                #     print(f"      📍 모터 {motor_index} 스텝 {i+1}/{steps}: 시퀀스={current_step}, 상태=0x{self.motor_states[motor_index]:02X}")
                 
-                # 최적화된 회전 속도 조절 (UI 우선순위보다 빠르게)
-                time.sleep_us(1000)  # 1ms로 증가하여 더 확실한 동작
+                # 최대 속도로 회전 (0.5ms)
+                time.sleep_us(500)  # 0.5ms - 최대 속도
             
-            print(f"    ✅ 모터 {motor_index} 연속 회전 완료")
+            # 디버깅 로그 제거
+            # print(f"    ✅ 모터 {motor_index} 연속 회전 완료")
             return True
     
     def stop_motor(self, motor_index):
@@ -369,8 +380,8 @@ class StepperMotorController:
                 self.motor_states[motor_index] = self.stepper_sequence[current_step]
                 self.update_motor_output()
                 
-                # 속도 조절
-                time.sleep_us(1000)  # 1ms 지연
+                # 최대 속도
+                time.sleep_us(500)  # 0.5ms - 최대 속도
                 step_count += 1
                 
                 # 진행 상황 출력 (20스텝마다)
@@ -387,8 +398,8 @@ class StepperMotorController:
                 self.motor_states[motor_index] = self.stepper_sequence[current_step]
                 self.update_motor_output()
                 
-                # 속도 조절
-                time.sleep_us(1000)  # 1ms 지연
+                # 최대 속도
+                time.sleep_us(500)  # 0.5ms - 최대 속도
                 step_count += 1
             
             # 1칸 이동 완료 (리미트 스위치 눌렸다가 떼짐)
@@ -442,8 +453,8 @@ class StepperMotorController:
                 self.motor_states[motor_index] = self.stepper_sequence[current_step]
                 self.update_motor_output()
                 
-                # 속도 조절
-                time.sleep_us(1000)  # 1ms 지연
+                # 최대 속도
+                time.sleep_us(500)  # 0.5ms - 최대 속도
                 
                 # 진행 상황 출력 (1000스텝일 때는 100스텝마다)
                 if steps >= 1000:

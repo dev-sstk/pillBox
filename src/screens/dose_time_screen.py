@@ -78,6 +78,15 @@ class DoseTimeScreen:
             if korean_font:
                 self.hour_roller.set_style_text_font(korean_font, 0)
             
+            # 롤러 선택된 항목 스타일 - 로고 색상(민트)
+            try:
+                self.hour_roller.set_style_bg_color(lv.color_hex(0x00C9A7), lv.PART.SELECTED)
+                self.hour_roller.set_style_bg_opa(255, lv.PART.SELECTED)
+                self.hour_roller.set_style_text_color(lv.color_hex(0xFFFFFF), lv.PART.SELECTED)
+                self.hour_roller.set_style_radius(6, lv.PART.SELECTED)
+            except AttributeError:
+                pass
+            
             print("  ✅ 시간 롤러 생성 완료")
             
             # 메모리 정리
@@ -112,17 +121,27 @@ class DoseTimeScreen:
             if korean_font:
                 self.minute_roller.set_style_text_font(korean_font, 0)
             
+            # 롤러 선택된 항목 스타일 - 로고 색상(민트)
+            try:
+                self.minute_roller.set_style_bg_color(lv.color_hex(0x00C9A7), lv.PART.SELECTED)
+                self.minute_roller.set_style_bg_opa(255, lv.PART.SELECTED)
+                self.minute_roller.set_style_text_color(lv.color_hex(0xFFFFFF), lv.PART.SELECTED)
+                self.minute_roller.set_style_radius(6, lv.PART.SELECTED)
+            except AttributeError:
+                pass
+            
             print("  ✅ 분 롤러 생성 완료")
             
             # 메모리 정리
             import gc
             gc.collect()
             
-            # 버튼 힌트
+            # 버튼 힌트 (복용 횟수 화면과 동일한 위치 및 색상)
             self.hints_label = lv.label(self.screen_obj)
             self.hints_label.set_text(f"A:{lv.SYMBOL.UP} B:{lv.SYMBOL.DOWN} C:{lv.SYMBOL.PREV} D:{lv.SYMBOL.OK}")
-            self.hints_label.align(lv.ALIGN.BOTTOM_MID, 0, -5)
-            self.hints_label.set_style_text_color(lv.color_hex(0x007AFF), 0)
+            self.hints_label.align(lv.ALIGN.BOTTOM_MID, 0, -2)  # -5 → -2로 변경
+            self.hints_label.set_style_text_color(lv.color_hex(0x8E8E93), 0)  # 0x007AFF → 0x8E8E93 (모던 라이트 그레이)
+            self.hints_label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
             
             print(f"  ✅ 간단한 화면 생성 완료")
             
