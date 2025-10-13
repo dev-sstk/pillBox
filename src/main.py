@@ -349,11 +349,8 @@ def init_motor_system():
         print("🔧 스테퍼 모터 시스템 초기화 중...")
         motor_system = PillBoxMotorSystem()
         
-        # 초기화 시 ULN2003A 출력 1C,2C,3C,4C HIGH 설정
-        print("⚡ ULN2003A 출력 초기화: 1C,2C,3C,4C HIGH 설정")
-        motor_system.motor_controller.initialize_uln2003_high()
-        
-        print("✅ 스테퍼 모터 시스템 초기화 완료")
+        # 모터 컨트롤러가 이미 __init__에서 모든 코일을 OFF로 초기화함
+        print("✅ 스테퍼 모터 시스템 초기화 완료 (모든 코일 OFF)")
         return motor_system
         
     except Exception as e:

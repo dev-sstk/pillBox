@@ -131,37 +131,30 @@ class StepperMotorController:
         self.motor_direction = [1, 1, 1, 1]  # 각 모터별 방향
         self.last_step_times = [0, 0, 0, 0]  # 각 모터별 마지막 스텝 시간
         
-        # 초기화 시 ULN2003A 출력 HIGH 상태로 설정
-        self.initialize_uln2003_high()
+        # 초기화 시 모든 코일 OFF 상태로 설정
+        self.turn_off_all_coils()
         
         print("✅ StepperMotorController 초기화 완료")
     
-    def initialize_uln2003_high(self):
-        """ULN2003A 출력 1C,2C,3C,4C HIGH 상태로 초기화"""
-        print("⚡ ULN2003A 출력 초기화: 1C,2C,3C,4C HIGH 설정")
+    def turn_off_all_coils(self):
+        """모든 모터 코일 OFF (74HC595 출력 LOW → ULN2003A 출력 HIGH → 코일 OFF)"""
+        print("⚡ 모터 코일 초기화: 모든 코일 OFF 설정")
         
-        # 모든 모터의 상태를 HIGH (0x0F)로 설정
-        # 0x0F = 0b00001111 (1C,2C,3C,4C 모두 HIGH)
+        # 모든 모터의 상태를 0x00으로 설정
+        # 0x00 = 0b00000000 (모든 코일 OFF)
         for i in range(4):
-            self.motor_states[i] = 0x0F
+            self.motor_states[i] = 0x00
         
         # 74HC595D에 출력
         self.update_motor_output()
-        print("✅ ULN2003A 출력 초기화 완료: 모든 출력 HIGH")
+        print("✅ 모터 코일 초기화 완료: 모든 코일 OFF")
     
-    def set_motor_idle_high(self, motor_index):
-        """특정 모터를 미사용 시 HIGH 상태로 설정"""
+    def turn_off_coil(self, motor_index):
+        """특정 모터 코일 OFF"""
         if 0 <= motor_index <= 3:
-            self.motor_states[motor_index] = 0x0F  # 1C,2C,3C,4C 모두 HIGH
+            self.motor_states[motor_index] = 0x00  # 모든 코일 OFF
             self.update_motor_output()
-            print(f"모터 {motor_index} 미사용 시 HIGH 상태 설정")
-    
-    def set_all_motors_idle_high(self):
-        """모든 모터를 미사용 시 HIGH 상태로 설정"""
-        for i in range(4):
-            self.motor_states[i] = 0x0F  # 1C,2C,3C,4C 모두 HIGH
-        self.update_motor_output()
-        print("모든 모터 미사용 시 HIGH 상태 설정")
+            print(f"모터 {motor_index} 코일 OFF")
     
     def check_limit_switches(self):
         """모든 리미트 스위치 상태 확인"""
@@ -284,18 +277,18 @@ class StepperMotorController:
             return True
     
     def stop_motor(self, motor_index):
-        """모터 정지 (ULN2003A 출력 HIGH 상태로 설정)"""
+        """모터 정지 (코일 OFF)"""
         if 0 <= motor_index <= 3:
-            self.motor_states[motor_index] = 0x0F  # 1C,2C,3C,4C 모두 HIGH
+            self.motor_states[motor_index] = 0x00  # 모든 코일 OFF
             self.update_motor_output()
-            print(f"모터 {motor_index} 정지 (HIGH 상태)")
+            print(f"모터 {motor_index} 정지 (코일 OFF)")
     
     def stop_all_motors(self):
-        """모든 모터 정지 (ULN2003A 출력 HIGH 상태로 설정)"""
+        """모든 모터 정지 (모든 코일 OFF)"""
         for i in range(4):
-            self.motor_states[i] = 0x0F  # 1C,2C,3C,4C 모두 HIGH
+            self.motor_states[i] = 0x00  # 모든 코일 OFF
         self.update_motor_output()
-        print("모든 모터 정지 (HIGH 상태)")
+        print("모든 모터 정지 (모든 코일 OFF)")
     
     def set_speed(self, delay_ms):
         """모터 속도 설정"""
@@ -505,6 +498,9 @@ class PillBoxMotorSystem:
                 time.sleep_ms(500)  # 각 칸마다 잠시 대기
             
             print(f"디스크 {disk_index} 알약 충전 완료")
+            
+            # 동작 완료 후 코일 OFF
+            self.motor_controller.stop_motor(disk_index)
             return True
         
         return False
@@ -521,9 +517,15 @@ class PillBoxMotorSystem:
             # 해당 칸으로 이동
             if self.motor_controller.move_to_compartment(disk_index, compartment):
                 print(f"디스크 {disk_index} 칸 {compartment} 배출 완료")
+                
+                # 동작 완료 후 코일 OFF
+                self.motor_controller.stop_motor(disk_index)
                 return True
             else:
                 print(f"디스크 {disk_index} 배출 실패")
+                
+                # 실패 시에도 코일 OFF
+                self.motor_controller.stop_motor(disk_index)
                 return False
         
         return False
@@ -564,18 +566,23 @@ class PillBoxMotorSystem:
             print("  원점으로 복귀...")
             self.motor_controller.move_to_compartment(i, 0)
             time.sleep(1)
+            
+            # 테스트 완료 후 코일 OFF
+            self.motor_controller.stop_motor(i)
         
         print("모터 테스트 완료")
+        # 모든 모터 코일 OFF
+        self.motor_controller.stop_all_motors()
     
     def emergency_stop(self):
         """비상 정지 (모든 모터 HIGH 상태로 설정)"""
         print("비상 정지 실행!")
         self.motor_controller.stop_all_motors()
     
-    def set_motors_idle_high(self):
-        """모든 모터를 미사용 시 HIGH 상태로 설정"""
-        print("모든 모터 미사용 시 HIGH 상태 설정")
-        self.motor_controller.set_all_motors_idle_high()
+    def turn_off_all_motor_coils(self):
+        """모든 모터 코일 OFF"""
+        print("모든 모터 코일 OFF")
+        self.motor_controller.turn_off_all_coils()
 
     def control_dispense_slide(self, level):
         """배출구 슬라이드 제어 (디스크 모터와 동일한 로직)"""
@@ -633,9 +640,13 @@ class PillBoxMotorSystem:
             
             if not success:
                 print(f"    ❌ 배출구 슬라이드 {steps}스텝 이동 실패")
+                # 실패 시에도 코일 OFF
+                self.motor_controller.stop_motor(motor_index)
                 return False
             
             print(f"  ✅ 배출구 슬라이드 {steps}스텝 이동 완료")
+            # 동작 완료 후 코일 OFF
+            self.motor_controller.stop_motor(motor_index)
             return True
             
         except Exception as e:
@@ -698,9 +709,13 @@ class PillBoxMotorSystem:
             
             if not success:
                 print(f"    ❌ 배출구 슬라이드 {steps}스텝 역회전 실패")
+                # 실패 시에도 코일 OFF
+                self.motor_controller.stop_motor(motor_index)
                 return False
             
             print(f"  ✅ 배출구 슬라이드 {steps}스텝 역회전 완료")
+            # 동작 완료 후 코일 OFF
+            self.motor_controller.stop_motor(motor_index)
             return True
             
         except Exception as e:
@@ -763,10 +778,14 @@ class PillBoxMotorSystem:
                     print(f"    🔍 전체 모터 상태: {[hex(self.motor_controller.motor_states[i]) for i in range(4)]}")
             
             print(f"  ✅ 모터 3 테스트 완료")
+            # 동작 완료 후 코일 OFF
+            self.motor_controller.stop_motor(motor_index)
             return True
             
         except Exception as e:
             print(f"  ❌ 모터 3 테스트 실패: {e}")
+            # 실패 시에도 코일 OFF
+            self.motor_controller.stop_motor(motor_index)
             return False
     
     def rotate_disk(self, disk_num, steps):
@@ -796,6 +815,8 @@ class PillBoxMotorSystem:
                     time.sleep_ms(500)
                 
                 print(f"  ✅ 디스크 {disk_num} {steps}칸 회전 완료")
+                # 동작 완료 후 코일 OFF
+                self.motor_controller.stop_motor(motor_num)
                 return True
             else:
                 print(f"  ❌ 잘못된 디스크 번호: {disk_num}")
@@ -803,6 +824,9 @@ class PillBoxMotorSystem:
                 
         except Exception as e:
             print(f"  ❌ 디스크 회전 실패: {e}")
+            # 실패 시에도 코일 OFF
+            if 0 <= motor_num < 3:
+                self.motor_controller.stop_motor(motor_num)
             return False
     
     def test_motor_hardware(self, motor_index, steps=10):
@@ -818,8 +842,12 @@ class PillBoxMotorSystem:
             else:
                 print(f"  ❌ 모터 {motor_index} 하드웨어 테스트 실패")
             
+            # 동작 완료 후 코일 OFF
+            self.motor_controller.stop_motor(motor_index)
             return success
             
         except Exception as e:
             print(f"  ❌ 모터 하드웨어 테스트 실패: {e}")
+            # 실패 시에도 코일 OFF
+            self.motor_controller.stop_motor(motor_index)
             return False

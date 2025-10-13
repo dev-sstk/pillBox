@@ -164,15 +164,9 @@ class WifiScanScreen:
         print(f"  📱 LVGL 리스트 위젯 WiFi 리스트 생성 시작...")
         
         try:
-            # 스캔된 네트워크가 있으면 표시, 없으면 샘플 데이터 사용
+            # 스캔된 네트워크가 없으면 메시지 표시
             if not self.wifi_networks:
-                self.wifi_networks = [
-                    {"ssid": "Home_WiFi", "signal": 85, "security": "WPA2"},
-                    {"ssid": "Office_Network", "signal": 72, "security": "WPA3"},
-                    {"ssid": "Guest_WiFi", "signal": 45, "security": "Open"},
-                    {"ssid": "Neighbor_5G", "signal": 38, "security": "WPA2"}
-                ]
-                print("📡 샘플 WiFi 네트워크 사용")
+                print("⚠️ 스캔된 WiFi 네트워크가 없습니다")
             
             # LVGL 리스트 위젯 생성
             self.wifi_list = lv.list(self.screen_obj)
@@ -314,15 +308,9 @@ class WifiScanScreen:
         try:
             self.wifi_labels = []
             
-            # 스캔된 네트워크가 있으면 표시, 없으면 샘플 데이터 사용
+            # 스캔된 네트워크가 없으면 메시지 표시
             if not self.wifi_networks:
-                self.wifi_networks = [
-                    {"ssid": "Home_WiFi", "signal": 85, "security": "WPA2"},
-                    {"ssid": "Office_Network", "signal": 72, "security": "WPA3"},
-                    {"ssid": "Guest_WiFi", "signal": 45, "security": "Open"},
-                    {"ssid": "Neighbor_5G", "signal": 38, "security": "WPA2"}
-                ]
-                print("📡 샘플 WiFi 네트워크 사용")
+                print("⚠️ 스캔된 WiFi 네트워크가 없습니다")
             
             # 최대 4개 네트워크만 표시
             max_networks = min(len(self.wifi_networks), 4)
@@ -471,15 +459,9 @@ class WifiScanScreen:
         try:
             self.wifi_labels = []
             
-            # 스캔된 네트워크가 있으면 표시, 없으면 샘플 데이터 사용
+            # 스캔된 네트워크가 없으면 메시지 표시
             if not self.wifi_networks:
-                self.wifi_networks = [
-                    {"ssid": "Home_WiFi", "signal": 85, "security": "WPA2"},
-                    {"ssid": "Office_Network", "signal": 72, "security": "WPA3"},
-                    {"ssid": "Guest_WiFi", "signal": 45, "security": "Open"},
-                    {"ssid": "Neighbor_5G", "signal": 38, "security": "WPA2"}
-                ]
-                print("📡 샘플 WiFi 네트워크 사용")
+                print("⚠️ 스캔된 WiFi 네트워크가 없습니다")
             
             # 최대 4개 네트워크만 표시 (Modern 스타일)
             max_networks = min(len(self.wifi_networks), 4)
@@ -896,26 +878,32 @@ class WifiScanScreen:
         self.scanning = True
         
         try:
-            # WiFi 매니저를 통해 네트워크 스캔
+            # WiFi 매니저를 통해 네트워크 스캔 (재시도 로직 추가)
+            print("  📡 1차 스캔 시도...")
             scanned_networks = wifi_manager.scan_networks(force=True)
+            
+            # 스캔 결과가 없으면 재시도
+            if not scanned_networks:
+                print("  📡 스캔 결과 없음, 2초 대기 후 재시도...")
+                time.sleep(2)
+                print("  📡 2차 스캔 시도...")
+                scanned_networks = wifi_manager.scan_networks(force=True)
             
             if scanned_networks:
                 self.wifi_networks = scanned_networks
                 print(f"✅ {len(self.wifi_networks)}개 네트워크 발견")
             else:
-                # 스캔 실패 시 샘플 네트워크 사용
-                self.wifi_networks = [
-                    {"ssid": "Home_WiFi", "signal": 85, "security": "WPA2"},
-                    {"ssid": "Office_Network", "signal": 72, "security": "WPA3"},
-                    {"ssid": "Guest_WiFi", "signal": 45, "security": "Open"},
-                    {"ssid": "Neighbor_5G", "signal": 38, "security": "WPA2"}
-                ]
-                print("⚠️ WiFi 스캔 실패, 샘플 네트워크 사용")
+                # 스캔 실패 시 빈 목록
+                self.wifi_networks = []
+                print("⚠️ WiFi 스캔 결과가 없습니다")
+                print("  💡 ESP32-C6 WiFi가 제대로 초기화되지 않았을 수 있습니다")
             
             self.scanning = False
             self.last_scan_time = time.ticks_ms()
             
         except Exception as e:
             print(f"❌ WiFi 스캔 오류: {e}")
+            import sys
+            sys.print_exception(e)
             self.scanning = False
     

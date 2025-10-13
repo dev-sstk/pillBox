@@ -17,6 +17,10 @@ class WiFiManager:
         self.wifi = network.WLAN(network.STA_IF)
         self.wifi.active(True)
         
+        # WiFi 초기화 대기 (중요! 이 시간이 없으면 스캔 실패)
+        print("📡 WiFi 초기화 중... (2초 대기)")
+        time.sleep(2)
+        
         # WiFi 설정 저장 파일
         self.config_file = "/wifi_config.json"
         
@@ -51,37 +55,66 @@ class WiFiManager:
         
         # 강제 스캔이 아니고 스캔 간격이 지나지 않았으면 기존 결과 반환
         if not force and (time.ticks_diff(current_time, self.last_scan_time) < self.scan_interval):
+            print(f"📡 캐시된 {len(self.scanned_networks)}개 네트워크 반환")
             return self.scanned_networks
         
         print("📡 WiFi 네트워크 스캔 시작...")
         
         try:
+            # WiFi 재초기화 (연결 실패 후 스캔을 위해 중요!)
+            print("  📡 WiFi 재초기화 시작...")
+            self.wifi.active(False)
+            time.sleep_ms(500)
+            self.wifi.active(True)
+            time.sleep_ms(2000)  # 초기화 대기 (중요!)
+            
+            print(f"  📡 WiFi 활성 상태: {self.wifi.active()}")
+            
             # WiFi 스캔 실행
+            print("  📡 스캔 실행 중...")
             scan_results = self.wifi.scan()
+            print(f"  📡 원시 스캔 결과: {len(scan_results) if scan_results else 0}개")
+            
             self.scanned_networks = []
             
-            for result in scan_results:
-                ssid = result[0].decode('utf-8')
-                if ssid:  # 빈 SSID 제외
-                    network_info = {
-                        'ssid': ssid,
-                        'signal': result[3],  # RSSI 값
-                        'security': self._get_security_type(result[4]),  # 보안 타입
-                        'channel': result[2],
-                        'mac': ':'.join(['%02x' % b for b in result[1]])
-                    }
-                    self.scanned_networks.append(network_info)
-            
-            # 신호 강도순으로 정렬 (높은 순)
-            self.scanned_networks.sort(key=lambda x: x['signal'], reverse=True)
+            if scan_results:
+                for idx, result in enumerate(scan_results):
+                    try:
+                        ssid = result[0].decode('utf-8')
+                        print(f"    📡 스캔 결과 #{idx+1}: SSID={ssid}, RSSI={result[3]}, Auth={result[4]}")
+                        
+                        if ssid:  # 빈 SSID 제외
+                            network_info = {
+                                'ssid': ssid,
+                                'signal': result[3],  # RSSI 값
+                                'security': self._get_security_type(result[4]),  # 보안 타입
+                                'channel': result[2],
+                                'mac': ':'.join(['%02x' % b for b in result[1]])
+                            }
+                            self.scanned_networks.append(network_info)
+                    except Exception as e:
+                        print(f"    ❌ 스캔 결과 #{idx+1} 파싱 실패: {e}")
+                        continue
+                
+                # 신호 강도순으로 정렬 (높은 순)
+                self.scanned_networks.sort(key=lambda x: x['signal'], reverse=True)
+            else:
+                print("  ⚠️ 스캔 결과가 비어있음")
             
             self.last_scan_time = current_time
             
             print(f"✅ {len(self.scanned_networks)}개 네트워크 스캔 완료")
+            
+            # 스캔 결과 출력
+            for i, network in enumerate(self.scanned_networks):
+                print(f"  {i+1}. {network['ssid']} (신호: {network['signal']}dBm, 보안: {network['security']})")
+            
             return self.scanned_networks
             
         except Exception as e:
             print(f"❌ WiFi 스캔 실패: {e}")
+            import sys
+            sys.print_exception(e)
             return []
     
     def _get_security_type(self, authmode):

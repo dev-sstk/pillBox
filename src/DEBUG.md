@@ -967,5 +967,298 @@ time.sleep(5)
 
 ---
 
+---
+
+# WiFi 스캔 동작 문제 디버깅
+
+**문제 발생일**: 2025-10-13  
+**증상**: WiFi 네트워크 스캔 시 0개 결과 반환  
+**영향 범위**: WiFi 초기 설정 기능 전체
+
+---
+
+## 📊 문제 개요
+
+### 증상
+- WiFi 스캔 실행은 되지만 원시 스캔 결과가 0개
+- 실제로 주변에 WiFi 네트워크가 존재함에도 불구하고 감지 안 됨
+- WiFi 활성화 상태는 True로 정상
+
+### 로그 분석
+```
+📡 WiFi 네트워크 스캔 시작...
+  📡 WiFi 활성 상태: True
+  📡 스캔 실행 중...
+  📡 원시 스캔 결과: 0개
+  ⚠️ 스캔 결과가 비어있음
+✅ 0개 네트워크 스캔 완료
+```
+
+### 재시도 로직 실행
+```
+  📡 스캔 결과 없음, 2초 대기 후 재시도...
+  📡 2차 스캔 시도...
+📡 WiFi 네트워크 스캔 시작...
+  📡 WiFi 활성 상태: True
+  📡 스캔 실행 중...
+  📡 원시 스캔 결과: 0개
+  ⚠️ 스캔 결과가 비어있음
+✅ 0개 네트워크 스캔 완료
+⚠️ WiFi 스캔 결과가 없습니다
+  💡 ESP32-C6 WiFi가 제대로 초기화되지 않았을 수 있습니다
+```
+
+---
+
+## 🔍 원인 분석
+
+### 1️⃣ ESP32-C6 WiFi 초기화 문제 (가장 유력!)
+
+**가능한 원인:**
+- WiFi 모듈이 활성화는 되었으나 실제로 RF가 동작하지 않음
+- WiFi 펌웨어 초기화 실패
+- 안테나 문제
+
+**확인 사항:**
+```python
+# wifi_manager.py 초기화
+self.wifi = network.WLAN(network.STA_IF)
+self.wifi.active(True)  # ← 이것만으로는 부족할 수 있음
+```
+
+**ESP32-C6 특이사항:**
+- ESP32-C6는 WiFi 6 (802.11ax) 지원
+- 일부 펌웨어에서 WiFi 초기화 지연 필요
+- 스캔 전 충분한 대기 시간 필요
+
+### 2️⃣ MicroPython 펌웨어 문제
+
+**현재 펌웨어:**
+```
+ESP32_GENERIC_C6-20250911_I2S+LVGL+KrFont.bin
+```
+
+**가능한 문제:**
+- 커스텀 펌웨어에 WiFi 드라이버 이슈
+- WiFi 스캔 함수 버그
+- ESP-IDF 버전 문제
+
+**확인 방법:**
+```python
+import network
+wlan = network.WLAN(network.STA_IF)
+wlan.active(True)
+print(wlan.config('mac'))  # MAC 주소 출력되는지 확인
+print(wlan.status())  # 상태 코드 확인
+```
+
+### 3️⃣ 하드웨어 문제
+
+**가능성:**
+- WiFi 안테나 연결 불량
+- RF 회로 문제
+- 보드 제조 결함
+
+**증거:**
+- 같은 펌웨어를 다른 보드에서 테스트 필요
+- 만약 다른 보드에서는 작동한다면 하드웨어 문제 확정
+
+### 4️⃣ 스캔 타이밍 문제
+
+**현재 로직:**
+```python
+# WiFi 활성화 후 즉시 스캔
+if not self.wifi.active():
+    self.wifi.active(True)
+    time.sleep_ms(500)  # 500ms 대기
+
+scan_results = self.wifi.scan()  # 바로 스캔
+```
+
+**문제:**
+- ESP32-C6는 WiFi 초기화에 더 많은 시간 필요 가능
+- 500ms로는 부족할 수 있음
+
+---
+
+## 🔧 해결 방안
+
+### 1단계: 대기 시간 증가
+
+```python
+def scan_networks(self, force=False):
+    # WiFi 활성화 확인
+    if not self.wifi.active():
+        print("  📡 WiFi 비활성 상태 감지, 활성화 중...")
+        self.wifi.active(True)
+        time.sleep_ms(2000)  # 500ms → 2000ms로 증가
+    
+    # 스캔 전 추가 대기
+    time.sleep_ms(500)
+    
+    # WiFi 스캔 실행
+    scan_results = self.wifi.scan()
+```
+
+### 2단계: WiFi 재초기화
+
+```python
+def scan_networks(self, force=False):
+    # WiFi 재초기화 시도
+    print("  📡 WiFi 재초기화 시도...")
+    self.wifi.active(False)
+    time.sleep_ms(500)
+    self.wifi.active(True)
+    time.sleep_ms(2000)
+    
+    # 스캔 실행
+    scan_results = self.wifi.scan()
+```
+
+### 3단계: 명시적 스캔 옵션
+
+```python
+def scan_networks(self, force=False):
+    # 스캔 옵션 명시
+    print("  📡 WiFi 스캔 (모든 채널)...")
+    scan_results = self.wifi.scan(
+        # show_hidden=True,  # 숨겨진 네트워크도 표시
+    )
+```
+
+### 4단계: 디버깅 정보 추가
+
+```python
+def scan_networks(self, force=False):
+    # WiFi 상태 상세 확인
+    print(f"  📡 WiFi MAC: {':'.join(['%02x' % b for b in self.wifi.config('mac')])}")
+    print(f"  📡 WiFi Status: {self.wifi.status()}")
+    print(f"  📡 WiFi Channel: {self.wifi.config('channel')}")
+    
+    # 스캔 실행
+    scan_results = self.wifi.scan()
+```
+
+### 5단계: 펌웨어 문제 확인
+
+```python
+# REPL에서 직접 테스트
+import network
+wlan = network.WLAN(network.STA_IF)
+wlan.active(True)
+import time
+time.sleep(2)
+scan_results = wlan.scan()
+print(f"스캔 결과: {len(scan_results)}개")
+for result in scan_results:
+    print(result)
+```
+
+---
+
+## 🧪 테스트 계획
+
+### 1. REPL 직접 테스트
+```python
+# Thonny나 mpremote로 직접 실행
+>>> import network
+>>> wlan = network.WLAN(network.STA_IF)
+>>> wlan.active(True)
+>>> import time
+>>> time.sleep(2)
+>>> results = wlan.scan()
+>>> print(len(results))
+>>> for r in results:
+...     print(r[0].decode('utf-8'), r[3])
+```
+
+**예상 결과:**
+- 정상: 주변 WiFi 네트워크 목록 출력
+- 문제: 0개 또는 에러 발생
+
+### 2. 다른 보드에서 테스트
+- 동일한 펌웨어를 다른 ESP32-C6 보드에 업로드
+- 같은 코드 실행
+- 결과 비교
+
+### 3. 표준 펌웨어 테스트
+- MicroPython 공식 ESP32-C6 펌웨어 설치
+- WiFi 스캔 테스트
+- 정상 동작 확인 시 커스텀 펌웨어 문제
+
+---
+
+## 📋 권장 조치 순서
+
+### 즉시 조치:
+1. **REPL 직접 테스트** (5분)
+   - WiFi 스캔이 REPL에서는 되는지 확인
+
+2. **대기 시간 증가** (10분)
+   - 500ms → 2000ms
+   - 스캔 전 추가 대기 500ms
+
+3. **WiFi 재초기화** (10분)
+   - active(False) → active(True)
+
+### 추가 확인:
+4. **다른 보드 테스트** (30분)
+   - 하드웨어 문제 여부 확인
+
+5. **공식 펌웨어 테스트** (1시간)
+   - 커스텀 펌웨어 문제 여부 확인
+
+6. **안테나 확인** (10분)
+   - 물리적 연결 상태 확인
+
+---
+
+## 🎯 결론
+
+### 가장 유력한 원인 (우선순위순)
+
+#### 1️⃣ ESP32-C6 WiFi 초기화 타이밍 문제 (70%)
+**증상:**
+- WiFi active는 True이지만 스캔 결과 0개
+- 하드웨어는 정상이지만 RF가 준비 안됨
+
+**해결책:**
+- 대기 시간 증가 (500ms → 2000ms)
+- WiFi 재초기화 시도
+
+#### 2️⃣ 커스텀 펌웨어 WiFi 드라이버 버그 (60%)
+**증상:**
+- LVGL + I2S + 한글폰트 통합 펌웨어
+- WiFi 기능 테스트 부족 가능성
+
+**해결책:**
+- 공식 MicroPython 펌웨어로 테스트
+- WiFi 동작 확인 후 커스텀 펌웨어 재빌드
+
+#### 3️⃣ 하드웨어 문제 (30%)
+**증상:**
+- 안테나 연결 불량
+- RF 회로 문제
+
+**해결책:**
+- 다른 보드에서 테스트
+- 안테나 재연결
+
+---
+
+## 📝 관련 파일
+
+- `src/wifi_manager.py`: WiFi 관리 시스템
+- `src/screens/wifi_scan_screen.py`: WiFi 스캔 화면
+- `firmware/ESP32_GENERIC_C6-20250911_I2S+LVGL+KrFont.bin`: 현재 펌웨어
+
+---
+
+**작성일**: 2025-10-13  
+**작성자**: PillBox Debug Team  
+**상태**: 🔍 조사 중 - REPL 직접 테스트 필요
+
+---
+
 ## 📊 이전 분석 (참고용)
 
