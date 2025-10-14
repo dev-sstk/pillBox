@@ -644,22 +644,32 @@ class PillLoadingScreen:
     
     def on_button_b(self):
         """버튼 B 처리 - 다음 화면으로 (메인 화면으로)"""
+        print(f"🔘 버튼 B 클릭됨 - 현재 모드: {self.current_mode}")
+        
         if self.current_mode == 'selection':
             print("다음 화면으로 이동 (메인 화면)")
             
+            # 화면 매니저 상태 확인
+            print(f"  📱 화면 매니저 존재: {hasattr(self.screen_manager, 'screens')}")
+            if hasattr(self.screen_manager, 'screens'):
+                print(f"  📱 등록된 화면들: {list(self.screen_manager.screens.keys())}")
+                print(f"  📱 main 화면 등록됨: {'main' in self.screen_manager.screens}")
+            
             # 메인 화면으로 이동
             if hasattr(self.screen_manager, 'screens') and 'main' in self.screen_manager.screens:
-                self.screen_manager.show_screen('main')
+                print("  📱 기존 main 화면으로 이동 시도...")
+                success = self.screen_manager.show_screen('main')
+                print(f"  📱 화면 전환 결과: {success}")
             else:
                 # 메인 화면이 없으면 동적으로 생성
                 print("  📱 main 화면이 등록되지 않음. 동적 생성 중...")
                 try:
-                    from screens.main_screen_ui import MainScreen
+                    from screens.main_screen import MainScreen
                     main_screen = MainScreen(self.screen_manager)
                     self.screen_manager.register_screen('main', main_screen)
                     print("  ✅ main 화면 생성 및 등록 완료")
-                    self.screen_manager.show_screen('main')
-                    print("  📱 메인 화면으로 전환 완료")
+                    success = self.screen_manager.show_screen('main')
+                    print(f"  📱 메인 화면으로 전환 완료: {success}")
                 except Exception as e:
                     print(f"  ❌ 메인 화면 생성 실패: {e}")
                     print("  📱 메인 화면 생성 실패로 현재 화면에 머물기")
@@ -795,7 +805,7 @@ class PillLoadingScreen:
                     # 단일 루프로 3칸 모두 처리
                     while self.current_disk_state.is_loading:
                         # 1스텝씩 회전 (리미트 스위치 감지되어도 계속 회전) - 반시계방향
-                        self.motor_system.motor_controller.step_motor_continuous(disk_index, 1, 1)
+                        self.motor_system.motor_controller.step_motor_continuous(disk_index, -1, 1)
                         
                         # 현재 리미트 스위치 상태 확인 (엣지 감지 정확성 위해 매 스텝 체크)
                         current_limit_state = self.motor_system.motor_controller.is_limit_switch_pressed(disk_index)

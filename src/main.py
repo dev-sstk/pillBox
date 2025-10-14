@@ -36,6 +36,14 @@ def set_st7735_offset(offset_x=0, offset_y=0):
 def init_display():
     """ST7735 디스플레이 초기화 (test_lvgl.py 방식)"""
     try:
+        # ⚡ 메모리 부족 해결: 디스플레이 초기화 전 강력한 메모리 정리
+        import gc
+        print("🧹 디스플레이 초기화 전 메모리 정리 시작...")
+        for i in range(20):  # 20회 가비지 컬렉션 (더 강력하게)
+            gc.collect()
+            time.sleep(0.1)  # 0.1초 대기 (더 오래)
+        print("✅ 디스플레이 초기화 전 메모리 정리 완료")
+        
         # 디스플레이 설정
         DISPLAY_WIDTH = 128
         DISPLAY_HEIGHT = 160
@@ -50,6 +58,13 @@ def init_display():
         dc = Pin(19, Pin.OUT)
         cs = Pin(23, Pin.OUT)
         rst = Pin(20, Pin.OUT)
+        
+        # ⚡ 메모리 부족 해결: ST7735 디스플레이 객체 생성 전 추가 메모리 정리
+        print("🧹 ST7735 디스플레이 객체 생성 전 메모리 정리 시작...")
+        for i in range(10):  # 10회 추가 가비지 컬렉션 (더 강력하게)
+            gc.collect()
+            time.sleep(0.05)  # 0.05초 대기 (더 오래)
+        print("✅ ST7735 디스플레이 객체 생성 전 메모리 정리 완료")
         
         # ST7735 디스플레이 초기화
         display = St7735(
@@ -71,11 +86,25 @@ def init_display():
         
     except Exception as e:
         print(f"❌ 디스플레이 초기화 실패: {e}")
+        # ⚡ 메모리 할당 실패 시 추가 메모리 정리
+        print("🧹 디스플레이 초기화 실패 후 추가 메모리 정리...")
+        for i in range(5):
+            gc.collect()
+            time.sleep(0.01)
+        print("✅ 추가 메모리 정리 완료")
         return False
 
 def setup_lvgl():
     """LVGL 환경 설정 (올바른 순서)"""
     try:
+        # ⚡ 메모리 부족 해결: LVGL 설정 전 메모리 정리
+        import gc
+        print("🧹 LVGL 설정 전 메모리 정리 시작...")
+        for i in range(5):  # 5회 가비지 컬렉션
+            gc.collect()
+            time.sleep(0.02)  # 0.02초 대기
+        print("✅ LVGL 설정 전 메모리 정리 완료")
+        
         # 이미 초기화된 경우 체크
         if lv.is_initialized():
             print("⚠️ LVGL이 이미 초기화됨, 재초기화 시도...")
@@ -90,7 +119,10 @@ def setup_lvgl():
         
         # 2단계: 디스플레이 드라이버 초기화 (ST7735)
         # 이 단계에서 lv.display_register()가 호출됨
-        init_display()
+        display_init_success = init_display()
+        if not display_init_success:
+            print("❌ 디스플레이 초기화 실패로 LVGL 설정 중단")
+            return False
         print("✅ 디스플레이 드라이버 초기화 완료")
         
         # 3단계: 이벤트 루프 시작
@@ -219,7 +251,7 @@ def run_screen_test(screen_name):
                 # 테스트를 위해 기본값 1회로 설정 (실제로는 dose_count에서 전달받아야 함)
                 screen = DoseTimeScreen(screen_manager, dose_count=1)
             elif screen_name == "main":
-                from screens.main_screen_ui import MainScreen
+                from screens.main_screen import MainScreen
                 screen = MainScreen(screen_manager)
                 
                 # 약품 배출 테스트 함수들을 바로 사용할 수 있도록 전역 변수로 설정

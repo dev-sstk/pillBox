@@ -17,34 +17,24 @@ class WifiPasswordScreen:
         # UI 스타일 초기화
         self.ui_style = UIStyle()
         
-        # Modern 화면 생성
-        print(f"📱 {self.screen_name} Modern 화면 생성 시도...")
-        try:
-            self._create_modern_screen()
-            print(f"✅ {self.screen_name} 화면 초기화 완료")
-        except Exception as e:
-            print(f"❌ {self.screen_name} 화면 초기화 실패: {e}")
-            import sys
-            sys.print_exception(e)
-            # 기본 화면 생성 시도
-            print(f"📱 {self.screen_name} 기본 화면 생성 시도...")
-            try:
-                self._create_basic_screen()
-                print(f"✅ {self.screen_name} 기본 화면 초기화 완료")
-            except Exception as e2:
-                print(f"❌ {self.screen_name} 기본 화면 초기화도 실패: {e2}")
-                import sys
-                sys.print_exception(e2)
+        # ⚡ 메모리 부족 해결: 지연 초기화 (화면 생성은 나중에)
+        self.screen_obj = None
+        self._initialized = False
+        
+        print(f"📱 {self.screen_name} 화면 객체 생성 완료 (지연 초기화)")
     
     def _create_modern_screen(self):
         """Modern 스타일 화면 생성"""
         print(f"  📱 {self.screen_name} Modern 화면 생성 시작...")
         
         try:
-            # 메모리 정리
+            # ⚡ 메모리 부족 해결: 더 강력한 메모리 정리
             import gc
-            gc.collect()
-            print(f"  ✅ 메모리 정리 완료")
+            print(f"  🧹 화면 생성 전 메모리 정리 시작...")
+            for i in range(15):  # 15회 가비지 컬렉션 (더 강력하게)
+                gc.collect()
+                time.sleep(0.03)  # 0.03초 대기 (더 오래)
+            print(f"  ✅ 화면 생성 전 메모리 정리 완료")
             
             # 화면 생성
             print(f"  📱 화면 객체 생성...")
@@ -353,6 +343,40 @@ class WifiPasswordScreen:
     def show(self):
         """화면 표시"""
         print(f"📱 {self.screen_name} 화면 표시 시작...")
+        
+        # ⚡ 메모리 부족 해결: 지연 초기화 (show() 시점에 화면 생성)
+        if not self._initialized:
+            print(f"📱 {self.screen_name} 지연 초기화 시작...")
+            
+            # ⚡ 메모리 부족 해결: show() 시점 메모리 정리
+            import gc
+            print(f"🧹 show() 시점 메모리 정리 시작...")
+            for i in range(10):  # 10회 가비지 컬렉션
+                gc.collect()
+                time.sleep(0.02)  # 0.02초 대기
+            print(f"✅ show() 시점 메모리 정리 완료")
+            
+            try:
+                self._create_modern_screen()
+                self._initialized = True
+                print(f"✅ {self.screen_name} 지연 초기화 완료")
+            except Exception as e:
+                print(f"❌ {self.screen_name} 지연 초기화 실패: {e}")
+                # ⚡ 메모리 할당 실패 시 추가 메모리 정리
+                print(f"🧹 지연 초기화 실패 후 추가 메모리 정리...")
+                for i in range(5):
+                    gc.collect()
+                    time.sleep(0.01)
+                print(f"✅ 추가 메모리 정리 완료")
+                
+                # 기본 화면으로 대체
+                try:
+                    self._create_basic_screen()
+                    self._initialized = True
+                    print(f"✅ {self.screen_name} 기본 화면으로 대체 완료")
+                except Exception as e2:
+                    print(f"❌ {self.screen_name} 기본 화면도 실패: {e2}")
+                    return
         
         if hasattr(self, 'screen_obj') and self.screen_obj:
             print(f"📱 화면 객체 존재 확인됨")

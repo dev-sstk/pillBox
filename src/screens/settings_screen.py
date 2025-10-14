@@ -460,7 +460,8 @@ class SettingsScreen:
         elif action == "pill_loading":
             self.screen_manager.show_screen('pill_loading')
         elif action == "pill_dispense":
-            self.screen_manager.show_screen('pill_dispense')
+            print("⚠️ 알약 배출 기능은 메인 화면에서 사용하세요")
+            # self.screen_manager.show_screen('pill_dispense')  # 제거된 화면
         elif action == "wifi_status":
             self._show_wifi_status()
         elif action == "battery":

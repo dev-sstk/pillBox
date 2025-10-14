@@ -815,6 +815,15 @@ class WifiScanScreen:
         # 패스워드 화면이 등록되어 있지 않으면 동적 생성
         if 'wifi_password' not in self.screen_manager.screens:
             print(f"  📱 비밀번호 화면 동적 생성 중...")
+            
+            # ⚡ 메모리 부족 해결: 강력한 메모리 정리
+            import gc
+            print(f"  🧹 화면 전환 전 메모리 정리 시작...")
+            for i in range(10):  # 10회 가비지 컬렉션 (더 강력하게)
+                gc.collect()
+                time.sleep(0.05)  # 0.05초 대기 (더 오래)
+            print(f"  ✅ 화면 전환 전 메모리 정리 완료")
+            
             try:
                 from screens.wifi_password_screen import WifiPasswordScreen
                 wifi_password_screen = WifiPasswordScreen(self.screen_manager, selected_network['ssid'])
@@ -822,6 +831,12 @@ class WifiScanScreen:
                 print(f"  ✅ 비밀번호 화면 생성 및 등록 완료")
             except Exception as e:
                 print(f"  ❌ 비밀번호 화면 생성 실패: {e}")
+                # ⚡ 메모리 할당 실패 시 추가 메모리 정리
+                print(f"  🧹 메모리 할당 실패 후 추가 메모리 정리...")
+                for i in range(5):
+                    gc.collect()
+                    time.sleep(0.02)
+                print(f"  ✅ 추가 메모리 정리 완료")
                 import sys
                 sys.print_exception(e)
                 return

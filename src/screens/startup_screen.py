@@ -253,9 +253,25 @@ class StartupScreen:
         # 짧은 대기 후 화면 전환
         time.sleep(0.2)
         
+        # ⚡ 메모리 부족 해결: startup 화면 종료 시 메모리 정리
+        import gc
+        print("🧹 startup 화면 종료 시 메모리 정리 시작...")
+        for i in range(5):  # 5회 가비지 컬렉션
+            gc.collect()
+            time.sleep(0.02)  # 0.02초 대기
+        print("✅ startup 화면 종료 시 메모리 정리 완료")
+        
         # wifi_scan 화면이 등록되어 있는지 확인
         if 'wifi_scan' not in self.screen_manager.screens:
             print("📱 wifi_scan 화면이 등록되지 않음. 동적 생성 중...")
+            
+            # ⚡ 메모리 부족 해결: wifi_scan 화면 생성 전 메모리 정리
+            print("🧹 wifi_scan 화면 생성 전 메모리 정리 시작...")
+            for i in range(5):  # 5회 가비지 컬렉션
+                gc.collect()
+                time.sleep(0.02)  # 0.02초 대기
+            print("✅ wifi_scan 화면 생성 전 메모리 정리 완료")
+            
             try:
                 from screens.wifi_scan_screen import WifiScanScreen
                 wifi_scan_screen = WifiScanScreen(self.screen_manager)
@@ -263,6 +279,12 @@ class StartupScreen:
                 print("✅ wifi_scan 화면 생성 및 등록 완료")
             except Exception as e:
                 print(f"❌ wifi_scan 화면 생성 실패: {e}")
+                # ⚡ 메모리 할당 실패 시 추가 메모리 정리
+                print("🧹 wifi_scan 화면 생성 실패 후 추가 메모리 정리...")
+                for i in range(3):
+                    gc.collect()
+                    time.sleep(0.01)
+                print("✅ 추가 메모리 정리 완료")
                 import sys
                 sys.print_exception(e)
                 return
