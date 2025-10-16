@@ -99,7 +99,13 @@ class MainScreen:
                     dose_times = dose_time_screen.get_dose_times()
                     if dose_times:
                         self.dose_schedule = []
-                        for time_str in dose_times:
+                        for dose_time in dose_times:
+                            # dose_time이 딕셔너리인 경우 'time' 키 사용, 문자열인 경우 그대로 사용
+                            if isinstance(dose_time, dict):
+                                time_str = dose_time.get('time', '08:00')
+                            else:
+                                time_str = dose_time
+                            
                             self.dose_schedule.append({
                                 "time": time_str,
                                 "status": "pending"
@@ -805,79 +811,79 @@ def _create_battery_indicators(self):
 
 # 기존 _create_status_indicators 함수는 제거됨 (WiFi와 배터리를 분리)
 
-def _create_schedule_area(self):
-    """복용 일정 영역 생성"""
-    try:
-        # 일정 컨테이너
-        self.schedule_container = lv.obj(self.main_container)
-        self.schedule_container.set_size(160, 90)
-        self.schedule_container.align(lv.ALIGN.TOP_MID, 0, 1)  # 8픽셀 위로 이동 (9 → 1)
-        self.schedule_container.set_style_bg_opa(0, 0)
-        self.schedule_container.set_style_border_width(0, 0)
-        
-        # 스크롤바 완전 비활성화
-        self.schedule_container.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
-        self.schedule_container.set_scroll_dir(lv.DIR.NONE)
-        
-        # 날짜 표시
-        date_label = lv.label(self.schedule_container)
-        date_label.set_text(self.current_date)
-        date_label.align(lv.ALIGN.TOP_MID, 0, 5)
-        date_label.set_style_text_color(lv.color_hex(0x1D1D1F), 0)
-        
-        # 복용 일정 표시
-        self.schedule_labels = []
-        for i, schedule in enumerate(self.dose_schedule):
-            # 상태에 따른 아이콘 (LVGL 심볼 사용)
-            if schedule["status"] == "completed":
-                status_icon = lv.SYMBOL.OK
-            elif schedule["status"] == "failed":
-                status_icon = lv.SYMBOL.CLOSE
-            else:  # pending
-                status_icon = lv.SYMBOL.BELL
-            
-            # 일정 아이템 컨테이너
-            schedule_item = lv.obj(self.schedule_container)
-            schedule_item.set_size(145, 22)
-            schedule_item.align(lv.ALIGN.TOP_MID, 0, 20 + i * 18)
-            schedule_item.set_style_bg_opa(0, 0)
-            schedule_item.set_style_border_width(0, 0)
+    def _create_schedule_area(self):
+        """복용 일정 영역 생성"""
+        try:
+            # 일정 컨테이너
+            self.schedule_container = lv.obj(self.main_container)
+            self.schedule_container.set_size(160, 90)
+            self.schedule_container.align(lv.ALIGN.TOP_MID, 0, 1)  # 8픽셀 위로 이동 (9 → 1)
+            self.schedule_container.set_style_bg_opa(0, 0)
+            self.schedule_container.set_style_border_width(0, 0)
             
             # 스크롤바 완전 비활성화
-            schedule_item.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
-            schedule_item.set_scroll_dir(lv.DIR.NONE)
+            self.schedule_container.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
+            self.schedule_container.set_scroll_dir(lv.DIR.NONE)
             
-            # 시간과 아이콘을 하나의 라벨로 합쳐서 중앙 정렬
-            combined_text = f"{schedule['time']} {status_icon}"
-            combined_label = lv.label(schedule_item)
-            combined_label.set_text(combined_text)
-            combined_label.align(lv.ALIGN.CENTER, 0, 0)
-            combined_label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
-            combined_label.set_style_text_color(lv.color_hex(0x1D1D1F), 0)
+            # 날짜 표시
+            date_label = lv.label(self.schedule_container)
+            date_label.set_text(self.current_date)
+            date_label.align(lv.ALIGN.TOP_MID, 0, 5)
+            date_label.set_style_text_color(lv.color_hex(0x1D1D1F), 0)
             
-            self.schedule_labels.append(combined_label)
-        
-    except Exception as e:
-        print(f"  ❌ 복용 일정 영역 생성 실패: {e}")
+            # 복용 일정 표시
+            self.schedule_labels = []
+            for i, schedule in enumerate(self.dose_schedule):
+                # 상태에 따른 아이콘 (LVGL 심볼 사용)
+                if schedule["status"] == "completed":
+                    status_icon = lv.SYMBOL.OK
+                elif schedule["status"] == "failed":
+                    status_icon = lv.SYMBOL.CLOSE
+                else:  # pending
+                    status_icon = lv.SYMBOL.BELL
+                
+                # 일정 아이템 컨테이너
+                schedule_item = lv.obj(self.schedule_container)
+                schedule_item.set_size(145, 22)
+                schedule_item.align(lv.ALIGN.TOP_MID, 0, 20 + i * 18)
+                schedule_item.set_style_bg_opa(0, 0)
+                schedule_item.set_style_border_width(0, 0)
+                
+                # 스크롤바 완전 비활성화
+                schedule_item.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
+                schedule_item.set_scroll_dir(lv.DIR.NONE)
+                
+                # 시간과 아이콘을 하나의 라벨로 합쳐서 중앙 정렬
+                combined_text = f"{schedule['time']} {status_icon}"
+                combined_label = lv.label(schedule_item)
+                combined_label.set_text(combined_text)
+                combined_label.align(lv.ALIGN.CENTER, 0, 0)
+                combined_label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
+                combined_label.set_style_text_color(lv.color_hex(0x1D1D1F), 0)
+                
+                self.schedule_labels.append(combined_label)
+            
+        except Exception as e:
+            print(f"  ❌ 복용 일정 영역 생성 실패: {e}")
 
-def _create_button_hints_area(self):
-    """하단 버튼 힌트 영역 생성 - Modern 스타일"""
-    # 버튼 힌트 컨테이너
-    self.hints_container = lv.obj(self.main_container)
-    self.hints_container.set_size(140, 18)
-    self.hints_container.align(lv.ALIGN.BOTTOM_MID, 0, 12)
-    # 투명 배경 (Modern 스타일)
-    self.hints_container.set_style_bg_opa(0, 0)
-    self.hints_container.set_style_border_width(0, 0)
-    self.hints_container.set_style_pad_all(0, 0)
-    
-    # 버튼 힌트 텍스트 (LVGL 심볼 사용) - 기본 폰트 사용
-    self.hints_text = lv.label(self.hints_container)
-    self.hints_text.set_text(f"A:{lv.SYMBOL.UP} B:{lv.SYMBOL.DOWN} C:{lv.SYMBOL.DOWNLOAD} D:{lv.SYMBOL.SETTINGS}")
-    self.hints_text.align(lv.ALIGN.CENTER, 0, 0)  # 컨테이너 중앙에 배치
-    self.hints_text.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
-    self.hints_text.set_style_text_color(lv.color_hex(0x8E8E93), 0)  # 모던 라이트 그레이
-    # 기본 폰트는 자동으로 사용됨 (한글 폰트 적용 안함)
+    def _create_button_hints_area(self):
+        """하단 버튼 힌트 영역 생성 - Modern 스타일"""
+        # 버튼 힌트 컨테이너
+        self.hints_container = lv.obj(self.main_container)
+        self.hints_container.set_size(140, 18)
+        self.hints_container.align(lv.ALIGN.BOTTOM_MID, 0, 12)
+        # 투명 배경 (Modern 스타일)
+        self.hints_container.set_style_bg_opa(0, 0)
+        self.hints_container.set_style_border_width(0, 0)
+        self.hints_container.set_style_pad_all(0, 0)
+        
+        # 버튼 힌트 텍스트 (LVGL 심볼 사용) - 기본 폰트 사용
+        self.hints_text = lv.label(self.hints_container)
+        self.hints_text.set_text(f"A:{lv.SYMBOL.UP} B:{lv.SYMBOL.DOWN} C:{lv.SYMBOL.DOWNLOAD} D:{lv.SYMBOL.SETTINGS}")
+        self.hints_text.align(lv.ALIGN.CENTER, 0, 0)  # 컨테이너 중앙에 배치
+        self.hints_text.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
+        self.hints_text.set_style_text_color(lv.color_hex(0x8E8E93), 0)  # 모던 라이트 그레이
+        # 기본 폰트는 자동으로 사용됨 (한글 폰트 적용 안함)
 
 def _create_basic_screen(self):
     """기본 화면 생성 (오류 시 대안)"""

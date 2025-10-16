@@ -98,6 +98,10 @@ class PillLoadingScreen:
             if i not in self.disk_states:
                 self.disk_states[i] = DiskState(i + 1)
         
+        # 메모리 정리
+        import gc
+        gc.collect()
+        
         # UI 스타일 초기화
         try:
             self.ui_style = UIStyle()
@@ -105,6 +109,10 @@ class PillLoadingScreen:
         except Exception as e:
             print(f"⚠️ UI 스타일 초기화 실패: {e}")
             self.ui_style = None
+        
+        # 메모리 정리
+        import gc
+        gc.collect()
         
         # 모터 시스템 초기화
         try:
@@ -123,6 +131,7 @@ class PillLoadingScreen:
         # self._create_modern_screen()  # update_dose_times 후에 생성
         
         print(f"✅ {self.screen_name} 화면 초기화 완료")
+    
     
     def show(self):
         """화면 표시"""
@@ -247,8 +256,8 @@ class PillLoadingScreen:
     def _determine_sequential_mode(self):
         """순차적 충전 모드 결정"""
         try:
-            if len(self.selected_meals) >= 2:
-                # 2개 이상 선택했으면 순차적 충전 모드
+            if len(self.selected_meals) >= 1:
+                # 1개 이상 선택했으면 순차적 충전 모드 (디스크 선택 화면 제거)
                 self.sequential_mode = True
                 self.sequential_disks = []
                 
@@ -265,7 +274,7 @@ class PillLoadingScreen:
                     meal_name = self._get_meal_name_by_disk(disk_index)
                     print(f"  {i+1}. 디스크 {disk_index + 1} ({meal_name})")
             else:
-                # 1개 이하 선택했으면 개별 선택 모드
+                # 선택된 식사 시간이 없으면 개별 선택 모드
                 self.sequential_mode = False
                 self.sequential_disks = []
                 self.current_sequential_index = 0
@@ -346,11 +355,40 @@ class PillLoadingScreen:
         try:
             print(f"📱 순차적 충전 완료 - 메인 화면으로 이동")
             
+            # 강력한 메모리 정리
+            import gc
+            gc.collect()
+            gc.collect()  # 두 번 실행으로 더 확실한 정리
+            
             # 메인 화면으로 이동
             if hasattr(self.screen_manager, 'screens') and 'main' in self.screen_manager.screens:
                 self.screen_manager.show_screen('main')
+                print(f"✅ 메인 화면으로 이동 완료")
             else:
-                print(f"📱 메인 화면이 없어서 현재 화면에 머물기")
+                # 메인 화면이 없으면 동적으로 생성
+                print(f"📱 메인 화면이 등록되지 않음. 동적 생성 중...")
+                try:
+                    # 추가 메모리 정리
+                    gc.collect()
+                    
+                    from screens.main_screen import MainScreen
+                    main_screen = MainScreen(self.screen_manager)
+                    self.screen_manager.register_screen('main', main_screen)
+                    self.screen_manager.show_screen('main')
+                    print(f"✅ 메인 화면 생성 및 이동 완료")
+                except Exception as e:
+                    print(f"❌ 메인 화면 생성 실패: {e}")
+                    print(f"📱 메인 화면 생성 실패로 현재 화면에 머물기")
+                    # 메모리 정리 후 재시도
+                    gc.collect()
+                    try:
+                        from screens.main_screen import MainScreen
+                        main_screen = MainScreen(self.screen_manager)
+                        self.screen_manager.register_screen('main', main_screen)
+                        self.screen_manager.show_screen('main')
+                        print(f"✅ 메인 화면 재시도 생성 및 이동 완료")
+                    except Exception as e2:
+                        print(f"❌ 메인 화면 재시도도 실패: {e2}")
             
         except Exception as e:
             print(f"❌ 순차적 충전 완료 처리 실패: {e}")

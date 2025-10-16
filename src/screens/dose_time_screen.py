@@ -464,6 +464,26 @@ class DoseTimeScreen:
                 else:
                     # 필 로딩 화면이 없으면 동적으로 생성
                     print("  📱 pill_loading 화면이 등록되지 않음. 동적 생성 중...")
+                    
+                    # 현재 화면 정리 및 메모리 정리
+                    print("  📱 현재 dose_time 화면 정리 시작...")
+                    self.hide()
+                    
+                    # 화면 객체 정리
+                    if hasattr(self, 'screen_obj') and self.screen_obj:
+                        try:
+                            self.screen_obj.delete()
+                            self.screen_obj = None
+                            print("  📱 dose_time 화면 객체 삭제 완료")
+                        except:
+                            pass
+                    
+                    # 메모리 정리
+                    import gc
+                    for i in range(3):
+                        gc.collect()
+                        print(f"  🧹 메모리 정리 {i+1}/3")
+                    
                     try:
                         from screens.pill_loading_screen import PillLoadingScreen
                         pill_loading_screen = PillLoadingScreen(self.screen_manager)
