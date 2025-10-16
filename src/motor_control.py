@@ -92,23 +92,24 @@ class StepperMotorController:
         # 입력 시프트 레지스터 초기화 (리미트 스위치용)
         self.input_shift_register = InputShiftRegister(sh_cp_pin, st_cp_pin, data_out_pin)
         
-        # 리미트 스위치 초기화 (실제 하드웨어 연결에 맞춰 매핑)
-        # 테스트 결과: 모터 0→LIMIT2, 모터 1→LIMIT3, 모터 2→LIMIT4
+        # 리미트 스위치 초기화 (사용자 요청 매핑)
+        # 모터 1→LIMIT SW1 (Pin 5), 모터 2→LIMIT SW2 (Pin 6), 모터 3→LIMIT SW3 (Pin 7)
+        # 모터 4는 리미트 스위치 없음 (게이트 제어용)
         self.limit_switches = [
-            LimitSwitch(self.input_shift_register, 5),  # 모터 0 → LIMIT SW2 (Pin 5)
-            LimitSwitch(self.input_shift_register, 6),  # 모터 1 → LIMIT SW3 (Pin 6)
-            LimitSwitch(self.input_shift_register, 7),  # 모터 2 → LIMIT SW4 (Pin 7)
-            None,  # 모터 3 리미트 스위치 (사용 안함)
-            # LimitSwitch(self.input_shift_register, 4),  # LIMIT SW1 (Pin 4) - 사용 안함
+            None,  # 인덱스 0 사용 안함
+            LimitSwitch(self.input_shift_register, 5),  # 모터 1 → LIMIT SW1 (Pin 5)
+            LimitSwitch(self.input_shift_register, 6),  # 모터 2 → LIMIT SW2 (Pin 6)
+            LimitSwitch(self.input_shift_register, 7),  # 모터 3 → LIMIT SW3 (Pin 7)
+            None,  # 모터 4 리미트 스위치 없음 (게이트 제어용)
         ]
         
         # 스테퍼모터 설정 (28BYJ-48)
-        self.steps_per_rev = 2048  # 28BYJ-48의 스텝 수
-        self.steps_per_compartment = 136  # 1칸당 스텝 수 (2048/15칸)
+        self.steps_per_rev = 4096  # 28BYJ-48의 스텝 수 (64:1 감속비)
+        self.steps_per_compartment = 273  # 1칸당 스텝 수 (4096/15칸)
         
         # 각 모터별 독립적인 스텝 상태
-        self.motor_steps = [0, 0, 0, 0]  # 모터 0,1,2,3의 현재 스텝
-        self.motor_positions = [0, 0, 0, 0]  # 각 모터의 현재 칸 위치
+        self.motor_steps = [0, 0, 0, 0, 0]  # 모터 1,2,3,4의 현재 스텝 (인덱스 0 사용 안함)
+        self.motor_positions = [0, 0, 0, 0, 0]  # 각 모터의 현재 칸 위치 (인덱스 0 사용 안함)
         
         # ULN2003 시퀀스 (8스텝 시퀀스)
         self.stepper_sequence = [
@@ -123,15 +124,15 @@ class StepperMotorController:
         ]
         
         # 4개 모터의 현재 상태 (각 모터당 8비트)
-        self.motor_states = [0, 0, 0, 0]
+        self.motor_states = [0, 0, 0, 0, 0]  # 모터 1,2,3,4 상태 (인덱스 0 사용 안함)
         
         # 속도 설정 (디스크 회전과 동일한 속도) - 모터 우선순위 모드
         self.step_delay_us = 500  # 스텝 간 지연 시간 (마이크로초) - 디스크 회전과 동일 (0.5ms)
         
         # 비블로킹 제어를 위한 변수들
-        self.motor_running = [False, False, False, False]  # 각 모터별 실행 상태
-        self.motor_direction = [1, 1, 1, 1]  # 각 모터별 방향
-        self.last_step_times = [0, 0, 0, 0]  # 각 모터별 마지막 스텝 시간
+        self.motor_running = [False, False, False, False, False]  # 각 모터별 실행 상태 (인덱스 0 사용 안함)
+        self.motor_direction = [1, 1, 1, 1, 1]  # 각 모터별 방향 (인덱스 0 사용 안함)
+        self.last_step_times = [0, 0, 0, 0, 0]  # 각 모터별 마지막 스텝 시간 (인덱스 0 사용 안함)
         
         # 초기화 시 모든 코일 OFF 상태로 설정
         self.turn_off_all_coils()
@@ -144,7 +145,7 @@ class StepperMotorController:
         
         # 모든 모터의 상태를 0x00으로 설정
         # 0x00 = 0b00000000 (모든 코일 OFF)
-        for i in range(4):
+        for i in range(1, 5):  # 모터 1,2,3,4
             self.motor_states[i] = 0x00
         
         # 74HC595D에 출력
@@ -153,7 +154,7 @@ class StepperMotorController:
     
     def turn_off_coil(self, motor_index):
         """특정 모터 코일 OFF"""
-        if 0 <= motor_index <= 3:
+        if 1 <= motor_index <= 4:
             self.motor_states[motor_index] = 0x00  # 모든 코일 OFF
             self.update_motor_output()
             print(f"모터 {motor_index} 코일 OFF")
@@ -175,7 +176,7 @@ class StepperMotorController:
     
     def is_limit_switch_pressed(self, motor_index):
         """특정 모터의 리미트 스위치가 눌렸는지 확인"""
-        if 0 <= motor_index <= 3:
+        if 1 <= motor_index <= 4:
             # 모터 3은 리미트 스위치 없음
             if self.limit_switches[motor_index] is None:
                 return False
@@ -211,17 +212,17 @@ class StepperMotorController:
         """모든 모터 상태를 74HC595D에 출력 (test_74hc595_stepper.py와 동일)"""
         combined_data = 0
 
-        # 모터0 → 하위 4비트 (Q0~Q3)
-        combined_data |= (self.motor_states[0] & 0x0F)
+        # 모터1 → 하위 4비트 (Q0~Q3)
+        combined_data |= (self.motor_states[1] & 0x0F)
 
-        # 모터1 → 상위 4비트 (Q4~Q7)
-        combined_data |= ((self.motor_states[1] & 0x0F) << 4)
+        # 모터2 → 상위 4비트 (Q4~Q7)
+        combined_data |= ((self.motor_states[2] & 0x0F) << 4)
 
-        # 모터2 → 두 번째 칩 하위 4비트 (Q0~Q3 of 2번 74HC595)
-        combined_data |= ((self.motor_states[2] & 0x0F) << 8)
+        # 모터3 → 두 번째 칩 하위 4비트 (Q0~Q3 of 2번 74HC595)
+        combined_data |= ((self.motor_states[3] & 0x0F) << 8)
 
-        # 모터3 → 두 번째 칩 상위 4비트 (Q4~Q7 of 2번 74HC595)
-        combined_data |= ((self.motor_states[3] & 0x0F) << 12)
+        # 모터4 → 두 번째 칩 상위 4비트 (Q4~Q7 of 2번 74HC595)
+        combined_data |= ((self.motor_states[4] & 0x0F) << 12)
 
         # 전송 (상위 바이트 먼저)
         upper_byte = (combined_data >> 8) & 0xFF
@@ -239,13 +240,13 @@ class StepperMotorController:
     
     def set_motor_step(self, motor_index, step_value):
         """특정 모터의 스텝 설정 (test_74hc595_stepper.py와 동일)"""
-        if 0 <= motor_index <= 3:
+        if 1 <= motor_index <= 4:
             self.motor_states[motor_index] = self.stepper_sequence[step_value % 8]
             self.update_motor_output()
     
     def step_motor(self, motor_index, direction=1, steps=1):
         """스테퍼모터 회전 (test_74hc595_stepper.py와 동일)"""
-        if 0 <= motor_index <= 3:
+        if 1 <= motor_index <= 4:
             for _ in range(steps):
                 # 리미트 스위치 확인
                 if self.is_limit_switch_pressed(motor_index):
@@ -267,7 +268,7 @@ class StepperMotorController:
     
     def step_motor_continuous(self, motor_index, direction=1, steps=1):
         """스테퍼모터 회전 (리미트 스위치 감지되어도 계속 회전) - 최적화된 성능"""
-        if 0 <= motor_index <= 3:
+        if 1 <= motor_index <= 4:
             # 디버깅 로그 제거로 성능 향상
             # print(f"    🔧 모터 {motor_index} 연속 회전 시작: {steps}스텝")
             
@@ -289,17 +290,20 @@ class StepperMotorController:
             # 디버깅 로그 제거
             # print(f"    ✅ 모터 {motor_index} 연속 회전 완료")
             return True
+        else:
+            print(f"    ❌ 잘못된 모터 인덱스: {motor_index} (1-4 범위여야 함)")
+            return False
     
     def stop_motor(self, motor_index):
         """모터 정지 (코일 OFF)"""
-        if 0 <= motor_index <= 3:
+        if 1 <= motor_index <= 4:
             self.motor_states[motor_index] = 0x00  # 모든 코일 OFF
             self.update_motor_output()
             print(f"모터 {motor_index} 정지 (코일 OFF)")
     
     def stop_all_motors(self):
         """모든 모터 정지 (모든 코일 OFF)"""
-        for i in range(4):
+        for i in range(1, 5):  # 모터 1,2,3,4
             self.motor_states[i] = 0x00  # 모든 코일 OFF
         self.update_motor_output()
         print("모든 모터 정지 (모든 코일 OFF)")
@@ -323,13 +327,12 @@ class StepperMotorController:
     
     def calibrate_motor(self, motor_index):
         """모터 원점 보정"""
-        if 0 <= motor_index <= 3:
+        if 1 <= motor_index <= 4:
             print(f"모터 {motor_index} 원점 보정 시작...")
             
-            # 천천히 회전하면서 리미트 스위치 감지
+            # 회전하면서 리미트 스위치 감지
             while not self.is_limit_switch_pressed(motor_index):
                 self.step_motor(motor_index, -1, 1)  # 반시계 방향으로 1스텝
-                time.sleep_ms(10)  # 천천히
             
             # 원점 위치 설정
             self.motor_positions[motor_index] = 0
@@ -339,9 +342,48 @@ class StepperMotorController:
         
         return False
     
+    def calibrate_multiple_motors(self, motor_indices):
+        """여러 모터 동시 원점 보정"""
+        print(f"모터 {motor_indices} 동시 원점 보정 시작...")
+        
+        # 모든 모터를 먼저 정지
+        self.stop_all_motors()
+        
+        # 보정할 모터들의 상태 추적
+        calibration_done = [False] * len(motor_indices)
+        
+        # 모든 모터가 보정될 때까지 반복
+        while not all(calibration_done):
+            # 각 모터별로 1스텝씩 진행
+            for i, motor_index in enumerate(motor_indices):
+                if not calibration_done[i]:
+                    # 리미트 스위치 확인
+                    if self.is_limit_switch_pressed(motor_index):
+                        # 이 모터는 보정 완료
+                        calibration_done[i] = True
+                        self.motor_positions[motor_index] = 0
+                        self.motor_steps[motor_index] = 0
+                        print(f"✅ 모터 {motor_index} 원점 보정 완료")
+                    else:
+                        # 이 모터는 1스텝 진행
+                        self.motor_steps[motor_index] = (self.motor_steps[motor_index] - 1) % 8
+                        current_step = self.motor_steps[motor_index]
+                        self.motor_states[motor_index] = self.stepper_sequence[current_step]
+            
+            # 모든 모터 상태를 한 번에 출력
+            self.update_motor_output()
+            
+            # 회전 속도 조절
+            time.sleep_us(self.step_delay_us)
+        
+        # 모든 모터 정지
+        self.stop_all_motors()
+        print(f"모터 {motor_indices} 동시 원점 보정 완료!")
+        return True
+    
     def move_to_compartment(self, motor_index, compartment):
         """특정 칸으로 이동"""
-        if 0 <= motor_index <= 3 and 0 <= compartment <= 14:
+        if 1 <= motor_index <= 3 and 0 <= compartment <= 14:
             current_pos = self.motor_positions[motor_index]
             steps_needed = (compartment - current_pos) * self.steps_per_compartment
             
@@ -367,7 +409,7 @@ class StepperMotorController:
     
     def next_compartment(self, motor_index):
         """다음 칸으로 이동 - 리미트 스위치 기반"""
-        if 0 <= motor_index <= 3:
+        if 1 <= motor_index <= 4:
             print(f"  🔄 모터 {motor_index} 리미트 스위치 기반 이동 시작")
             
             # 리미트 스위치 기반 이동: 리미트 스위치가 눌렸다가 떼면 1칸으로 인식
@@ -413,7 +455,7 @@ class StepperMotorController:
     
     def get_motor_position(self, motor_index):
         """모터의 현재 칸 위치 반환"""
-        if 0 <= motor_index <= 3:
+        if 1 <= motor_index <= 4:
             return self.motor_positions[motor_index]
         return -1
     
@@ -429,7 +471,7 @@ class StepperMotorController:
     
     def test_motor_simple(self, motor_index, steps=10):
         """간단한 모터 테스트 - 리미트 스위치 없이"""
-        if 0 <= motor_index <= 3:
+        if 1 <= motor_index <= 4:
             print(f"  🧪 모터 {motor_index} 간단 테스트 시작 ({steps}스텝)")
             
             # 디버깅 플래그 리셋
@@ -483,7 +525,7 @@ class PillBoxMotorSystem:
         self.motor_controller = StepperMotorController()
         
         # 필박스 설정
-        self.num_disks = 3  # 3개 디스크
+        self.num_disks = 3  # 3개 디스크 (모터 1,2,3)
         self.compartments_per_disk = 15  # 디스크당 15칸
         
         print("✅ PillBoxMotorSystem 초기화 완료")
@@ -492,7 +534,7 @@ class PillBoxMotorSystem:
         """모든 디스크 원점 보정"""
         print("모든 디스크 원점 보정 시작...")
         
-        for i in range(self.num_disks):
+        for i in range(1, self.num_disks + 1):  # 모터 1,2,3
             if not self.motor_controller.calibrate_motor(i):
                 print(f"디스크 {i} 보정 실패")
                 return False
@@ -500,9 +542,21 @@ class PillBoxMotorSystem:
         print("모든 디스크 보정 완료!")
         return True
     
+    def calibrate_all_disks_simultaneous(self):
+        """모든 디스크 동시 원점 보정"""
+        print("모든 디스크 동시 원점 보정 시작...")
+        
+        # 모터 1, 2, 3을 동시에 보정
+        if self.motor_controller.calibrate_multiple_motors([1, 2, 3]):
+            print("모든 디스크 동시 보정 완료!")
+            return True
+        else:
+            print("디스크 동시 보정 실패")
+            return False
+    
     def load_pills(self, disk_index, compartments=3):
         """알약 충전 (3칸씩 회전)"""
-        if 0 <= disk_index < self.num_disks:
+        if 1 <= disk_index <= self.num_disks:
             print(f"디스크 {disk_index} 알약 충전 시작 ({compartments}칸 회전)")
             
             for i in range(compartments):
@@ -521,7 +575,7 @@ class PillBoxMotorSystem:
     
     def dispense_pills(self, disk_index, compartment=None):
         """알약 배출"""
-        if 0 <= disk_index < self.num_disks:
+        if 1 <= disk_index <= self.num_disks:
             if compartment is None:
                 # 현재 칸에서 배출
                 compartment = self.motor_controller.get_motor_position(disk_index)
@@ -807,10 +861,10 @@ class PillBoxMotorSystem:
         try:
             print(f"  🔄 디스크 {disk_num} 회전: {steps} 스텝 (우선순위 모드)")
             
-            # 디스크 번호는 1-3, 모터 번호는 0-2
-            motor_num = disk_num - 1
+            # 디스크 번호는 1-3, 모터 번호는 1-3
+            motor_num = disk_num
             
-            if 0 <= motor_num < 3:
+            if 1 <= motor_num <= 3:
                 # 모터 우선순위 모드 - 다른 작업 중단
                 print(f"  ⚡ 모터 {motor_num} 우선순위 모드 활성화")
                 
@@ -839,7 +893,7 @@ class PillBoxMotorSystem:
         except Exception as e:
             print(f"  ❌ 디스크 회전 실패: {e}")
             # 실패 시에도 코일 OFF
-            if 0 <= motor_num < 3:
+            if 1 <= motor_num <= 3:
                 self.motor_controller.stop_motor(motor_num)
             return False
     

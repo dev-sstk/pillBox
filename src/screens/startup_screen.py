@@ -17,7 +17,7 @@ class StartupScreen:
         self.screen_name = 'startup'
         self.screen_obj = None
         self.start_time = time.ticks_ms()
-        self.auto_advance_time = 1000  # 1초 후 자동 진행
+        self.auto_advance_time = 2000  # 2초 후 자동 진행 (원점 보정 시간 확보)
         
         # UI 스타일 시스템 초기화
         self.ui_style = UIStyle()
@@ -27,6 +27,13 @@ class StartupScreen:
         self.wifi_auto_connect_done = False
         self.wifi_connected = False
         self.wifi_connected_time = 0  # WiFi 연결 성공 시각 기록
+        
+        # 디스크 원점 보정 상태
+        self.calibration_started = False
+        self.calibration_done = False
+        self.calibration_progress = 0  # 0-100%
+        self.current_disk = 0  # 0, 1, 2
+        self.calibration_start_time = 0
         
         # 화면 생성
         self._create_modern_screen()
@@ -60,9 +67,6 @@ class StartupScreen:
         
         # 로고 영역 생성
         self._create_logo_area()
-        
-        # 로딩 영역 생성
-        self._create_loading_area()
         
         # 하단 정보 영역 생성
         self._create_info_area()
@@ -125,10 +129,6 @@ class StartupScreen:
         
         # 부제목 제거됨
     
-    def _create_loading_area(self):
-        """로딩 영역 생성 - 제거됨"""
-        # 로딩 텍스트와 프로그레스 바 제거
-        pass
     
     def _create_info_area(self):
         """하단 정보 영역 생성 - 버전 텍스트 제거로 간소화"""
@@ -177,22 +177,75 @@ class StartupScreen:
         current_time = time.ticks_ms()
         elapsed_time = time.ticks_diff(current_time, self.start_time)
         
-        # 로딩 진행 업데이트
-        self._update_loading_progress(elapsed_time)
+        # 원점 보정 완료 후 WiFi 연결 시도
+        if self.calibration_done and not self.wifi_auto_connect_started:
+            print("🔧 원점 보정 완료, WiFi 연결 시도 시작")
+            self._try_wifi_auto_connect()
         
         # WiFi 연결 완료되면 즉시 전환
         if self.wifi_auto_connect_done:
             # WiFi 연결 시도 완료 (성공/실패 관계없이 즉시 전환)
             print(f"✅ WiFi 연결 시도 완료, Wi-Fi 스캔 화면으로 이동")
             self._go_to_wifi_setup()
+        
+        # 최대 대기 시간 초과 시 강제 전환 (2초)
+        if elapsed_time > self.auto_advance_time:
+            print("⏰ 최대 대기 시간 초과, Wi-Fi 스캔 화면으로 강제 전환")
+            self._go_to_wifi_setup()
     
     def _start_loading_animation(self):
         """로딩 애니메이션 시작"""
-        print("🔄 로딩 애니메이션 시작 (텍스트/프로그레스 바 없음)")
+        print("🔄 백그라운드 원점 보정 시작")
+        # 원점 보정 시작
+        self._start_calibration()
     
     def _stop_loading_animation(self):
         """로딩 애니메이션 정지"""
-        print("⏹️ 로딩 애니메이션 정지")
+        print("⏹️ 백그라운드 원점 보정 정지")
+    
+    def _start_calibration(self):
+        """디스크 원점 보정 시작"""
+        if self.calibration_started:
+            return
+        
+        self.calibration_started = True
+        self.calibration_start_time = time.ticks_ms()
+        print("🔧 디스크 원점 보정 시작...")
+        
+        # 모터 시스템 직접 초기화
+        try:
+            from motor_control import PillBoxMotorSystem
+            motor_system = PillBoxMotorSystem()
+            print("✅ 모터 시스템 직접 초기화 완료")
+            
+            # 비동기로 원점 보정 실행
+            self._run_calibration_async(motor_system)
+            
+        except Exception as e:
+            print(f"❌ 모터 시스템 초기화 실패: {e}")
+            print("⚠️ 원점 보정 건너뛰기")
+            self.calibration_done = True
+            self.calibration_progress = 100
+    
+    def _run_calibration_async(self, motor_system):
+        """비동기 원점 보정 실행 (3개 모터 동시 보정)"""
+        try:
+            print("🔧 3개 디스크 동시 원점 보정 중...")
+            
+            # 3개 디스크 동시 보정
+            if motor_system.calibrate_all_disks_simultaneous():
+                print("✅ 모든 디스크 동시 원점 보정 완료!")
+                self.calibration_progress = 100
+                self.calibration_done = True
+            else:
+                print("❌ 디스크 동시 보정 실패")
+                self.calibration_done = True
+                
+        except Exception as e:
+            print(f"❌ 원점 보정 중 오류: {e}")
+            motor_system.motor_controller.stop_all_motors()
+            print("🔌 전체 모터 끄기")
+            self.calibration_done = True
     
     def _try_wifi_auto_connect(self):
         """WiFi 자동 연결 시도"""
@@ -224,11 +277,8 @@ class StartupScreen:
             self.wifi_auto_connect_done = True
     
     def _update_loading_progress(self, elapsed_time):
-        """로딩 진행률 업데이트"""
-        # 즉시 WiFi 연결 시도 (WiFi 연결 자체가 딜레이가 되어 로고 표시 시간 확보)
-        if not self.wifi_auto_connect_started:
-            print(f"📱 WiFi 연결 시도 즉시 시작")
-            self._try_wifi_auto_connect()
+        """로딩 진행률 업데이트 - 제거됨 (원점 보정으로 대체)"""
+        pass
     
     def on_button_a(self):
         """버튼 A 처리"""

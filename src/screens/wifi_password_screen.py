@@ -81,6 +81,11 @@ class WifiPasswordScreen:
             self._create_keyboard_area()
             print(f"  📱 키보드 영역 생성 완료")
             
+            # 버튼 힌트 영역 생성 (간단한 방식)
+            print(f"  📱 버튼 힌트 영역 생성 시도...")
+            self._create_simple_button_hints()
+            print(f"  📱 버튼 힌트 영역 생성 완료")
+            
             print(f"  ✅ Modern 화면 생성 완료")
             
         except Exception as e:
@@ -100,7 +105,19 @@ class WifiPasswordScreen:
         # 기본 라벨 생성
         self.title_label = lv.label(self.screen_obj)
         self.title_label.set_text(f"Wi-Fi 비밀번호\n{self.selected_network}")
-        self.title_label.align(lv.ALIGN.CENTER, 0, 0)
+        self.title_label.align(lv.ALIGN.CENTER, 0, 0)  # 6픽셀 더 아래로 이동 (-6 -> 0)
+        
+        # 기본 버튼 힌트 생성 (메모리 절약을 위해 간단하게)
+        try:
+            self.hints_label = lv.label(self.screen_obj)
+            # LVGL 심볼 사용 (기본 폰트에서 지원)
+            self.hints_label.set_text(f"A:{lv.SYMBOL.LEFT} B:{lv.SYMBOL.RIGHT} C:{lv.SYMBOL.CLOSE} D:{lv.SYMBOL.OK}")
+            self.hints_label.align(lv.ALIGN.BOTTOM_MID, 0, -2)  # Wi-Fi 스캔 화면과 동일한 위치
+            self.hints_label.set_style_text_color(lv.color_hex(0x8E8E93), 0)
+            self.hints_label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
+            print(f"  ✅ 기본 버튼 힌트 생성 완료 (LVGL 심볼 사용)")
+        except Exception as e:
+            print(f"  ⚠️ 기본 버튼 힌트 생성 실패: {e}")
         
         print(f"  ✅ 기본 화면 생성 완료")
     
@@ -110,7 +127,7 @@ class WifiPasswordScreen:
             # 네트워크 제목 컨테이너
             self.network_title_container = lv.obj(self.main_container)
             self.network_title_container.set_size(160, 25)
-            self.network_title_container.align(lv.ALIGN.TOP_MID, 0, -8)  # 위로 10픽셀 이동 (2 -> -8)
+            self.network_title_container.align(lv.ALIGN.TOP_MID, 0, -16)  # 6픽셀 더 아래로 이동 (-22 -> -16)
             self.network_title_container.set_style_bg_opa(0, 0)
             self.network_title_container.set_style_border_width(0, 0)
             
@@ -152,7 +169,7 @@ class WifiPasswordScreen:
             # 패스워드 입력 컨테이너 생성
             self.password_container = lv.obj(self.main_container)
             self.password_container.set_size(160, 24)  # 높이를 4픽셀 늘림 (20 -> 24)
-            self.password_container.align(lv.ALIGN.TOP_MID, 0, 20)  # 원래 위치로 복원
+            self.password_container.align(lv.ALIGN.TOP_MID, 0, 8)  # 2픽셀 더 아래로 이동 (6 -> 8)
             self.password_container.set_style_bg_opa(0, 0)  # 투명 배경
             self.password_container.set_style_border_width(0, 0)
             self.password_container.set_style_pad_all(0, 0)
@@ -240,7 +257,7 @@ class WifiPasswordScreen:
             print("  📱 키보드 컨테이너 크기 설정 중...")
             self.keyboard_container.set_size(160, 60)  # 높이 증가로 키보드 잘림 방지
             print("  📱 키보드 컨테이너 정렬 설정 중...")
-            self.keyboard_container.align(lv.ALIGN.CENTER, 0, 30)  # 아래로 5픽셀 추가 이동 (25 -> 30)
+            self.keyboard_container.align(lv.ALIGN.CENTER, 0, 16)  # 4픽셀 아래로 이동 (12 -> 16)
             print("  📱 키보드 컨테이너 스타일 설정 중...")
             self.keyboard_container.set_style_bg_opa(0, 0)  # 투명 배경
             self.keyboard_container.set_style_border_width(0, 0)
@@ -432,14 +449,14 @@ class WifiPasswordScreen:
                 print("✅ 보안 WiFi 연결 성공!")
                 time.sleep(1)
                 
-                # dose_count 화면으로 이동 (없으면 생성)
-                if 'dose_count' not in self.screen_manager.screens:
-                    print("📱 복용 횟수 설정 화면 동적 생성 중...")
+                # meal_time 화면으로 이동 (없으면 생성)
+                if 'meal_time' not in self.screen_manager.screens:
+                    print("📱 복용 시간 선택 화면 동적 생성 중...")
                     try:
-                        from screens.dose_count_screen import DoseCountScreen
-                        dose_count_screen = DoseCountScreen(self.screen_manager)
-                        self.screen_manager.register_screen('dose_count', dose_count_screen)
-                        print("✅ 복용 횟수 설정 화면 생성 및 등록 완료")
+                        from screens.meal_time_screen import MealTimeScreen
+                        meal_time_screen = MealTimeScreen(self.screen_manager)
+                        self.screen_manager.register_screen('meal_time', meal_time_screen)
+                        print("✅ 복용 시간 선택 화면 생성 및 등록 완료")
                     except Exception as e:
                         print(f"❌ 복용 횟수 설정 화면 생성 실패: {e}")
                         import sys
@@ -448,9 +465,9 @@ class WifiPasswordScreen:
                         self.screen_manager.show_screen('wifi_scan')
                         return
                 
-                # 복용 횟수 설정 화면으로 이동
-                print("📱 복용 횟수 설정 화면으로 이동")
-                self.screen_manager.show_screen('dose_count')
+                # 복용 시간 선택 화면으로 이동
+                print("📱 복용 시간 선택 화면으로 이동")
+                self.screen_manager.show_screen('meal_time')
             else:
                 print("❌ WiFi 연결 실패!")
                 # 연결 실패 시 현재 화면에 머물기 (팝업 제거)
@@ -586,14 +603,14 @@ class WifiPasswordScreen:
                 self._handle_ok()
             
             elif current_key == '123':
-                                # 숫자 모드 전환
-                                print(f"  📱 숫자 모드 전환")
-                                self._switch_to_numbers_mode()
+                # 숫자 모드 전환
+                print(f"  📱 숫자 모드 전환")
+                self._switch_to_numbers_mode()
                             
             elif current_key == 'ABC':
-                                # 대소문자 전환
-                                print(f"  📱 대소문자 전환")
-                                self._switch_case_mode()
+                # 대소문자 전환
+                print(f"  📱 대소문자 전환")
+                self._switch_case_mode()
                             
             elif current_key == 'abc':
                 # 소문자 모드로 전환
@@ -768,6 +785,54 @@ class WifiPasswordScreen:
                 
         except Exception as e:
             print(f"  ❌ 문자 추가 실패: {e}")
+            import sys
+            sys.print_exception(e)
+    
+    def _create_simple_button_hints(self):
+        """간단한 버튼 힌트 생성 - 메모리 절약"""
+        try:
+            # 화면에 직접 라벨 생성 (컨테이너 없이)
+            self.hints_label = lv.label(self.screen_obj)
+            # LVGL 심볼 사용 (기본 폰트에서 지원)
+            self.hints_label.set_text(f"A:{lv.SYMBOL.LEFT} B:{lv.SYMBOL.RIGHT} C:{lv.SYMBOL.CLOSE} D:{lv.SYMBOL.OK}")
+            self.hints_label.align(lv.ALIGN.BOTTOM_MID, 0, -2)  # Wi-Fi 스캔 화면과 동일한 위치
+            self.hints_label.set_style_text_color(lv.color_hex(0x8E8E93), 0)
+            self.hints_label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
+            print(f"  ✅ 간단한 버튼 힌트 생성 완료 (LVGL 심볼 사용)")
+            
+        except Exception as e:
+            print(f"  ❌ 간단한 버튼 힌트 생성 중 오류: {e}")
+            import sys
+            sys.print_exception(e)
+    
+    def _create_button_hints_area(self):
+        """하단 버튼 힌트 영역 생성 - Modern 스타일 (사용 안함)"""
+        try:
+            print(f"  📱 버튼 힌트 영역 생성 중...")
+            # 버튼 힌트 컨테이너
+            self.hints_container = lv.obj(self.main_container)
+            self.hints_container.set_size(140, 18)
+            self.hints_container.align(lv.ALIGN.BOTTOM_MID, 0, 0)
+            # 투명 배경 (Modern 스타일)
+            self.hints_container.set_style_bg_opa(0, 0)
+            self.hints_container.set_style_border_width(0, 0)
+            self.hints_container.set_style_pad_all(0, 0)
+            
+            # 버튼 힌트 텍스트 (Modern 스타일) - 모던 UI 색상
+            self.hints_text = self.ui_style.create_label(
+                self.hints_container,
+                "A:←  B:→  C:×  D:✓",
+                'text_caption',
+                0x8E8E93  # 모던 라이트 그레이
+            )
+            self.hints_text.align(lv.ALIGN.CENTER, 0, 0)
+            # 버튼 힌트 텍스트 위치 고정 (움직이지 않도록)
+            self.hints_text.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
+            
+            print(f"  ✅ 버튼 힌트 영역 생성 완료")
+            
+        except Exception as e:
+            print(f"  ❌ 버튼 힌트 영역 생성 중 오류: {e}")
             import sys
             sys.print_exception(e)
     

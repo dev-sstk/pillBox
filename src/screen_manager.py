@@ -41,11 +41,29 @@ class ScreenManager:
         print(f"📱 화면 전환: {screen_name}")
         return True
     
-    def show_screen(self, screen_name, add_to_stack=True):
+    def show_screen(self, screen_name, add_to_stack=True, **kwargs):
         """화면 전환"""
         if screen_name not in self.screens:
-            print(f"❌ 존재하지 않는 화면: {screen_name}")
-            return False
+            # 화면이 등록되지 않았다면 동적으로 생성 시도
+            print(f"📱 {screen_name} 화면이 등록되지 않음. 동적 생성 중...")
+            if self.app and hasattr(self.app, 'create_and_register_screen'):
+                self.app.create_and_register_screen(screen_name, **kwargs) # kwargs 전달
+            else:
+                # app 참조가 없으면 직접 화면 생성 시도
+                self._create_screen_directly(screen_name, **kwargs)
+            if screen_name not in self.screens:
+                print(f"❌ 존재하지 않는 화면: {screen_name}")
+                return False
+        else:
+            # 기존 화면이 있으면 새로운 매개변수로 업데이트 시도
+            if kwargs and screen_name == 'dose_time':
+                print(f"📱 기존 {screen_name} 화면에 새로운 매개변수 적용 중...")
+                existing_screen = self.screens[screen_name]
+                if hasattr(existing_screen, 'update_meal_selections'):
+                    dose_count = kwargs.get('dose_count', 1)
+                    selected_meals = kwargs.get('selected_meals', None)
+                    existing_screen.update_meal_selections(dose_count, selected_meals)
+                    print(f"✅ {screen_name} 화면 상태 업데이트 완료")
         
         # 현재 화면이 있으면 숨기기
         if self.current_screen:
@@ -60,6 +78,28 @@ class ScreenManager:
         
         print(f"📱 화면 전환: {screen_name}")
         return True
+    
+    def _create_screen_directly(self, screen_name, **kwargs):
+        """직접 화면 생성 (app 참조가 없을 때)"""
+        try:
+            if screen_name == "dose_time":
+                from screens.dose_time_screen import DoseTimeScreen
+                dose_count = kwargs.get('dose_count', 1)
+                selected_meals = kwargs.get('selected_meals', None)
+                screen = DoseTimeScreen(self, dose_count=dose_count, selected_meals=selected_meals)
+                self.register_screen(screen_name, screen)
+                print(f"✅ {screen_name} 화면 직접 생성 완료")
+            elif screen_name == "meal_time":
+                from screens.meal_time_screen import MealTimeScreen
+                screen = MealTimeScreen(self)
+                self.register_screen(screen_name, screen)
+                print(f"✅ {screen_name} 화면 직접 생성 완료")
+            else:
+                print(f"❌ 지원하지 않는 화면: {screen_name}")
+        except Exception as e:
+            print(f"❌ 화면 직접 생성 실패: {e}")
+            import sys
+            sys.print_exception(e)
     
     def go_back(self):
         """이전 화면으로 돌아가기"""

@@ -712,15 +712,9 @@ class WifiScanScreen:
                 print(f"  📱 이미 마지막 항목")
     
     def on_button_c(self):
-        """버튼 C (Back) 처리"""
-        print("Wi-Fi 스캔 화면 뒤로가기")
-        # startup 화면이 등록되어 있으면 이동, 없으면 종료
-        if 'startup' in self.screen_manager.screens:
-            self.screen_manager.show_screen('startup')
-        else:
-            print("  📱 뒤로갈 화면이 없습니다. 테스트를 종료합니다.")
-            # 테스트 종료를 위한 예외 발생
-            raise KeyboardInterrupt("Wi-Fi 테스트 종료")
+        """버튼 C 처리 - 기능 없음"""
+        print("Wi-Fi 스캔 화면 버튼 C - 기능 없음")
+        # 버튼 C 기능 제거됨
     
     def on_button_d(self):
         """버튼 D (Select) 처리 - LVGL 리스트에서 선택"""
@@ -786,6 +780,7 @@ class WifiScanScreen:
                         if success:
                             print(f"  ✅ 저장된 비밀번호로 연결 성공!")
                             time.sleep(1)
+                            # 저장된 비밀번호로 연결 성공 시 바로 다음 화면으로 이동
                             self._go_to_next_screen()
                         else:
                             print(f"  ❌ 저장된 비밀번호로 연결 실패! 비밀번호 입력 화면으로 이동")
@@ -875,17 +870,17 @@ class WifiScanScreen:
                         pass
     
     def _go_to_next_screen(self):
-        """다음 화면으로 이동 (복용 횟수 설정)"""
-        print("📱 복용 횟수 설정 화면으로 이동")
+        """다음 화면으로 이동 (복용 시간 선택)"""
+        print("📱 복용 시간 선택 화면으로 이동")
         
-        # dose_count 화면이 등록되어 있지 않으면 동적 생성
-        if 'dose_count' not in self.screen_manager.screens:
-            print("📱 복용 횟수 설정 화면 동적 생성 중...")
+        # meal_time 화면이 등록되어 있지 않으면 동적 생성
+        if 'meal_time' not in self.screen_manager.screens:
+            print("📱 복용 시간 선택 화면 동적 생성 중...")
             try:
-                from screens.dose_count_screen import DoseCountScreen
-                dose_count_screen = DoseCountScreen(self.screen_manager)
-                self.screen_manager.register_screen('dose_count', dose_count_screen)
-                print("✅ 복용 횟수 설정 화면 생성 및 등록 완료")
+                from screens.meal_time_screen import MealTimeScreen
+                meal_time_screen = MealTimeScreen(self.screen_manager)
+                self.screen_manager.register_screen('meal_time', meal_time_screen)
+                print("✅ 복용 시간 선택 화면 생성 및 등록 완료")
             except Exception as e:
                 print(f"❌ 복용 횟수 설정 화면 생성 실패: {e}")
                 import sys
@@ -893,8 +888,8 @@ class WifiScanScreen:
                 return
         
         # 화면 전환
-        print("📱 복용 횟수 설정 화면으로 이동")
-        self.screen_manager.show_screen('dose_count')
+        print("📱 복용 시간 선택 화면으로 이동")
+        self.screen_manager.show_screen('meal_time')
 
     def _connect_to_open_network(self, network):
         """오픈 네트워크에 직접 연결"""

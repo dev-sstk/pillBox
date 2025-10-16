@@ -28,22 +28,22 @@ class ButtonInterface:
         
         # 버튼 매핑 (74HC165 핀 순서)
         self.button_mapping = {
-            0: 'SW1',  # Menu (C 버튼 역할)
-            1: 'SW2',  # Select (D 버튼 역할)
-            2: 'SW3',  # Up (A 버튼 역할)
-            3: 'SW4',  # Down (B 버튼 역할)
-            4: 'LIMIT_SW3',  # 리미트 스위치 3 (역순)
+            0: 'SW1',  # 버튼 A 역할
+            1: 'SW2',  # 버튼 B 역할
+            2: 'SW3',  # 버튼 C 역할
+            3: 'SW4',  # 버튼 D 역할
+            4: 'LIMIT_SW1',  # 리미트 스위치 1
             5: 'LIMIT_SW2',  # 리미트 스위치 2
-            6: 'LIMIT_SW1',  # 리미트 스위치 1 (역순)
-            7: 'LIMIT_SW4'   # 리미트 스위치 4
+            6: 'LIMIT_SW3',  # 리미트 스위치 3
+            7: 'UNUSED'      # 사용 안함
         }
         
         # 버튼 콜백 함수들 (A, B, C, D 매핑)
         self.callbacks = {
-            'A': None,  # SW3 (Up)
-            'B': None,  # SW4 (Down)
-            'C': None,  # SW1 (Menu/Back)
-            'D': None   # SW2 (Select/Next)
+            'A': None,  # SW1
+            'B': None,  # SW2
+            'C': None,  # SW3
+            'D': None   # SW4
         }
         
         # 버튼 상태 추적
@@ -139,10 +139,10 @@ class ButtonInterface:
         """버튼 상태 반환"""
         # A, B, C, D를 실제 핀 번호로 매핑
         pin_mapping = {
-            'A': 0,  # SW1 → A
-            'B': 1,  # SW2 → B
-            'C': 2,  # SW3 → C
-            'D': 3   # SW4 → D
+            'A': 0,  # SW1
+            'B': 1,  # SW2
+            'C': 2,  # SW3
+            'D': 3   # SW4
         }
         
         if button_id in pin_mapping:

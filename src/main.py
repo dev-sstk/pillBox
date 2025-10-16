@@ -189,7 +189,7 @@ def cleanup_lvgl():
     except Exception as e:
         print(f"⚠️ 리소스 정리 중 오류 (무시됨): {e}")
 
-def run_screen_test(screen_name):
+def run_screen_test(screen_name, **kwargs):
     """특정 화면 테스트 실행"""
     print("=" * 60)
     print(f"필박스 {screen_name} 화면 테스트")
@@ -234,22 +234,24 @@ def run_screen_test(screen_name):
                     wifi_password_screen = WifiPasswordScreen(screen_manager, "Example_SSID")
                     screen_manager.register_screen('wifi_password', wifi_password_screen)
                     print("✅ wifi_password 화면도 함께 등록됨")
-                # WiFi 연결 후 복용 횟수 선택 화면으로 이동하기 위해 미리 등록
-                if 'dose_count' not in screen_manager.screens:
-                    from screens.dose_count_screen import DoseCountScreen
-                    dose_count_screen = DoseCountScreen(screen_manager)
-                    screen_manager.register_screen('dose_count', dose_count_screen)
-                    print("✅ dose_count 화면도 함께 등록됨")
+                # WiFi 연결 후 복용 시간 선택 화면으로 이동하기 위해 미리 등록
+                if 'meal_time' not in screen_manager.screens:
+                    from screens.meal_time_screen import MealTimeScreen
+                    meal_time_screen = MealTimeScreen(screen_manager)
+                    screen_manager.register_screen('meal_time', meal_time_screen)
+                    print("✅ meal_time 화면도 함께 등록됨")
             elif screen_name == "wifi_password":
                 from screens.wifi_password_screen import WifiPasswordScreen
                 screen = WifiPasswordScreen(screen_manager, "Example_SSID")
-            elif screen_name == "dose_count":
-                from screens.dose_count_screen import DoseCountScreen
-                screen = DoseCountScreen(screen_manager)
+            elif screen_name == "meal_time":
+                from screens.meal_time_screen import MealTimeScreen
+                screen = MealTimeScreen(screen_manager)
             elif screen_name == "dose_time":
                 from screens.dose_time_screen import DoseTimeScreen
-                # 테스트를 위해 기본값 1회로 설정 (실제로는 dose_count에서 전달받아야 함)
-                screen = DoseTimeScreen(screen_manager, dose_count=1)
+                # dose_count와 selected_meals 매개변수 받기
+                dose_count = kwargs.get('dose_count', 1)
+                selected_meals = kwargs.get('selected_meals', None)
+                screen = DoseTimeScreen(screen_manager, dose_count=dose_count, selected_meals=selected_meals)
             elif screen_name == "main":
                 from screens.main_screen import MainScreen
                 screen = MainScreen(screen_manager)
