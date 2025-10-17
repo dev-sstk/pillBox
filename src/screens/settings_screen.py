@@ -168,7 +168,7 @@ class SettingsScreen:
             item_container.set_style_bg_opa(0, 0)
             item_container.set_style_border_width(0, 0)
             item_container.set_style_pad_all(0, 0)
-        
+            
             # 설정 이름
             name_label = lv.label(item_container)
             name_label.set_text(config["name"])

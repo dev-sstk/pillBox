@@ -202,11 +202,8 @@ class WifiScanScreen:
                     network = self.wifi_networks[i]
                     print(f"  [INFO] 네트워크 {i+1}: {network['ssid']} 리스트 아이템 생성 중...")
                     
-                    # 보안 아이콘
-                    security_icon = "LOCK" if network['security'] != "Open" else "OPEN"
-                    
-                    # 리스트 아이템 텍스트 (신호 강도 아이콘 제거)
-                    item_text = f"{network['ssid']} {security_icon}"
+                    # 리스트 아이템 텍스트 (네트워크 이름만 표시)
+                    item_text = network['ssid']
                     
                     # 리스트에 버튼 아이템 추가 (다른 메서드 시도)
                     try:
@@ -296,86 +293,6 @@ class WifiScanScreen:
             sys.print_exception(e)
             self.wifi_list_items = []
     
-    def _create_direct_wifi_list(self):
-        """화면에 직접 WiFi 리스트 생성 - 단순화된 버전"""
-        print(f"  [INFO] 화면에 직접 WiFi 리스트 생성...")
-        
-        try:
-            self.wifi_labels = []
-            
-            # 스캔된 네트워크가 없으면 메시지 표시
-            if not self.wifi_networks:
-                print("[WARN] 스캔된 WiFi 네트워크가 없습니다")
-            
-            # 최대 4개 네트워크만 표시
-            max_networks = min(len(self.wifi_networks), 4)
-            print(f"  [INFO] {max_networks}개 네트워크 표시 예정...")
-            
-            for i in range(max_networks):
-                try:
-                    network = self.wifi_networks[i]
-                    print(f"  [INFO] 네트워크 {i+1}: {network['ssid']} 생성 중...")
-                    
-                    # 간단한 WiFi 아이템 생성 - 고정 위치
-                    wifi_item = lv.obj(self.screen_obj)
-                    wifi_item.set_size(140, 25)  # 높이 증가로 텍스트 잘림 방지
-                    wifi_item.align(lv.ALIGN.CENTER, 0, -20 + i * 27)  # 간격 조정
-                    # 컨테이너 스크롤 방지
-                    wifi_item.set_style_overflow(lv.OVERFLOW.HIDDEN, 0)
-                    
-                    # 모던 UI 스타일 적용
-                    wifi_item.set_style_bg_color(lv.color_hex(0xFFFFFF), 0)  # 흰색 배경
-                    wifi_item.set_style_bg_opa(255, 0)
-                    wifi_item.set_style_radius(10, 0)  # 둥근 모서리
-                    wifi_item.set_style_border_width(1, 0)
-                    wifi_item.set_style_border_color(lv.color_hex(0xD1D5DB), 0)  # 더 진한 테두리로 구분감 향상
-                    wifi_item.set_style_pad_all(4, 0)  # 패딩 줄임 (8 -> 4)
-                    # 그림자 효과 (모던 UI)
-                    try:
-                        wifi_item.set_style_shadow_width(3, 0)
-                        wifi_item.set_style_shadow_color(lv.color_hex(0x000000), 0)
-                        wifi_item.set_style_shadow_opa(20, 0)
-                    except AttributeError:
-                        pass
-                    try:
-                        wifi_item.set_style_shadow_ofs_x(0, 0)
-                        wifi_item.set_style_shadow_ofs_y(2, 0)
-                    except AttributeError:
-                        pass
-                    
-                    # WiFi 네트워크 텍스트 (노토산스 폰트 사용) - 모던 UI 색상
-                    wifi_text = lv.label(wifi_item)
-                    wifi_text.set_text(f"📶 {network['ssid']}")
-                    wifi_text.set_style_text_color(lv.color_hex(0x1D1D1F), 0)  # 모던 다크 그레이
-                    # 노토산스 폰트 적용
-                    if hasattr(lv, "font_notosans_kr_regular"):
-                        wifi_text.set_style_text_font(lv.font_notosans_kr_regular, 0)
-                        print(f"    [INFO] 노토산스 폰트 적용됨")
-                    else:
-                        # 폰트를 설정하지 않음 (기본값 사용)
-                        print(f"    [INFO] 기본 폰트 사용됨")
-                    wifi_text.align(lv.ALIGN.CENTER, 0, 0)
-                    # 텍스트 위치 강력 고정 (중앙 정렬)
-                    wifi_text.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
-                    wifi_text.set_style_text_long_mode(lv.TEXT_LONG.CLIP, 0)
-                    
-                    self.wifi_labels.append(wifi_item)
-                    print(f"  [OK] 네트워크 {i+1} 아이템 생성 완료")
-                    
-                except Exception as e:
-                    print(f"  [ERROR] 네트워크 {i+1} 아이템 생성 실패: {e}")
-                    import sys
-                    sys.print_exception(e)
-                    continue
-            
-            # 선택된 항목 하이라이트
-            self._update_selection()
-            print(f"  [OK] {len(self.wifi_labels)}개 Wi-Fi 네트워크 리스트 생성 완료")
-            
-        except Exception as e:
-            print(f"  [ERROR] Wi-Fi 리스트 생성 실패: {e}")
-            import sys
-            sys.print_exception(e)
             self.wifi_labels = []
     
     def _create_title_area(self):

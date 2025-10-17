@@ -70,6 +70,8 @@ class MedicationTracker:
             disk_info = medication_data.get("disks", {}).get(str(disk_num), {})
             disk_name = disk_info.get("name", f"디스크 {disk_num}")
             
+            print(f"[DEBUG] 디스크 {disk_num} 상태 확인: {current_count}개, 임계값={self.low_stock_threshold}, 위험값={self.critical_threshold}")
+            
             # 상태 결정
             if current_count <= 0:
                 status = "empty"
@@ -79,6 +81,7 @@ class MedicationTracker:
                     "message": f"{disk_name} 소진됨 - 즉시 충전 필요",
                     "priority": "critical"
                 }
+                print(f"[DEBUG] 디스크 {disk_num}: 소진 상태 (0개)")
             elif current_count <= self.critical_threshold:
                 status = "critical"
                 alert = {
@@ -87,6 +90,7 @@ class MedicationTracker:
                     "message": f"{disk_name} 위험 수준 ({current_count}개 남음)",
                     "priority": "high"
                 }
+                print(f"[DEBUG] 디스크 {disk_num}: 위험 상태 ({current_count}개)")
             elif current_count <= self.low_stock_threshold:
                 status = "low_stock"
                 alert = {
@@ -95,9 +99,11 @@ class MedicationTracker:
                     "message": f"{disk_name} 부족 ({current_count}개 남음)",
                     "priority": "medium"
                 }
+                print(f"[DEBUG] 디스크 {disk_num}: 부족 상태 ({current_count}개)")
             else:
                 status = "normal"
                 alert = None
+                print(f"[DEBUG] 디스크 {disk_num}: 정상 상태 ({current_count}개)")
             
             return {
                 "disk_num": disk_num,

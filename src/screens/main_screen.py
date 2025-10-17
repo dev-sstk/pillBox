@@ -274,6 +274,13 @@ class MainScreen:
             self.current_time_label.align(lv.ALIGN.TOP_LEFT, 5, -10)  # 배터리와 같은 y축 위치
             self.current_time_label.set_style_text_align(lv.TEXT_ALIGN.LEFT, 0)
             self.current_time_label.set_style_text_color(lv.color_hex(0x007AFF), 0)
+            
+            # 알약 개수 표시 (시간 오른편)
+            self.pill_count_label = lv.label(self.main_container)
+            self.pill_count_label.set_text("10/15")  # 기본값
+            self.pill_count_label.align(lv.ALIGN.TOP_LEFT, 80, -10)  # 시간 오른편
+            self.pill_count_label.set_style_text_align(lv.TEXT_ALIGN.LEFT, 0)
+            self.pill_count_label.set_style_text_color(lv.color_hex(0x34C759), 0)  # 초록색
         
             # WiFi 심볼을 상단 중앙에 독립적으로 배치
             self._create_wifi_indicator()
@@ -450,54 +457,6 @@ class MainScreen:
         except Exception as e:
             return {"error": f"메모리 정보 조회 실패: {e}"}
     
-    def _create_optimized_ui(self):
-        """메모리 최적화된 UI 생성"""
-        try:
-            # 메모리 정리
-            import gc
-            gc.collect()
-            print("  🧹 UI 생성 전 메모리 정리 완료")
-            
-            # 화면 생성
-            self.screen_obj = lv.obj()
-            self.screen_obj.set_size(160, 128)
-            print("  [INFO] 화면 객체 생성 완료")
-            
-            # 제목 제거됨
-            
-            # 상태 표시
-            self.status_label = lv.label(self.screen_obj)
-            self.status_label.set_text(self.status_text)
-            self.status_label.align(lv.ALIGN.CENTER, 0, -10)
-            self.status_label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
-            print("  [INFO] 상태 표시 생성 완료")
-            
-            # 복용 일정 표시
-            self.schedule_label = lv.label(self.screen_obj)
-            self._update_schedule_display()
-            self.schedule_label.align(lv.ALIGN.CENTER, 0, 10)
-            self.schedule_label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
-            print("  [INFO] 일정 표시 생성 완료")
-            
-            # 버튼 힌트
-            self.hints_label = lv.label(self.screen_obj)
-            self.hints_label.set_text("A:이전 B:다음 C:리셋 D:배출")
-            self.hints_label.align(lv.ALIGN.BOTTOM_MID, 0, -5)
-            self.hints_label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
-            print("  [INFO] 버튼 힌트 생성 완료")
-            
-            print("  [OK] 최적화된 UI 생성 완료")
-            
-        except Exception as e:
-            print(f"  [ERROR] UI 생성 실패: {e}")
-            # 최소한의 UI라도 생성
-            self.screen_obj = lv.obj()
-            self.screen_obj.set_size(160, 128)
-            
-            self.title_label = lv.label(self.screen_obj)
-            self.title_label.set_text("필박스")
-            self.title_label.align(lv.ALIGN.CENTER, 0, 0)
-    
     def _update_schedule_display(self):
         """복용 일정 표시 업데이트"""
         try:
@@ -582,6 +541,9 @@ class MainScreen:
             self._update_current_time()
             # 시간 표시 업데이트
             self._update_time_display()
+            
+            # 알약 개수 업데이트
+            self._update_pill_count_display()
             
             # 자동 배출 시간 확인
             self._check_auto_dispense()
@@ -836,6 +798,37 @@ class MainScreen:
                 self.current_time_label.set_text(self.current_time)
         except Exception as e:
             print(f"  [ERROR] 시간 표시 업데이트 실패: {e}")
+    
+    def _update_pill_count_display(self):
+        """알약 개수 표시 업데이트"""
+        try:
+            if hasattr(self, 'pill_count_label') and self.pill_count_label:
+                # 현재 선택된 복용 일정의 디스크에서 알약 개수 가져오기
+                if self.current_dose_index < len(self.dose_schedule):
+                    current_dose = self.dose_schedule[self.current_dose_index]
+                    disk_num = current_dose.get('disk', self.current_dose_index + 1)
+                    
+                    # 디스크의 현재 개수와 최대 용량 가져오기
+                    current_count = self.data_manager.get_disk_count(disk_num)
+                    max_capacity = 15  # 디스크당 최대 15칸
+                    
+                    # 표시 텍스트 업데이트
+                    count_text = f"{current_count}/{max_capacity}"
+                    self.pill_count_label.set_text(count_text)
+                    
+                    # 개수에 따른 색상 변경
+                    if current_count <= 1:
+                        # 위험 (빨간색)
+                        self.pill_count_label.set_style_text_color(lv.color_hex(0xFF3B30), 0)
+                    elif current_count <= 3:
+                        # 부족 (주황색)
+                        self.pill_count_label.set_style_text_color(lv.color_hex(0xFF9500), 0)
+                    else:
+                        # 충분 (초록색)
+                        self.pill_count_label.set_style_text_color(lv.color_hex(0x34C759), 0)
+                        
+        except Exception as e:
+            print(f"  [ERROR] 알약 개수 표시 업데이트 실패: {e}")
     
     def on_button_a(self):
         """버튼 A - 배출"""
@@ -1129,9 +1122,14 @@ class MainScreen:
     def _decrease_selected_disks_count(self, dose_index):
         """선택된 디스크들의 약물 수량 감소"""
         try:
-            # 복용 시간 정보에서 선택된 디스크들 가져오기
-            dose_times = self.data_manager.get_dose_times()
-            if dose_index < len(dose_times):
+            # dose_time_screen에서 복용 시간 정보 가져오기
+            dose_times = []
+            if hasattr(self.screen_manager, 'screens') and 'dose_time' in self.screen_manager.screens:
+                dose_time_screen = self.screen_manager.screens['dose_time']
+                if hasattr(dose_time_screen, 'get_dose_times'):
+                    dose_times = dose_time_screen.get_dose_times()
+            
+            if dose_times and dose_index < len(dose_times):
                 dose_info = dose_times[dose_index]
                 selected_disks = dose_info.get('selected_disks', [dose_index + 1])  # 기본값: 해당 일정의 디스크
                 
@@ -1163,9 +1161,14 @@ class MainScreen:
     def _get_selected_disks_for_dose(self, dose_index):
         """복용 일정에 대한 선택된 디스크들 반환"""
         try:
-            # 복용 시간 정보에서 선택된 디스크들 가져오기
-            dose_times = self.data_manager.get_dose_times()
-            if dose_index < len(dose_times):
+            # dose_time_screen에서 복용 시간 정보 가져오기
+            dose_times = []
+            if hasattr(self.screen_manager, 'screens') and 'dose_time' in self.screen_manager.screens:
+                dose_time_screen = self.screen_manager.screens['dose_time']
+                if hasattr(dose_time_screen, 'get_dose_times'):
+                    dose_times = dose_time_screen.get_dose_times()
+            
+            if dose_times and dose_index < len(dose_times):
                 dose_info = dose_times[dose_index]
                 selected_disks = dose_info.get('selected_disks', [dose_index + 1])  # 기본값: 해당 일정의 디스크
                 return selected_disks

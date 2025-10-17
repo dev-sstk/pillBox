@@ -262,30 +262,32 @@ class DataManager:
             medication_data = self.load_medication_data()
             disk_key = str(disk_num)
             
-            if disk_key in medication_data["disks"]:
-                # 현재 시간 가져오기 (한국 시간)
-                wifi_mgr = get_wifi_manager()
-                current_time = wifi_mgr.get_kst_time()
-                
-                medication_data["disks"][disk_key]["current_count"] = new_count
-                medication_data["disks"][disk_key]["last_refill"] = f"{current_time[0]:04d}-{current_time[1]:02d}-{current_time[2]:02d}T{current_time[3]:02d}:{current_time[4]:02d}:{current_time[5]:02d}"
-                
-                # 리필 기록 추가
-                refill_record = {
-                    "disk": disk_num,
-                    "timestamp": f"{current_time[0]:04d}-{current_time[1]:02d}-{current_time[2]:02d}T{current_time[3]:02d}:{current_time[4]:02d}:{current_time[5]:02d}",
-                    "count": new_count
-                }
-                medication_data["refill_history"].append(refill_record)
-                
-                # 최근 50개 리필 기록만 유지
-                if len(medication_data["refill_history"]) > 50:
-                    medication_data["refill_history"] = medication_data["refill_history"][-50:]
-                
-                return self.save_medication_data(medication_data)
-            else:
-                print(f"[ERROR] 디스크 {disk_num} 데이터 없음")
-                return False
+            # 디스크 데이터가 없으면 기본 데이터 생성
+            if disk_key not in medication_data["disks"]:
+                print(f"[INFO] 디스크 {disk_num} 데이터 없음, 기본 데이터 생성")
+                default_data = self._get_default_medication_data()
+                medication_data["disks"][disk_key] = default_data["disks"][disk_key].copy()
+            
+            # 현재 시간 가져오기 (한국 시간)
+            wifi_mgr = get_wifi_manager()
+            current_time = wifi_mgr.get_kst_time()
+            
+            medication_data["disks"][disk_key]["current_count"] = new_count
+            medication_data["disks"][disk_key]["last_refill"] = f"{current_time[0]:04d}-{current_time[1]:02d}-{current_time[2]:02d}T{current_time[3]:02d}:{current_time[4]:02d}:{current_time[5]:02d}"
+            
+            # 리필 기록 추가
+            refill_record = {
+                "disk": disk_num,
+                "timestamp": f"{current_time[0]:04d}-{current_time[1]:02d}-{current_time[2]:02d}T{current_time[3]:02d}:{current_time[4]:02d}:{current_time[5]:02d}",
+                "count": new_count
+            }
+            medication_data["refill_history"].append(refill_record)
+            
+            # 최근 50개 리필 기록만 유지
+            if len(medication_data["refill_history"]) > 50:
+                medication_data["refill_history"] = medication_data["refill_history"][-50:]
+            
+            return self.save_medication_data(medication_data)
                 
         except Exception as e:
             print(f"[ERROR] 디스크 수량 업데이트 실패: {e}")
@@ -298,8 +300,11 @@ class DataManager:
             disk_key = str(disk_num)
             
             if disk_key in medication_data["disks"]:
-                return medication_data["disks"][disk_key]["current_count"]
+                current_count = medication_data["disks"][disk_key]["current_count"]
+                print(f"[DEBUG] 디스크 {disk_num} 수량 조회: {current_count}개")
+                return current_count
             else:
+                print(f"[DEBUG] 디스크 {disk_num} 데이터 없음, 0 반환")
                 return 0
         except Exception as e:
             print(f"[ERROR] 디스크 수량 조회 실패: {e}")
@@ -375,3 +380,28 @@ class DataManager:
         except Exception as e:
             print(f"[ERROR] 데이터 요약 생성 실패: {e}")
             return None
+    
+    def get_dose_times(self):
+        """복용 시간 정보 조회"""
+        try:
+            settings = self.load_settings()
+            if settings and "dose_times" in settings:
+                return settings["dose_times"]
+            else:
+                return []
+        except Exception as e:
+            print(f"[ERROR] 복용 시간 조회 실패: {e}")
+            return []
+    
+    def save_dose_times(self, dose_times):
+        """복용 시간 정보 저장"""
+        try:
+            settings = self.load_settings()
+            if not settings:
+                settings = {}
+            
+            settings["dose_times"] = dose_times
+            return self.save_settings(settings)
+        except Exception as e:
+            print(f"[ERROR] 복용 시간 저장 실패: {e}")
+            return False
