@@ -4,7 +4,6 @@
 """
 
 import time
-import os
 from machine import Pin, I2S
 from audio_files_info import get_audio_files_info
 

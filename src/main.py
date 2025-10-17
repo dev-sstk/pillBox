@@ -16,8 +16,6 @@ sys.path.append("/")
 sys.path.append("/screens")
 
 from screen_manager import ScreenManager
-from screens.startup_screen import StartupScreen
-from screens.wifi_scan_screen import WifiScanScreen
 from motor_control import PillBoxMotorSystem
 
 def set_st7735_offset(offset_x=0, offset_y=0):

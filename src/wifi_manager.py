@@ -7,7 +7,6 @@ import network
 import time
 import json
 import ntptime
-from machine import Pin
 
 class WiFiManager:
     """WiFi 관리 클래스"""

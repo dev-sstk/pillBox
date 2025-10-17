@@ -6,7 +6,6 @@
 import sys
 sys.path.append("/")
 
-import time
 import lvgl as lv
 from ui_style import UIStyle
 from data_manager import DataManager

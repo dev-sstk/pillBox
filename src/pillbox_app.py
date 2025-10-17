@@ -5,15 +5,6 @@
 
 import time
 import lvgl as lv
-import lv_utils
-from machine import Pin
-from button_interface import ButtonInterface
-from screen_manager import ScreenManager
-from ui_style import UIStyle
-from audio_system import AudioSystem
-from motor_control import PillBoxMotorSystem
-from wifi_manager import get_wifi_manager
-from led_controller import LEDController
 
 class PillBoxApp:
     """필박스 메인 애플리케이션 클래스"""
@@ -25,19 +16,105 @@ class PillBoxApp:
         gc.collect()
         print("[OK] 메모리 정리 완료")
         
-        self.ui_style = UIStyle()
-        self.audio_system = AudioSystem()
-        self.led_controller = LEDController()  # LED 컨트롤러 추가
-        self.button_interface = ButtonInterface()
-        self.motor_system = PillBoxMotorSystem()  # 모터 시스템 추가
-        self.wifi_manager = wifi_manager  # WiFi 시스템 추가
-        self.screen_manager = ScreenManager(self)  # 자신을 전달
+        # 지연 초기화를 위한 플래그들
+        self._ui_style = None
+        self._audio_system = None
+        self._led_controller = None
+        self._button_interface = None
+        self._motor_system = None
+        self._wifi_manager = None
+        self._screen_manager = None
         self.running = False
         
         # 버튼 콜백 설정
         self._setup_button_callbacks()
         
         print("[OK] PillBoxApp 초기화 완료")
+    
+    # 지연 로딩 메서드들
+    @property
+    def ui_style(self):
+        """UI 스타일 지연 로딩"""
+        if self._ui_style is None:
+            from ui_style import UIStyle
+            self._ui_style = UIStyle()
+            print("[DEBUG] UI 스타일 지연 로딩 완료")
+        return self._ui_style
+    
+    @property
+    def audio_system(self):
+        """오디오 시스템 지연 로딩"""
+        if self._audio_system is None:
+            from audio_system import AudioSystem
+            self._audio_system = AudioSystem()
+            print("[DEBUG] 오디오 시스템 지연 로딩 완료")
+        return self._audio_system
+    
+    @property
+    def led_controller(self):
+        """LED 컨트롤러 지연 로딩"""
+        if self._led_controller is None:
+            from led_controller import LEDController
+            self._led_controller = LEDController()
+            print("[DEBUG] LED 컨트롤러 지연 로딩 완료")
+        return self._led_controller
+    
+    @property
+    def button_interface(self):
+        """버튼 인터페이스 지연 로딩"""
+        if self._button_interface is None:
+            from button_interface import ButtonInterface
+            self._button_interface = ButtonInterface()
+            print("[DEBUG] 버튼 인터페이스 지연 로딩 완료")
+        return self._button_interface
+    
+    @property
+    def motor_system(self):
+        """모터 시스템 지연 로딩"""
+        if self._motor_system is None:
+            from motor_control import PillBoxMotorSystem
+            self._motor_system = PillBoxMotorSystem()
+            print("[DEBUG] 모터 시스템 지연 로딩 완료")
+        return self._motor_system
+    
+    @property
+    def wifi_manager(self):
+        """WiFi 관리자 지연 로딩"""
+        if self._wifi_manager is None:
+            from wifi_manager import get_wifi_manager
+            self._wifi_manager = get_wifi_manager()
+            print("[DEBUG] WiFi 관리자 지연 로딩 완료")
+        return self._wifi_manager
+    
+    @property
+    def screen_manager(self):
+        """화면 관리자 지연 로딩"""
+        if self._screen_manager is None:
+            from screen_manager import ScreenManager
+            self._screen_manager = ScreenManager(self)
+            print("[DEBUG] 화면 관리자 지연 로딩 완료")
+        return self._screen_manager
+    
+    def cleanup_unused_modules(self):
+        """사용하지 않는 모듈들 정리"""
+        import gc
+        
+        # 사용하지 않는 모듈들 해제
+        if hasattr(self, '_audio_system') and self._audio_system:
+            self._audio_system = None
+            print("[DEBUG] 오디오 시스템 메모리 해제")
+        
+        if hasattr(self, '_motor_system') and self._motor_system:
+            self._motor_system = None
+            print("[DEBUG] 모터 시스템 메모리 해제")
+        
+        if hasattr(self, '_led_controller') and self._led_controller:
+            self._led_controller = None
+            print("[DEBUG] LED 컨트롤러 메모리 해제")
+        
+        # 가비지 컬렉션 실행
+        gc.collect()
+        print("[DEBUG] 메모리 정리 완료")
     
     def _setup_button_callbacks(self):
         """버튼 콜백 함수들 설정"""

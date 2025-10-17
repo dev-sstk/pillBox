@@ -645,14 +645,14 @@ class PillLoadingScreen:
             from data_manager import DataManager
             data_manager = DataManager()
             
-            # 각 디스크의 충전된 수량을 DataManager에 저장
+            # 각 디스크의 최종 수량을 DataManager에 저장
             for disk_num in [1, 2, 3]:
                 disk_index = disk_num - 1  # 디스크 번호를 인덱스로 변환 (1->0, 2->1, 3->2)
                 if disk_index in self.disk_states:
-                    loaded_count = self.disk_states[disk_index].loaded_count
-                    success = data_manager.update_disk_count(disk_num, loaded_count)
+                    final_count = self.disk_states[disk_index].loaded_count
+                    success = data_manager.update_disk_count(disk_num, final_count)
                     if success:
-                        print(f"[OK] 디스크 {disk_num} 수량 저장: {loaded_count}개")
+                        print(f"[OK] 디스크 {disk_num} 수량 저장: {final_count}개")
                     else:
                         print(f"[ERROR] 디스크 {disk_num} 수량 저장 실패")
                 else:
@@ -1263,18 +1263,19 @@ class PillLoadingScreen:
             sys.print_exception(e)
     
     def _load_disk_states(self):
-        """저장된 디스크 충전 상태 불러오기"""
+        """저장된 디스크 충전 상태 불러오기 (DataManager에서 실제 수량 로드)"""
         try:
-            import json  # 지연 임포트
-            with open(self.disk_states_file, 'r') as f:
-                config = json.load(f)
+            # DataManager에서 실제 약물 수량 불러오기
+            from data_manager import DataManager
+            data_manager = DataManager()
             
-            # 불러온 상태로 디스크 생성 (디스크 번호 0, 1, 2)
+            # 디스크 생성 (디스크 번호 0, 1, 2)
             for i in range(3):
                 self.disk_states[i] = DiskState(i)
-                # 두 가지 키 형식 지원: disk_0_loaded (구버전) 또는 disk_1_loaded (신버전)
-                loaded_count = config.get(f'disk_{i+1}_loaded', config.get(f'disk_{i}_loaded', 0))
-                self.disk_states[i].loaded_count = loaded_count
+                # DataManager에서 실제 수량 가져오기
+                disk_num = i + 1  # 디스크 번호 (1, 2, 3)
+                current_count = data_manager.get_disk_count(disk_num)
+                self.disk_states[i].loaded_count = current_count
             
             print(f"  📂 디스크 충전 상태 불러옴: {self.disk_states[0].loaded_count}, {self.disk_states[1].loaded_count}, {self.disk_states[2].loaded_count}")
             

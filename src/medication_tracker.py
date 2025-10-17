@@ -4,7 +4,6 @@
 """
 
 import time
-from data_manager import DataManager
 
 class MedicationTracker:
     """약물 추적 및 관리 클래스"""

@@ -2,8 +2,6 @@
 알람 시스템
 5분 간격 재알람 및 배출 확인 기능
 """
-
-import time
 from wifi_manager import get_wifi_manager
 
 class AlarmSystem:

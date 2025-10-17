@@ -3,8 +3,6 @@
 모든 화면의 생성, 전환, 업데이트를 관리
 """
 
-import lvgl as lv
-
 class ScreenManager:
     """화면 관리자 클래스"""
     

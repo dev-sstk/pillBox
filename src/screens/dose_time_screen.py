@@ -477,12 +477,8 @@ class DoseTimeScreen:
                     if isinstance(dose_info, dict):
                         print(f"    - {dose_info['meal_name']}: {dose_info['time']}")
             else:
-                # 기본 저장 방식
-                self.dose_times.append(time_str)
-                print(f"  [INFO] 복용 시간 {self.current_dose_index + 1} 저장: {time_str}")
-                
-                # 전역 데이터에도 저장
-                global_data.save_dose_times(self.dose_times)
+                # selected_meals가 없는 경우는 정상적인 상황이 아님
+                print(f"  [WARN] selected_meals가 없음, 시간 저장 건너뛰기: {time_str}")
         except Exception as e:
             print(f"  [ERROR] 시간 저장 실패: {e}")
             import sys

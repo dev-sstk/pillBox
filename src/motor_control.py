@@ -5,7 +5,6 @@
 
 from machine import Pin
 import time
-import _thread
 
 class InputShiftRegister:
     """74HC165D 입력 시프트 레지스터 제어 클래스"""
