@@ -32,14 +32,20 @@ class AudioSystem:
             return True
             
         try:
-            # 메모리 정리 후 I2S 초기화 시도
+            # 메모리 정리 후 I2S 초기화 시도 (극도로 강화된 정리)
             import gc
             gc.collect()
-            print("[INFO] I2S 지연 초기화 시작 - 메모리 정리 완료")
+            gc.collect()  # 두 번 정리
+            gc.collect()  # 세 번 정리
+            gc.collect()  # 네 번 정리
+            gc.collect()  # 다섯 번 정리
+            import time
+            time.sleep_ms(500)  # 500ms 대기 (더 긴 대기)
+            print("[INFO] I2S 지연 초기화 시작 - 극도로 강화된 메모리 정리 완료")
             
             # I2S 설정 (MAX98357A) - 메모리 사용량 최적화
             # BCLK: GPIO 6, LRCLK: GPIO 7, DIN: GPIO 5
-            # 버퍼 크기를 줄여서 메모리 사용량 감소
+            # 버퍼 크기를 극도로 줄여서 메모리 사용량 감소
             self.i2s = I2S(
                 0,
                 sck=Pin(6),      # Bit Clock
@@ -49,7 +55,7 @@ class AudioSystem:
                 bits=16,
                 format=I2S.MONO,
                 rate=16000,
-                ibuf=1024        # 2048 → 1024로 줄여서 메모리 절약
+                ibuf=256         # 1024 → 256으로 극도로 줄여서 메모리 절약
             )
             self.i2s_initialized = True
             print("[OK] I2S 오디오 하드웨어 지연 초기화 완료 (메모리 최적화)")
@@ -58,9 +64,11 @@ class AudioSystem:
             print(f"[WARN] I2S 오디오 하드웨어 지연 초기화 실패: {e}")
             # 메모리 부족 시 더 작은 버퍼로 재시도
             try:
-                print("[INFO] 작은 버퍼로 I2S 재시도...")
+                print("[INFO] 극도로 작은 버퍼로 I2S 재시도...")
                 import gc
                 gc.collect()
+                gc.collect()
+                time.sleep_ms(200)
                 self.i2s = I2S(
                     0,
                     sck=Pin(6),
@@ -70,7 +78,7 @@ class AudioSystem:
                     bits=16,
                     format=I2S.MONO,
                     rate=16000,
-                    ibuf=512      # 더 작은 버퍼로 재시도
+                    ibuf=128      # 극도로 작은 버퍼로 재시도
                 )
                 self.i2s_initialized = True
                 print("[OK] I2S 오디오 하드웨어 지연 초기화 완료 (작은 버퍼)")
@@ -90,6 +98,13 @@ class AudioSystem:
         
         if self.audio_files_info is None:
             self.audio_files_info = get_audio_files_info()
+        
+        # 디버그: 사용 가능한 파일 목록 출력
+        print(f"[DEBUG] 요청된 오디오 파일: {audio_file}")
+        if hasattr(self.audio_files_info, 'audio_files'):
+            available_files = list(self.audio_files_info.audio_files.keys())
+            print(f"[DEBUG] 사용 가능한 오디오 파일들: {available_files}")
+        
         file_info = self.audio_files_info.get_file_info(audio_file)
         if not file_info:
             print(f"[ERROR] 알 수 없는 오디오 파일: {audio_file}")

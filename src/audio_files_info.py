@@ -113,6 +113,12 @@ class AudioFilesInfo:
                 "duration": 3000,
                 "category": "voice",
                 "priority": "high"
+            },
+            "dispense_medicine.wav": {
+                "description": "배출 안내 음성",
+                "duration": 2000,
+                "category": "voice",
+                "priority": "high"
             }
         }
         

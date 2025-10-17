@@ -536,26 +536,48 @@ class MainScreen:
                 
                 # 실제 수량으로 초기화
                 try:
-                    # 해당 일정의 디스크 번호 결정
-                    if i < len(self.dose_schedule):
-                        current_dose = self.dose_schedule[i]
-                        selected_disks = current_dose.get('selected_disks', [i + 1])
-                        if selected_disks:
-                            disk_num = selected_disks[0]
-                        else:
-                            disk_num = i + 1
+                    # 복용 횟수 확인
+                    dose_count = len(self.dose_schedule)
+                    
+                    if dose_count == 1:
+                        # 1일 1회: 선택된 디스크들의 총합 표시
+                        selected_disks = self._get_selected_disks_from_dose_time()
                         
-                        # DataManager에서 실제 수량 가져오기
-                        data_manager = self.data_manager
-                        if data_manager:
-                            current_count = data_manager.get_disk_count(disk_num)
-                        else:
-                            current_count = 15  # 기본값
+                        total_count = 0
+                        total_capacity = 0
                         
-                        max_capacity = 15
-                        count_text = f"{current_count}/{max_capacity}"
+                        for disk_num in selected_disks:
+                            data_manager = self.data_manager
+                            if data_manager:
+                                current_count = data_manager.get_disk_count(disk_num)
+                            else:
+                                current_count = 15  # 기본값
+                            total_count += current_count
+                            total_capacity += 15
+                        
+                        count_text = f"{total_count}/{total_capacity}"
+                        print(f"  [DEBUG] 1일 1회 초기 선택된 디스크 총합 표시: {total_count}/{total_capacity} (디스크: {selected_disks})")
                     else:
-                        count_text = "15/15"  # 기본값
+                        # 1일 2회 이상: 기존 방식 (디스크별 개별 표시)
+                        if i < len(self.dose_schedule):
+                            current_dose = self.dose_schedule[i]
+                            selected_disks = current_dose.get('selected_disks', [i + 1])
+                            if selected_disks:
+                                disk_num = selected_disks[0]
+                            else:
+                                disk_num = i + 1
+                            
+                            # DataManager에서 실제 수량 가져오기
+                            data_manager = self.data_manager
+                            if data_manager:
+                                current_count = data_manager.get_disk_count(disk_num)
+                            else:
+                                current_count = 15  # 기본값
+                            
+                            max_capacity = 15
+                            count_text = f"{current_count}/{max_capacity}"
+                        else:
+                            count_text = "15/15"  # 기본값
                 except:
                     count_text = "15/15"  # 오류 시 기본값
                 
@@ -1025,36 +1047,79 @@ class MainScreen:
         """알약 개수 표시 업데이트 (모든 일정)"""
         try:
             if hasattr(self, 'pill_count_labels') and self.pill_count_labels:
-                for i, pill_count_label in enumerate(self.pill_count_labels):
-                    if i < len(self.dose_schedule):
-                        current_dose = self.dose_schedule[i]
-                        
-                        # dose_time_screen에서 설정한 selected_disks 정보 사용
-                        selected_disks = current_dose.get('selected_disks', [i + 1])
-                        if selected_disks:
-                            disk_num = selected_disks[0]  # 첫 번째 선택된 디스크 사용
-                        else:
-                            disk_num = i + 1  # 기본값
-                        
-                        # 디스크의 현재 개수와 최대 용량 가져오기
-                        data_manager = self.data_manager
-                        if data_manager:
-                            current_count = data_manager.get_disk_count(disk_num)
-                        else:
-                            current_count = 15  # 기본값
-                        
-                        max_capacity = 15  # 디스크당 최대 15칸
-                        
-                        # 표시 텍스트 업데이트
-                        count_text = f"{current_count}/{max_capacity}"
-                        pill_count_label.set_text(count_text)
-                        
-                        # 개수에 따른 색상 변경
-                        # 알약 개수는 항상 검정색으로 표시
-                        pill_count_label.set_style_text_color(lv.color_hex(0x000000), 0)
+                # 복용 횟수 확인
+                dose_count = len(self.dose_schedule)
+                
+                if dose_count == 1:
+                    # 1일 1회: 모든 디스크의 총합 표시
+                    self._update_total_pill_count_display()
+                else:
+                    # 1일 2회 이상: 기존 방식 (디스크별 개별 표시)
+                    self._update_individual_pill_count_display()
                         
         except Exception as e:
             print(f"  [ERROR] 알약 개수 표시 업데이트 실패: {e}")
+    
+    def _update_total_pill_count_display(self):
+        """1일 1회일 때 선택된 디스크들의 총합 알약 개수 표시"""
+        try:
+            # 선택된 디스크들 가져오기
+            selected_disks = self._get_selected_disks_from_dose_time()
+            
+            # 선택된 디스크들의 총합 계산
+            total_count = 0
+            total_capacity = 0
+            
+            for disk_num in selected_disks:
+                current_count = self.data_manager.get_disk_count(disk_num)
+                total_count += current_count
+                total_capacity += 15  # 디스크당 최대 15칸
+            
+            # 모든 일정에 동일한 총합 표시
+            for i, pill_count_label in enumerate(self.pill_count_labels):
+                if i < len(self.dose_schedule):
+                    count_text = f"{total_count}/{total_capacity}"
+                    pill_count_label.set_text(count_text)
+                    pill_count_label.set_style_text_color(lv.color_hex(0x000000), 0)
+                    
+            print(f"  [DEBUG] 1일 1회 선택된 디스크 총합 표시: {total_count}/{total_capacity} (디스크: {selected_disks})")
+                    
+        except Exception as e:
+            print(f"  [ERROR] 총합 알약 개수 표시 실패: {e}")
+    
+    def _update_individual_pill_count_display(self):
+        """1일 2회 이상일 때 개별 디스크 알약 개수 표시"""
+        try:
+            for i, pill_count_label in enumerate(self.pill_count_labels):
+                if i < len(self.dose_schedule):
+                    current_dose = self.dose_schedule[i]
+                    
+                    # dose_time_screen에서 설정한 selected_disks 정보 사용
+                    selected_disks = current_dose.get('selected_disks', [i + 1])
+                    if selected_disks:
+                        disk_num = selected_disks[0]  # 첫 번째 선택된 디스크 사용
+                    else:
+                        disk_num = i + 1  # 기본값
+                    
+                    # 디스크의 현재 개수와 최대 용량 가져오기
+                    data_manager = self.data_manager
+                    if data_manager:
+                        current_count = data_manager.get_disk_count(disk_num)
+                    else:
+                        current_count = 15  # 기본값
+                    
+                    max_capacity = 15  # 디스크당 최대 15칸
+                    
+                    # 표시 텍스트 업데이트
+                    count_text = f"{current_count}/{max_capacity}"
+                    pill_count_label.set_text(count_text)
+                    
+                    # 개수에 따른 색상 변경
+                    # 알약 개수는 항상 검정색으로 표시
+                    pill_count_label.set_style_text_color(lv.color_hex(0x000000), 0)
+                    
+        except Exception as e:
+            print(f"  [ERROR] 개별 알약 개수 표시 실패: {e}")
     
     def on_button_a(self):
         """버튼 A - 배출"""
@@ -1074,23 +1139,27 @@ class MainScreen:
                 self._update_status("수동 배출 중...")
                 
                 try:
+                    print(f"  [DEBUG] 모터 시스템 초기화 시작...")
                     motor_system = self._init_motor_system()
+                    print(f"  [DEBUG] 모터 시스템 초기화 완료")
                     
                     print(f"  [RETRY] 수동 배출 시퀀스 시작: 일정 {self.current_dose_index + 1}")
                     
+                    print(f"  [DEBUG] 선택된 디스크 확인 시작...")
                     required_disks = self._get_selected_disks_for_dose(self.current_dose_index)
                     print(f"  [INFO] 선택된 디스크들: {required_disks}")
                     
                     print(f"  📋 필요한 디스크: {required_disks}")
                     
+                    print(f"  [DEBUG] 배출 함수 호출 시작...")
                     success = self._dispense_from_selected_disks(motor_system, required_disks)
+                    print(f"  [DEBUG] 배출 함수 호출 완료, 결과: {success}")
                     
                     if success:
                         print(f"  [OK] 모든 디스크 배출 완료")
                         self._update_status("배출 완료")
                         
-                        # 배출 성공 시 음성 안내 재생
-                        self._play_dispense_voice()
+                        # 배출 성공 (안내는 배출 전에 이미 재생됨)
                         
                         self.dose_schedule[self.current_dose_index]["status"] = "completed"
                         
@@ -1098,7 +1167,8 @@ class MainScreen:
                         
                         self.alarm_system.confirm_dispense(self.current_dose_index)
                         
-                        self._decrease_selected_disks_count(self.current_dose_index)
+                        # 디스크 수량 감소는 _dispense_from_selected_disks()에서 처리됨
+                        # self._decrease_selected_disks_count(self.current_dose_index)  # 중복 제거
                         
                         self._update_schedule_display()
                         
@@ -1141,8 +1211,7 @@ class MainScreen:
                 print(f"[OK] 알람 배출 성공: {alarm_info['meal_name']}")
                 self._update_status("알람 배출 완료")
                 
-                # 알람 배출 성공 시 음성 안내 재생
-                self._play_dispense_voice()
+                # 알람 배출 성공 (안내는 배출 전에 이미 재생됨)
             else:
                 print(f"[ERROR] 알람 배출 실패: {alarm_info['meal_name']}")
                 self._update_status("알람 배출 실패")
@@ -1331,8 +1400,8 @@ class MainScreen:
                 # 알람 시스템에 배출 확인
                 self.alarm_system.confirm_dispense(dose_index)
                 
-                # 선택된 디스크들의 약물 수량 감소
-                self._decrease_selected_disks_count(dose_index)
+                # 디스크 수량 감소는 _dispense_from_selected_disks()에서 처리됨
+                # self._decrease_selected_disks_count(dose_index)  # 중복 제거
                 
                 self._update_status("자동 배출 완료")
                 print(f"[OK] 자동 배출 성공: 일정 {dose_index + 1}")
@@ -1353,8 +1422,64 @@ class MainScreen:
             print(f"[ERROR] 자동 배출 실행 실패: {e}")
             self._update_status("자동 배출 오류")
     
-    def _decrease_selected_disks_count(self, dose_index):
-        """선택된 디스크들의 약물 수량 감소"""
+    # def _decrease_selected_disks_count(self, dose_index):
+    #     """선택된 디스크들의 약물 수량 감소 (중복 제거됨)"""
+    #     # 이 함수는 _dispense_from_selected_disks()에서 _decrease_disk_count()로 대체됨
+    #     # 중복으로 디스크 수량을 감소시키는 문제를 해결하기 위해 비활성화
+    #     pass
+    
+    def _get_selected_disks_for_dose(self, dose_index):
+        """복용 일정에 대한 선택된 디스크들 반환 (순차 소진 방식)"""
+        try:
+            # 복용 횟수 확인
+            dose_count = len(self.dose_schedule)
+            
+            if dose_count == 1:
+                # 1일 1회: 디스크1 → 디스크2 → 디스크3 순으로 배출
+                result = self._get_sequential_dispense_order()
+                print(f"[DEBUG] _get_sequential_dispense_order() 결과: {result}")
+                return result
+            else:
+                # 1일 2회 이상: 기존 방식 (일정별 개별 디스크)
+                return self._get_individual_disk_for_dose(dose_index)
+                
+        except Exception as e:
+            print(f"[ERROR] 선택된 디스크 결정 실패: {e}")
+            return [1]  # 기본값
+    
+    def _get_sequential_dispense_order(self):
+        """1일 1회일 때 순차 배출 순서 반환 (선택된 디스크들 중에서 순차적으로)"""
+        try:
+            # dose_time_screen에서 선택된 디스크들 가져오기
+            selected_disks = self._get_selected_disks_from_dose_time()
+            
+            if not selected_disks:
+                print("[WARN] 선택된 디스크 정보 없음, 기본값 사용")
+                return [1]  # 기본값
+            
+            # 선택된 디스크들을 정렬해서 1, 2, 3 순서로 배출
+            sorted_disks = sorted(selected_disks)
+            print(f"[INFO] 선택된 디스크 정렬: {selected_disks} → {sorted_disks}")
+            
+            # 정렬된 디스크들 중에서 사용 가능한 첫 번째 디스크 찾기
+            for disk_num in sorted_disks:
+                current_count = self.data_manager.get_disk_count(disk_num)
+                if current_count > 0:
+                    print(f"[INFO] 1일 1회 순차 배출: 디스크 {disk_num}에서 1알 배출 ({current_count}개 남음)")
+                    return [disk_num]  # 한 번에 하나의 디스크만 반환
+                else:
+                    print(f"[INFO] 디스크 {disk_num}: {current_count}개 → 비어있음, 다음 디스크 확인")
+            
+            # 선택된 모든 디스크가 비어있음
+            print("[WARN] 선택된 모든 디스크가 비어있음")
+            return [selected_disks[0]] if selected_disks else [1]  # 첫 번째 선택된 디스크에서 시도
+            
+        except Exception as e:
+            print(f"[ERROR] 순차 배출 순서 결정 실패: {e}")
+            return [1]  # 기본값
+    
+    def _get_selected_disks_from_dose_time(self):
+        """dose_time_screen에서 선택된 디스크들 가져오기"""
         try:
             # dose_time_screen에서 복용 시간 정보 가져오기
             dose_times = []
@@ -1363,37 +1488,22 @@ class MainScreen:
                 if hasattr(dose_time_screen, 'get_dose_times'):
                     dose_times = dose_time_screen.get_dose_times()
             
-            if dose_times and dose_index < len(dose_times):
-                dose_info = dose_times[dose_index]
-                selected_disks = dose_info.get('selected_disks', [dose_index + 1])  # 기본값: 해당 일정의 디스크
-                
-                print(f"[INFO] 선택된 디스크들: {selected_disks}")
-                
-                # 각 디스크의 약물 수량 감소
-                for disk_num in selected_disks:
-                    current_count = self.data_manager.get_disk_count(disk_num)
-                    if current_count > 0:
-                        new_count = current_count - 1
-                        self.data_manager.update_disk_count(disk_num, new_count)
-                        print(f"[INFO] 디스크 {disk_num} 약물 수량: {current_count} → {new_count}")
-                    else:
-                        print(f"[WARN] 디스크 {disk_num} 약물 수량이 0입니다")
+            if dose_times and len(dose_times) > 0:
+                # 첫 번째 복용 시간의 선택된 디스크들 사용
+                dose_info = dose_times[0]
+                selected_disks = dose_info.get('selected_disks', [1])  # 기본값: 디스크1
+                print(f"[INFO] dose_time_screen에서 선택된 디스크들: {selected_disks}")
+                return selected_disks
             else:
-                # 기본 로직: 해당 일정의 디스크만 감소
-                disk_num = dose_index + 1
-                current_count = self.data_manager.get_disk_count(disk_num)
-                if current_count > 0:
-                    new_count = current_count - 1
-                    self.data_manager.update_disk_count(disk_num, new_count)
-                    print(f"[INFO] 디스크 {disk_num} 약물 수량: {current_count} → {new_count}")
+                print("[WARN] dose_times 정보 없음, 기본값 사용")
+                return [1]  # 기본값
                 
         except Exception as e:
-            print(f"[ERROR] 선택된 디스크 수량 감소 실패: {e}")
-            import sys
-            sys.print_exception(e)
+            print(f"[ERROR] 선택된 디스크 가져오기 실패: {e}")
+            return [1]  # 기본값
     
-    def _get_selected_disks_for_dose(self, dose_index):
-        """복용 일정에 대한 선택된 디스크들 반환 (순차 소진 방식)"""
+    def _get_individual_disk_for_dose(self, dose_index):
+        """1일 2회 이상일 때 개별 디스크 반환"""
         try:
             # dose_time_screen에서 복용 시간 정보 가져오기
             dose_times = []
@@ -1448,33 +1558,121 @@ class MainScreen:
             return None
     
     def _play_dispense_voice(self):
-        """배출 완료 시 음성 안내 재생"""
+        """배출 완료 시 버저 → LED → 음성 순서로 안내"""
         try:
-            print("🔊 배출 완료 음성 안내 재생 시작")
+            print("🔊 배출 완료 안내 시작 (버저 → LED → 음성)")
             
-            # 알람 시스템의 오디오 시스템을 통해 음성 재생
+            # 1단계: 버저 소리 재생
+            self._play_buzzer_sound()
+            
+            # 2단계: LED 켜기
+            self._turn_on_led()
+            
+            # 3단계: 음성 재생
+            self._play_voice_audio()
+                
+        except Exception as e:
+            print(f"[ERROR] 배출 완료 안내 실패: {e}")
+    
+    def _play_buzzer_sound(self):
+        """버저 소리 재생"""
+        try:
+            print("🔔 버저 소리 재생 시작")
+            
+            # 알람 시스템의 오디오 시스템을 통해 버저 소리 재생
             if hasattr(self.alarm_system, 'audio_system') and self.alarm_system.audio_system:
-                # take_medicine.wav 파일 재생
-                self.alarm_system.audio_system.play_voice("take_medicine.wav", blocking=False)
-                print("🔊 take_medicine.wav 음성 재생 완료")
+                self.alarm_system.audio_system.play_alarm_sound()
+                print("🔔 버저 소리 재생 완료")
             else:
-                print("🔊 오디오 시스템 없음, 음성 재생 시뮬레이션")
+                print("🔔 버저 시스템 없음, 버저 시뮬레이션")
+                import time
+                time.sleep(0.5)  # 시뮬레이션
+                
+        except Exception as e:
+            print(f"[ERROR] 버저 소리 재생 실패: {e}")
+    
+    def _turn_on_led(self):
+        """LED 켜기"""
+        try:
+            print("💡 LED 켜기 시작")
+            
+            # 알람 시스템의 LED 컨트롤러를 통해 LED 켜기
+            if hasattr(self.alarm_system, 'led_controller') and self.alarm_system.led_controller:
+                # 성공 표시용 LED 켜기
+                self.alarm_system.led_controller.show_alarm_led()
+                print("💡 LED 켜기 완료")
+                
+                # 1초 후 LED 끄기
+                import time
+                time.sleep(1)
+                self.alarm_system.led_controller.hide_alarm_led()
+                print("💡 LED 끄기 완료")
+            else:
+                print("💡 LED 시스템 없음, LED 시뮬레이션")
                 import time
                 time.sleep(1)  # 시뮬레이션
                 
         except Exception as e:
-            print(f"[ERROR] 배출 완료 음성 재생 실패: {e}")
+            print(f"[ERROR] LED 제어 실패: {e}")
+    
+    def _play_voice_audio(self):
+        """음성 재생 (수동 배출 시 dispense_medicine.wav 사용)"""
+        try:
+            print("🔊 음성 재생 시작")
+            
+            # 음성 재생 직전 메모리 정리 강화
+            import gc
+            gc.collect()
+            gc.collect()  # 두 번 정리
+            import time
+            time.sleep_ms(100)  # 100ms 대기
+            
+            # DataManager 캐시 비활성화 (메모리 절약)
+            if hasattr(self, 'data_manager') and self.data_manager:
+                try:
+                    # 캐시된 데이터 정리
+                    if hasattr(self.data_manager, 'clear_cache'):
+                        self.data_manager.clear_cache()
+                    print("[INFO] DataManager 캐시 정리 완료")
+                except Exception as cache_error:
+                    print(f"[WARN] 캐시 정리 실패: {cache_error}")
+            
+            # 직접 오디오 시스템을 통해 음성 재생 (블로킹 모드로 실제 재생)
+            try:
+                from audio_system import AudioSystem
+                audio_system = AudioSystem()
+                audio_system.play_voice("dispense_medicine.wav", blocking=True)
+                print("🔊 dispense_medicine.wav 음성 재생 완료")
+            except Exception as audio_error:
+                print(f"[WARN] 직접 오디오 시스템 재생 실패: {audio_error}")
+                
+                # 알람 시스템의 오디오 시스템을 통해 음성 재생 (백업)
+                if hasattr(self.alarm_system, 'audio_system') and self.alarm_system.audio_system:
+                    self.alarm_system.audio_system.play_voice("dispense_medicine.wav", blocking=True)
+                    print("🔊 알람 시스템을 통한 dispense_medicine.wav 음성 재생 완료")
+                else:
+                    print("🔊 오디오 시스템 없음, 음성 재생 시뮬레이션")
+                    import time
+                    time.sleep(1)  # 시뮬레이션
+                
+        except Exception as e:
+            print(f"[ERROR] 음성 재생 실패: {e}")
     
     def _dispense_from_selected_disks(self, motor_system, selected_disks):
         """선택된 디스크들에서 순차적으로 배출"""
         try:
             print(f"[INFO] 선택된 디스크들 순차 배출 시작: {selected_disks}")
+            print(f"[DEBUG] motor_system 타입: {type(motor_system)}")
+            print(f"[DEBUG] selected_disks 타입: {type(selected_disks)}, 값: {selected_disks}")
             
             # 선택된 디스크가 없으면 실패
             if not selected_disks:
                 print(f"[ERROR] 배출할 디스크가 없음")
                 self._update_status("배출할 디스크 없음")
                 return False
+            
+            # 배출 시작 전 안내 (버저 → LED → 음성)
+            self._play_dispense_voice()
             
             for i, disk_num in enumerate(selected_disks):
                 print(f"[INFO] 디스크 {disk_num} 배출 중... ({i+1}/{len(selected_disks)})")
@@ -1504,6 +1702,9 @@ class MainScreen:
                 
                 print(f"[OK] 디스크 {disk_num} 배출 완료")
                 
+                # 배출된 디스크의 수량 감소
+                self._decrease_disk_count(disk_num)
+                
                 # 마지막 디스크가 아니면 잠시 대기
                 if i < len(selected_disks) - 1:
                     time.sleep(1)  # 1초 간격
@@ -1516,6 +1717,27 @@ class MainScreen:
             import sys
             sys.print_exception(e)
             return False
+    
+    def _decrease_disk_count(self, disk_num):
+        """배출된 디스크의 수량 감소"""
+        try:
+            print(f"[DEBUG] _decrease_disk_count 호출됨: 디스크 {disk_num}")
+            current_count = self.data_manager.get_disk_count(disk_num)
+            print(f"[DEBUG] 현재 수량: {current_count}")
+            if current_count > 0:
+                new_count = current_count - 1
+                print(f"[DEBUG] 새 수량: {new_count}")
+                success = self.data_manager.update_disk_count(disk_num, new_count)
+                if success:
+                    print(f"[INFO] 디스크 {disk_num} 약물 수량: {current_count} → {new_count}")
+                else:
+                    print(f"[ERROR] 디스크 {disk_num} 수량 업데이트 실패")
+            else:
+                print(f"[WARN] 디스크 {disk_num}가 이미 비어있음")
+        except Exception as e:
+            print(f"[ERROR] 디스크 {disk_num} 수량 감소 실패: {e}")
+            import sys
+            sys.print_exception(e)
     
     def _update_schedule_display(self, specific_index=None):
         """복용 일정 표시 업데이트 (특정 일정만 또는 전체)"""

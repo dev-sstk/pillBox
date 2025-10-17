@@ -35,15 +35,24 @@ class DataManager:
         self.medication_file = "/data/medication.json"
         self.dispense_log_file = "/data/dispense_log.json"
         
-        # 메모리 최적화: 데이터 캐싱
+        # 메모리 최적화: 데이터 캐싱 비활성화 (I2S 메모리 절약)
         self._medication_cache = None
         self._cache_timestamp = 0
-        self._cache_timeout = 30000  # 30초 캐시 유지 (메모리 절약)
+        self._cache_timeout = 0  # 캐시 비활성화 (메모리 절약)
         
         # 데이터 디렉토리 생성
         self._ensure_data_directory()
         
-        print("[OK] DataManager 초기화 완료 (캐싱 활성화)")
+        print("[OK] DataManager 초기화 완료 (캐싱 비활성화 - 메모리 절약)")
+    
+    def clear_cache(self):
+        """캐시 정리 (메모리 절약)"""
+        try:
+            self._medication_cache = None
+            self._cache_timestamp = 0
+            print("[INFO] DataManager 캐시 정리 완료")
+        except Exception as e:
+            print(f"[WARN] 캐시 정리 실패: {e}")
     
     def _ensure_data_directory(self):
         """데이터 디렉토리 존재 확인 및 생성"""
