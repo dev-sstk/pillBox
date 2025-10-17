@@ -36,13 +36,13 @@ def set_st7735_offset(offset_x=0, offset_y=0):
 def init_display():
     """ST7735 디스플레이 초기화 (test_lvgl.py 방식)"""
     try:
-        # ⚡ 메모리 부족 해결: 디스플레이 초기화 전 강력한 메모리 정리
+        # [FAST] 메모리 부족 해결: 디스플레이 초기화 전 강력한 메모리 정리
         import gc
         print("🧹 디스플레이 초기화 전 메모리 정리 시작...")
         for i in range(20):  # 20회 가비지 컬렉션 (더 강력하게)
             gc.collect()
             time.sleep(0.1)  # 0.1초 대기 (더 오래)
-        print("✅ 디스플레이 초기화 전 메모리 정리 완료")
+        print("[OK] 디스플레이 초기화 전 메모리 정리 완료")
         
         # 디스플레이 설정
         DISPLAY_WIDTH = 128
@@ -59,12 +59,12 @@ def init_display():
         cs = Pin(23, Pin.OUT)
         rst = Pin(20, Pin.OUT)
         
-        # ⚡ 메모리 부족 해결: ST7735 디스플레이 객체 생성 전 추가 메모리 정리
+        # [FAST] 메모리 부족 해결: ST7735 디스플레이 객체 생성 전 추가 메모리 정리
         print("🧹 ST7735 디스플레이 객체 생성 전 메모리 정리 시작...")
         for i in range(10):  # 10회 추가 가비지 컬렉션 (더 강력하게)
             gc.collect()
             time.sleep(0.05)  # 0.05초 대기 (더 오래)
-        print("✅ ST7735 디스플레이 객체 생성 전 메모리 정리 완료")
+        print("[OK] ST7735 디스플레이 객체 생성 전 메모리 정리 완료")
         
         # ST7735 디스플레이 초기화
         display = St7735(
@@ -81,33 +81,33 @@ def init_display():
         # 디스플레이 백라이트 설정
         display.set_backlight(100)
         
-        print("✅ ST7735 디스플레이 초기화 완료")
+        print("[OK] ST7735 디스플레이 초기화 완료")
         return True
         
     except Exception as e:
-        print(f"❌ 디스플레이 초기화 실패: {e}")
-        # ⚡ 메모리 할당 실패 시 추가 메모리 정리
+        print(f"[ERROR] 디스플레이 초기화 실패: {e}")
+        # [FAST] 메모리 할당 실패 시 추가 메모리 정리
         print("🧹 디스플레이 초기화 실패 후 추가 메모리 정리...")
         for i in range(5):
             gc.collect()
             time.sleep(0.01)
-        print("✅ 추가 메모리 정리 완료")
+        print("[OK] 추가 메모리 정리 완료")
         return False
 
 def setup_lvgl():
     """LVGL 환경 설정 (올바른 순서)"""
     try:
-        # ⚡ 메모리 부족 해결: LVGL 설정 전 메모리 정리
+        # [FAST] 메모리 부족 해결: LVGL 설정 전 메모리 정리
         import gc
         print("🧹 LVGL 설정 전 메모리 정리 시작...")
         for i in range(5):  # 5회 가비지 컬렉션
             gc.collect()
             time.sleep(0.02)  # 0.02초 대기
-        print("✅ LVGL 설정 전 메모리 정리 완료")
+        print("[OK] LVGL 설정 전 메모리 정리 완료")
         
         # 이미 초기화된 경우 체크
         if lv.is_initialized():
-            print("⚠️ LVGL이 이미 초기화됨, 재초기화 시도...")
+            print("[WARN] LVGL이 이미 초기화됨, 재초기화 시도...")
             # 기존 리소스 정리
             cleanup_lvgl()
             # 추가 대기
@@ -115,20 +115,20 @@ def setup_lvgl():
         
         # 1단계: LVGL 초기화
         lv.init()
-        print("✅ LVGL 초기화 완료")
+        print("[OK] LVGL 초기화 완료")
         
         # 2단계: 디스플레이 드라이버 초기화 (ST7735)
         # 이 단계에서 lv.display_register()가 호출됨
         display_init_success = init_display()
         if not display_init_success:
-            print("❌ 디스플레이 초기화 실패로 LVGL 설정 중단")
+            print("[ERROR] 디스플레이 초기화 실패로 LVGL 설정 중단")
             return False
-        print("✅ 디스플레이 드라이버 초기화 완료")
+        print("[OK] 디스플레이 드라이버 초기화 완료")
         
         # 3단계: 이벤트 루프 시작
         if not lv_utils.event_loop.is_running():
             event_loop = lv_utils.event_loop()
-            print("✅ LVGL 이벤트 루프 시작")
+            print("[OK] LVGL 이벤트 루프 시작")
         
         # 초기화 후 메모리 정리
         import gc
@@ -137,7 +137,7 @@ def setup_lvgl():
         return True
         
     except Exception as e:
-        print(f"❌ LVGL 설정 실패: {e}")
+        print(f"[ERROR] LVGL 설정 실패: {e}")
         import sys
         sys.print_exception(e)
         return False
@@ -162,7 +162,7 @@ def cleanup_lvgl():
                         child = current_screen.get_child(0)
                         if child:
                             child.delete()
-                    print("✅ 화면 자식 객체 정리 완료")
+                    print("[OK] 화면 자식 객체 정리 완료")
             
             # 디스플레이 버퍼 정리
             if hasattr(lv, 'display_get_default'):
@@ -173,21 +173,21 @@ def cleanup_lvgl():
                         disp.set_draw_buffers(None, None)
                     except:
                         pass
-                    print("✅ 디스플레이 버퍼 정리 완료")
+                    print("[OK] 디스플레이 버퍼 정리 완료")
             
-            print("✅ LVGL 리소스 정리 완료")
+            print("[OK] LVGL 리소스 정리 완료")
         except Exception as e:
-            print(f"⚠️ LVGL 정리 중 일부 오류 (무시됨): {e}")
+            print(f"[WARN] LVGL 정리 중 일부 오류 (무시됨): {e}")
         
         # 강제 가비지 컬렉션 여러 번 실행
         for i in range(3):
             gc.collect()
             time.sleep(0.01)  # 짧은 대기
         
-        print("✅ 메모리 정리 완료")
+        print("[OK] 메모리 정리 완료")
         
     except Exception as e:
-        print(f"⚠️ 리소스 정리 중 오류 (무시됨): {e}")
+        print(f"[WARN] 리소스 정리 중 오류 (무시됨): {e}")
 
 def run_screen_test(screen_name, **kwargs):
     """특정 화면 테스트 실행"""
@@ -201,7 +201,7 @@ def run_screen_test(screen_name, **kwargs):
         
         # LVGL 환경 설정
         if not setup_lvgl():
-            print("❌ LVGL 환경 설정 실패")
+            print("[ERROR] LVGL 환경 설정 실패")
             return False
         
         # 화면 관리자 생성
@@ -220,7 +220,7 @@ def run_screen_test(screen_name, **kwargs):
             screen = screen_manager.screens[screen_name]
         else:
             # 화면 생성 및 등록
-            print(f"📱 {screen_name} 화면 생성 중...")
+            print(f"[INFO] {screen_name} 화면 생성 중...")
             
             if screen_name == "startup":
                 from screens.startup_screen import StartupScreen
@@ -233,13 +233,13 @@ def run_screen_test(screen_name, **kwargs):
                     from screens.wifi_password_screen import WifiPasswordScreen
                     wifi_password_screen = WifiPasswordScreen(screen_manager, "Example_SSID")
                     screen_manager.register_screen('wifi_password', wifi_password_screen)
-                    print("✅ wifi_password 화면도 함께 등록됨")
+                    print("[OK] wifi_password 화면도 함께 등록됨")
                 # WiFi 연결 후 복용 시간 선택 화면으로 이동하기 위해 미리 등록
                 if 'meal_time' not in screen_manager.screens:
                     from screens.meal_time_screen import MealTimeScreen
                     meal_time_screen = MealTimeScreen(screen_manager)
                     screen_manager.register_screen('meal_time', meal_time_screen)
-                    print("✅ meal_time 화면도 함께 등록됨")
+                    print("[OK] meal_time 화면도 함께 등록됨")
             elif screen_name == "wifi_password":
                 from screens.wifi_password_screen import WifiPasswordScreen
                 screen = WifiPasswordScreen(screen_manager, "Example_SSID")
@@ -259,8 +259,8 @@ def run_screen_test(screen_name, **kwargs):
                 # 약품 배출 테스트 함수들을 바로 사용할 수 있도록 전역 변수로 설정
                 global main_screen_instance
                 main_screen_instance = screen
-                print("✅ 약품 배출 테스트 함수들이 전역 변수로 설정됨")
-                print("💡 사용법:")
+                print("[OK] 약품 배출 테스트 함수들이 전역 변수로 설정됨")
+                print("[TIP] 사용법:")
                 print("   main_screen_instance.test_auto()        # 자동 배출 테스트")
                 print("   main_screen_instance.test_manual(0)     # 수동 배출 테스트")
                 print("   main_screen_instance.test_slide(1)      # 슬라이드 테스트")
@@ -269,8 +269,8 @@ def run_screen_test(screen_name, **kwargs):
                 print("   main_screen_instance.show_status()      # 상태 확인")
                 print("   main_screen_instance.reset_schedule()   # 일정 초기화")
             elif screen_name == "notification":
-                from screens.mock_screen import NotificationMockScreen
-                screen = NotificationMockScreen(screen_manager, {"time": "10:00", "pills": ["Test Pill"]})
+                print("[ERROR] notification 화면은 현재 사용되지 않습니다")
+                return
             elif screen_name == "settings":
                 from screens.settings_screen import SettingsScreen
                 screen = SettingsScreen(screen_manager)
@@ -278,34 +278,43 @@ def run_screen_test(screen_name, **kwargs):
                 from screens.pill_loading_screen import PillLoadingScreen
                 screen = PillLoadingScreen(screen_manager)
             elif screen_name == "pill_dispense":
-                from screens.mock_screen import PillDispenseMockScreen
-                screen = PillDispenseMockScreen(screen_manager)
+                print("[ERROR] pill_dispense 화면은 현재 사용되지 않습니다")
+                return
+            elif screen_name == "medication_history":
+                from screens.medication_history_screen import MedicationHistoryScreen
+                screen = MedicationHistoryScreen(screen_manager)
+            elif screen_name == "medication_status":
+                from screens.medication_status_screen import MedicationStatusScreen
+                screen = MedicationStatusScreen(screen_manager)
+            elif screen_name == "settings":
+                from screens.settings_screen import SettingsScreen
+                screen = SettingsScreen(screen_manager)
             else:
-                print(f"❌ 알 수 없는 화면: {screen_name}")
+                print(f"[ERROR] 알 수 없는 화면: {screen_name}")
                 return False
             
             # 화면 등록
             screen_manager.register_screen(screen_name, screen)
-            print(f"✅ {screen_name} 화면 생성 및 등록 완료")
+            print(f"[OK] {screen_name} 화면 생성 및 등록 완료")
         
         # 화면 표시
-        print(f"📱 {screen_name} 화면 표시 중...")
+        print(f"[INFO] {screen_name} 화면 표시 중...")
         screen_manager.set_current_screen(screen_name)
         
-        print(f"✅ {screen_name} 화면 실행됨")
-        print("📱 화면이 표시되었습니다!")
-        print("🎮 버튼 조작법:")
+        print(f"[OK] {screen_name} 화면 실행됨")
+        print("[INFO] 화면이 표시되었습니다!")
+        print("[GAME] 버튼 조작법:")
         print("   - A: 위/이전")
         print("   - B: 아래/다음") 
         print("   - C: 뒤로가기")
         print("   - D: 선택/확인")
-        print("💡 실제 ESP32-C6 하드웨어에서 버튼으로 조작하세요")
-        print("💡 Ctrl+C로 종료하세요")
+        print("[TIP] 실제 ESP32-C6 하드웨어에서 버튼으로 조작하세요")
+        print("[TIP] Ctrl+C로 종료하세요")
         
         # 자동 시뮬레이션 제거 - 물리 버튼으로만 조작
         
         # 버튼 인터페이스 초기화
-        print("🔘 버튼 인터페이스 초기화 중...")
+        print("[BTN] 버튼 인터페이스 초기화 중...")
         try:
             from button_interface import ButtonInterface
             button_interface = ButtonInterface()
@@ -316,10 +325,10 @@ def run_screen_test(screen_name, **kwargs):
             button_interface.set_callback('C', screen_manager.handle_button_c)
             button_interface.set_callback('D', screen_manager.handle_button_d)
             
-            print("✅ 버튼 인터페이스 초기화 완료")
+            print("[OK] 버튼 인터페이스 초기화 완료")
         except Exception as e:
-            print(f"⚠️ 버튼 인터페이스 초기화 실패: {e}")
-            print("💡 실제 ESP32-C6 하드웨어에서만 버튼 입력이 가능합니다")
+            print(f"[WARN] 버튼 인터페이스 초기화 실패: {e}")
+            print("[TIP] 실제 ESP32-C6 하드웨어에서만 버튼 입력이 가능합니다")
             button_interface = None
         
         # 메인 루프 실행
@@ -349,7 +358,7 @@ def run_screen_test(screen_name, **kwargs):
         return True
         
     except Exception as e:
-        print(f"❌ {screen_name} 화면 실행 실패: {e}")
+        print(f"[ERROR] {screen_name} 화면 실행 실패: {e}")
         import sys
         sys.print_exception(e)
         return False
@@ -358,15 +367,15 @@ def run_screen_test(screen_name, **kwargs):
 def init_motor_system():
     """스테퍼 모터 시스템 초기화"""
     try:
-        print("🔧 스테퍼 모터 시스템 초기화 중...")
+        print("[TOOL] 스테퍼 모터 시스템 초기화 중...")
         motor_system = PillBoxMotorSystem()
         
         # 모터 컨트롤러가 이미 __init__에서 모든 코일을 OFF로 초기화함
-        print("✅ 스테퍼 모터 시스템 초기화 완료 (모든 코일 OFF)")
+        print("[OK] 스테퍼 모터 시스템 초기화 완료 (모든 코일 OFF)")
         return motor_system
         
     except Exception as e:
-        print(f"❌ 스테퍼 모터 시스템 초기화 실패: {e}")
+        print(f"[ERROR] 스테퍼 모터 시스템 초기화 실패: {e}")
         return None
 
 def main():
@@ -378,18 +387,18 @@ def main():
     # 스테퍼 모터 시스템 초기화
     motor_system = init_motor_system()
     if motor_system is None:
-        print("⚠️ 모터 시스템 초기화 실패, 모터 기능 없이 실행")
+        print("[WARN] 모터 시스템 초기화 실패, 모터 기능 없이 실행")
     
     try:
         # 자동으로 startup 화면부터 시작
-        print("📱 스타트업 화면 자동 시작...")
+        print("[INFO] 스타트업 화면 자동 시작...")
         run_screen_test("startup")
         
     except KeyboardInterrupt:
         print("\n🛑 프로그램이 중단되었습니다")
         cleanup_lvgl()
     except Exception as e:
-        print(f"❌ 오류 발생: {e}")
+        print(f"[ERROR] 오류 발생: {e}")
         import sys
         sys.print_exception(e)
         cleanup_lvgl()

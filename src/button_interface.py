@@ -54,7 +54,7 @@ class ButtonInterface:
         self.debounce_time = 50  # ms
         self.last_press_time = {key: 0 for key in self.callbacks.keys()}
         
-        print("✅ ButtonInterface (74HC165) 초기화 완료")
+        print("[OK] ButtonInterface (74HC165) 초기화 완료")
         print(f"핀 설정: PL={self.pload_pin}, DATA={self.data_pin}, CLK={self.clock_pin}")
     
     def read_shift_regs(self):
@@ -118,22 +118,22 @@ class ButtonInterface:
             # 디바운싱 체크
             if time.ticks_diff(current_time, self.last_press_time[button_id]) > self.debounce_time:
                 self.last_press_time[button_id] = current_time
-                print(f"🔘 버튼 {button_id} ({button_name}) 눌림")
+                print(f"[BTN] 버튼 {button_id} ({button_name}) 눌림")
                 
                 # 콜백 함수 호출
                 if self.callbacks[button_id]:
                     try:
                         self.callbacks[button_id]()
                     except Exception as e:
-                        print(f"❌ 버튼 {button_id} 콜백 실행 오류: {e}")
+                        print(f"[ERROR] 버튼 {button_id} 콜백 실행 오류: {e}")
     
     def set_callback(self, button_id, callback):
         """버튼 콜백 함수 설정"""
         if button_id in self.callbacks:
             self.callbacks[button_id] = callback
-            print(f"✅ 버튼 {button_id} 콜백 설정 완료")
+            print(f"[OK] 버튼 {button_id} 콜백 설정 완료")
         else:
-            print(f"❌ 잘못된 버튼 ID: {button_id}")
+            print(f"[ERROR] 잘못된 버튼 ID: {button_id}")
     
     def get_button_state(self, button_id):
         """버튼 상태 반환"""

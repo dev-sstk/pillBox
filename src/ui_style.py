@@ -13,21 +13,21 @@ class UIStyle:
         # Modern/Xiaomi-like 색상 정의
         self.colors = {
             'background': 0xFFFFFF,      # 화이트 배경
-            'primary': 0x00C9A7,         # 민트 포인트 (#00C9A7)
+            'primary': 0xd2b13f,         # 로고 색상 (#d2b13f)
             'secondary': 0x2196F3,       # 코발트 블루 포인트 (#2196F3)
             'text': 0x333333,            # 다크 그레이 텍스트 (#333333)
             'text_secondary': 0x666666,  # 세컨더리 텍스트
             'text_light': 0x888888,      # 라이트 텍스트
             'card': 0xF7F7F7,            # 카드 배경 (#F7F7F7)
-            'selected': 0x00C9A7,        # 선택된 항목 (민트)
+            'selected': 0xd2b13f,        # 선택된 항목 (로고 색상)
             'alert': 0xD32F2F,           # 알림 색상 (#D32F2F)
             'success': 0x4CAF50,         # 성공 색상
             'warning': 0xFF9800,         # 경고 색상
             'error': 0xF44336,           # 오류 색상
             'border': 0xE0E0E0,          # 테두리 색상
             'shadow': 0x000000,          # 그림자 색상
-            'highlight': 0x00C9A7,       # 하이라이트 색상
-            'disk_color': 0x00C9A7,      # 디스크 색상
+            'highlight': 0xd2b13f,       # 하이라이트 색상
+            'disk_color': 0xd2b13f,      # 디스크 색상
             'slide_color': 0x2196F3      # 슬라이드 색상
         }
         
@@ -46,7 +46,7 @@ class UIStyle:
         # 스타일 객체들 생성
         self._create_styles()
         
-        print("✅ UIStyle 초기화 완료")
+        print("[OK] UIStyle 초기화 완료")
     
     def _load_korean_font(self):
         """한글 폰트 로드"""
@@ -61,7 +61,7 @@ class UIStyle:
                 self.fonts['body'] = korean_font
                 self.fonts['caption'] = korean_font
                 self.fonts['korean'] = korean_font
-                print("✅ font_notosans_kr_regular 폰트 로드 성공")
+                print("[OK] font_notosans_kr_regular 폰트 로드 성공")
             else:
                 # 한글 폰트가 없으면 기본 폰트 사용
                 self.fonts['title'] = lv.font_default
@@ -69,10 +69,10 @@ class UIStyle:
                 self.fonts['body'] = lv.font_default
                 self.fonts['caption'] = lv.font_default
                 self.fonts['korean'] = lv.font_default
-                print("⚠️ font_notosans_kr_regular 폰트 없음, 기본 폰트 사용")
+                print("[WARN] font_notosans_kr_regular 폰트 없음, 기본 폰트 사용")
                 
         except Exception as e:
-            print(f"❌ 폰트 로드 실패: {e}")
+            print(f"[ERROR] 폰트 로드 실패: {e}")
             # 오류 시 기본 폰트 사용
             self.fonts['title'] = lv.font_default
             self.fonts['subtitle'] = lv.font_default
@@ -105,7 +105,7 @@ class UIStyle:
             self.styles['card'].set_shadow_ofs_y(2)
         except AttributeError:
             # 그림자 메서드가 없으면 건너뛰기
-            print("⚠️ 그림자 스타일 메서드 지원 안됨, 건너뛰기")
+            print("[WARN] 그림자 스타일 메서드 지원 안됨, 건너뛰기")
         
         # 선택된 카드 스타일
         self.styles['card_selected'] = lv.style_t()
@@ -191,7 +191,7 @@ class UIStyle:
         except AttributeError:
             pass
         
-        print("✅ UI 스타일 객체들 생성 완료")
+        print("[OK] UI 스타일 객체들 생성 완료")
     
     def get_color(self, color_name):
         """색상 값 반환"""
@@ -253,3 +253,34 @@ class UIStyle:
             label.set_style_text_color(lv.color_hex(color), 0)
         
         return label
+    
+    def cleanup(self):
+        """스타일 리소스 정리 (메모리 누수 방지)"""
+        try:
+            # 스타일 객체들 정리
+            for style_name, style_obj in self.styles.items():
+                if style_obj:
+                    try:
+                        # LVGL 스타일 객체 정리
+                        if hasattr(style_obj, 'reset'):
+                            style_obj.reset()
+                    except:
+                        pass
+            
+            # 폰트 객체들 정리
+            for font_name, font_obj in self.fonts.items():
+                if font_obj:
+                    try:
+                        # 폰트 객체는 일반적으로 정적이므로 특별한 정리 불필요
+                        pass
+                    except:
+                        pass
+            
+            # 딕셔너리 초기화
+            self.styles.clear()
+            self.fonts.clear()
+            self.colors.clear()
+            
+        except Exception as e:
+            # 정리 실패해도 계속 진행
+            pass

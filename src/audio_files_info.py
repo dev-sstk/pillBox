@@ -118,7 +118,7 @@ class AudioFilesInfo:
             "system": "/wav/"
         }
         
-        print("✅ AudioFilesInfo 초기화 완료")
+        print("[OK] AudioFilesInfo 초기화 완료")
     
     def get_file_info(self, filename):
         """특정 오디오 파일 정보 반환"""
@@ -251,5 +251,12 @@ class AudioFilesInfo:
         for category, path in self.audio_directories.items():
             print(f"{category}: {path}")
 
-# 전역 인스턴스 생성
-audio_files_info = AudioFilesInfo()
+# 전역 인스턴스 (지연 초기화)
+audio_files_info = None
+
+def get_audio_files_info():
+    """오디오 파일 정보 인스턴스 반환 (지연 초기화)"""
+    global audio_files_info
+    if audio_files_info is None:
+        audio_files_info = AudioFilesInfo()
+    return audio_files_info

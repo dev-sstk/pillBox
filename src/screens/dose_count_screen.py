@@ -25,22 +25,22 @@ class DoseCountScreen:
         # Modern 화면 생성
         self._create_modern_screen()
         
-        print(f"✅ {self.screen_name} 화면 초기화 완료")
+        print(f"[OK] {self.screen_name} 화면 초기화 완료")
     
     def _create_modern_screen(self):
         """Modern 스타일 화면 생성"""
-        print(f"  📱 {self.screen_name} Modern 화면 생성 시작...")
+        print(f"  [INFO] {self.screen_name} Modern 화면 생성 시작...")
         
         try:
             # 메모리 정리
             import gc
             gc.collect()
-            print(f"  ✅ 메모리 정리 완료")
+            print(f"  [OK] 메모리 정리 완료")
             
             # 화면 생성
-            print(f"  📱 화면 객체 생성...")
+            print(f"  [INFO] 화면 객체 생성...")
             self.screen_obj = lv.obj()
-            print(f"  📱 화면 객체 생성됨: {self.screen_obj}")
+            print(f"  [INFO] 화면 객체 생성됨: {self.screen_obj}")
             
             # 화면 배경 스타일 적용 (Modern 스타일)
             self.ui_style.apply_screen_style(self.screen_obj)
@@ -48,36 +48,36 @@ class DoseCountScreen:
             # 스크롤바 비활성화
             self.screen_obj.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
             self.screen_obj.set_scroll_dir(lv.DIR.NONE)
-            print(f"  ✅ 화면 배경 설정 완료")
+            print(f"  [OK] 화면 배경 설정 완료")
             
             # 화면 크기 설정
             self.screen_obj.set_size(160, 128)
-            print(f"  📱 화면 크기: 160x128")
+            print(f"  [INFO] 화면 크기: 160x128")
             
             # 3개 영역으로 구조화
             self._create_status_container()  # 상단 상태 컨테이너
             self._create_main_container()    # 중앙 메인 컨테이너
             self._create_button_hints_area() # 하단 버튼힌트 컨테이너
             
-            print(f"  ✅ Modern 화면 생성 완료")
+            print(f"  [OK] Modern 화면 생성 완료")
             
         except Exception as e:
-            print(f"  ❌ Modern 화면 생성 중 오류 발생: {e}")
+            print(f"  [ERROR] Modern 화면 생성 중 오류 발생: {e}")
             import sys
             sys.print_exception(e)
             # 기본 화면 생성 시도
-            print(f"  📱 {self.screen_name} 기본 화면 생성 시도...")
+            print(f"  [INFO] {self.screen_name} 기본 화면 생성 시도...")
             try:
                 self._create_basic_screen()
-                print(f"  ✅ {self.screen_name} 기본 화면 초기화 완료")
+                print(f"  [OK] {self.screen_name} 기본 화면 초기화 완료")
             except Exception as e2:
-                print(f"  ❌ {self.screen_name} 기본 화면 초기화도 실패: {e2}")
+                print(f"  [ERROR] {self.screen_name} 기본 화면 초기화도 실패: {e2}")
                 import sys
                 sys.print_exception(e2)
     
     def _create_basic_screen(self):
         """기본 화면 생성 (오류 시 대안)"""
-        print(f"  📱 {self.screen_name} 기본 화면 생성 시작...")
+        print(f"  [INFO] {self.screen_name} 기본 화면 생성 시작...")
         
         # 기본 화면 객체 생성
         self.screen_obj = lv.obj()
@@ -88,7 +88,7 @@ class DoseCountScreen:
         self.title_label.set_text("복용 횟수 설정")
         self.title_label.align(lv.ALIGN.CENTER, 0, 0)
         
-        print(f"  ✅ 기본 화면 생성 완료")
+        print(f"  [OK] 기본 화면 생성 완료")
     
     def _create_status_container(self):
         """상단 상태 컨테이너 생성"""
@@ -112,7 +112,7 @@ class DoseCountScreen:
         if korean_font:
             self.title_text.set_style_text_font(korean_font, 0)
         
-        print("  ✅ 상단 상태 컨테이너 생성 완료")
+        print("  [OK] 상단 상태 컨테이너 생성 완료")
     
     def _create_main_container(self):
         """중앙 메인 컨테이너 생성"""
@@ -131,7 +131,7 @@ class DoseCountScreen:
         # 복용 횟수 선택 영역 생성
         self._create_dose_selection_area()
         
-        print("  ✅ 중앙 메인 컨테이너 생성 완료")
+        print("  [OK] 중앙 메인 컨테이너 생성 완료")
     
     def _create_dose_selection_area(self):
         """복용 횟수 선택 영역 생성"""
@@ -156,10 +156,10 @@ class DoseCountScreen:
             if korean_font:
                 self.dose_roller.set_style_text_font(korean_font, 0)
             
-            print("  ✅ 복용 횟수 선택 영역 생성 완료")
+            print("  [OK] 복용 횟수 선택 영역 생성 완료")
             
         except Exception as e:
-            print(f"  ❌ 복용 횟수 선택 영역 생성 실패: {e}")
+            print(f"  [ERROR] 복용 횟수 선택 영역 생성 실패: {e}")
     
     def _create_button_hints_area(self):
         """하단 버튼힌트 컨테이너 생성"""
@@ -171,7 +171,7 @@ class DoseCountScreen:
         self.hints_text.set_style_text_color(lv.color_hex(0x8E8E93), 0)
         # lv 기본 폰트 사용 (한국어 폰트 적용하지 않음)
         
-        print("  ✅ 하단 버튼힌트 컨테이너 생성 완료")
+        print("  [OK] 하단 버튼힌트 컨테이너 생성 완료")
     
     def _create_title_area(self):
         """제목 영역 생성 (Wi-Fi 스캔 화면과 동일한 위치)"""
@@ -185,16 +185,16 @@ class DoseCountScreen:
             korean_font = getattr(lv, "font_notosans_kr_regular", None)
             if korean_font:
                 self.title_text.set_style_text_font(korean_font, 0)
-                print("  ✅ 제목에 한국어 폰트 적용 완료")
+                print("  [OK] 제목에 한국어 폰트 적용 완료")
             
             # Wi-Fi 스캔 화면과 동일한 위치 (TOP_MID, 0, 10)
             self.title_text.align(lv.ALIGN.TOP_MID, 0, 10)
             self.title_text.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
             
-            print("  ✅ 제목 텍스트 생성 완료")
+            print("  [OK] 제목 텍스트 생성 완료")
             
         except Exception as e:
-            print(f"  ❌ 제목 영역 생성 실패: {e}")
+            print(f"  [ERROR] 제목 영역 생성 실패: {e}")
     
     def _create_dose_selection_area(self):
         """복용 횟수 선택 영역 생성 (롤러 위젯 사용)"""
@@ -206,7 +206,7 @@ class DoseCountScreen:
             
             # 롤러 옵션을 개행 문자로 연결
             roller_options_str = "\n".join(roller_options)
-            print(f"  📱 롤러 옵션: {roller_options_str}")
+            print(f"  [INFO] 롤러 옵션: {roller_options_str}")
             
             # 롤러 위젯 생성 (화면에 직접)
             self.dose_roller = lv.roller(self.screen_obj)
@@ -229,17 +229,17 @@ class DoseCountScreen:
             korean_font = getattr(lv, "font_notosans_kr_regular", None)
             if korean_font:
                 self.dose_roller.set_style_text_font(korean_font, 0)
-                print("  ✅ 롤러에 한국어 폰트 적용 완료")
+                print("  [OK] 롤러에 한국어 폰트 적용 완료")
             
             # 롤러 선택된 항목 스타일 (선택된 행) - 로고 색상(민트)
             try:
-                self.dose_roller.set_style_bg_color(lv.color_hex(0x00C9A7), lv.PART.SELECTED)  # 민트색 (로고와 동일)
+                self.dose_roller.set_style_bg_color(lv.color_hex(0xd2b13f), lv.PART.SELECTED)  # 로고 색상
                 self.dose_roller.set_style_bg_opa(255, lv.PART.SELECTED)
                 self.dose_roller.set_style_text_color(lv.color_hex(0xFFFFFF), lv.PART.SELECTED)  # 흰색 텍스트
                 self.dose_roller.set_style_radius(6, lv.PART.SELECTED)
-                print("  ✅ 롤러 선택된 항목 스타일 설정 완료")
+                print("  [OK] 롤러 선택된 항목 스타일 설정 완료")
             except AttributeError:
-                print("  ⚠️ lv.PART.SELECTED 지원 안됨, 기본 스타일 사용")
+                print("  [WARN] lv.PART.SELECTED 지원 안됨, 기본 스타일 사용")
             
             # 초기 선택 설정 (1회가 기본값)
             try:
@@ -252,11 +252,11 @@ class DoseCountScreen:
             # 롤러 이벤트 콜백 등록
             self.dose_roller.add_event_cb(self._on_roller_value_changed, lv.EVENT.VALUE_CHANGED, None)
             
-            print("  ✅ 복용 횟수 롤러 생성 완료")
-            print("  ✅ 복용 횟수 선택 영역 생성 완료")
+            print("  [OK] 복용 횟수 롤러 생성 완료")
+            print("  [OK] 복용 횟수 선택 영역 생성 완료")
             
         except Exception as e:
-            print(f"  ❌ 복용 횟수 선택 영역 생성 실패: {e}")
+            print(f"  [ERROR] 복용 횟수 선택 영역 생성 실패: {e}")
             import sys
             sys.print_exception(e)
     
@@ -269,10 +269,10 @@ class DoseCountScreen:
             if selected_idx != self.selected_index:
                 self.selected_index = selected_idx
                 selected_dose = self.dose_options[self.selected_index]
-                print(f"  📱 롤러 선택 변경: {selected_dose}회 (인덱스: {self.selected_index})")
+                print(f"  [INFO] 롤러 선택 변경: {selected_dose}회 (인덱스: {self.selected_index})")
                 
         except Exception as e:
-            print(f"  ❌ 롤러 값 변경 처리 실패: {e}")
+            print(f"  [ERROR] 롤러 값 변경 처리 실패: {e}")
     
     
     def get_title(self):
@@ -293,39 +293,39 @@ class DoseCountScreen:
     
     def show(self):
         """화면 표시"""
-        print(f"📱 {self.screen_name} 화면 표시 시작...")
+        print(f"[INFO] {self.screen_name} 화면 표시 시작...")
         
         if hasattr(self, 'screen_obj') and self.screen_obj:
-            print(f"📱 화면 객체 존재 확인됨")
+            print(f"[INFO] 화면 객체 존재 확인됨")
             
             lv.screen_load(self.screen_obj)
-            print(f"✅ {self.screen_name} 화면 로드 완료")
+            print(f"[OK] {self.screen_name} 화면 로드 완료")
             
             # 화면 강제 업데이트
-            print(f"📱 {self.screen_name} 화면 강제 업데이트 시작...")
+            print(f"[INFO] {self.screen_name} 화면 강제 업데이트 시작...")
             for i in range(5):
                 lv.timer_handler()
                 time.sleep(0.01)
-                print(f"  📱 업데이트 {i+1}/5")
-            print(f"✅ {self.screen_name} 화면 강제 업데이트 완료")
+                print(f"  [INFO] 업데이트 {i+1}/5")
+            print(f"[OK] {self.screen_name} 화면 강제 업데이트 완료")
             
             # 디스플레이 플러시
-            print(f"📱 디스플레이 플러시 실행...")
+            print(f"[INFO] 디스플레이 플러시 실행...")
             try:
                 lv.disp_drv_t.flush_ready(None)
             except AttributeError:
                 try:
                     lv.disp_t.flush_ready(None)
                 except AttributeError:
-                    print("⚠️ 디스플레이 플러시 오류 (무시): 'module' object has no attribute 'disp_t'")
+                    print("[WARN] 디스플레이 플러시 오류 (무시): 'module' object has no attribute 'disp_t'")
             
-            print(f"📱 화면 전환: {self.screen_name}")
+            print(f"[INFO] 화면 전환: {self.screen_name}")
         else:
-            print(f"❌ {self.screen_name} 화면 객체가 없음")
+            print(f"[ERROR] {self.screen_name} 화면 객체가 없음")
     
     def hide(self):
         """화면 숨기기"""
-        print(f"📱 {self.screen_name} 화면 숨기기")
+        print(f"[INFO] {self.screen_name} 화면 숨기기")
         # 화면 숨기기 로직 (필요시 구현)
         pass
     
@@ -340,15 +340,15 @@ class DoseCountScreen:
         
         if self.selected_index > 0:
             prev_index = self.selected_index - 1
-            print(f"  📱 롤러 선택 업데이트: 인덱스 {prev_index}")
+            print(f"  [INFO] 롤러 선택 업데이트: 인덱스 {prev_index}")
             
             # 롤러 직접 조작 (애니메이션과 함께)
             try:
                 self.dose_roller.set_selected(prev_index, lv.ANIM.ON)
-                print(f"  📱 롤러 애니메이션과 함께 설정 완료")
+                print(f"  [INFO] 롤러 애니메이션과 함께 설정 완료")
             except AttributeError:
                 self.dose_roller.set_selected(prev_index, 1)
-                print(f"  📱 롤러 애니메이션 없이 설정 완료")
+                print(f"  [INFO] 롤러 애니메이션 없이 설정 완료")
             
             # 강제 업데이트
             try:
@@ -357,9 +357,9 @@ class DoseCountScreen:
                 pass
             
             self.selected_index = prev_index
-            print(f"  ✅ 롤러 선택 업데이트 완료: {self.dose_options[self.selected_index]}회")
+            print(f"  [OK] 롤러 선택 업데이트 완료: {self.dose_options[self.selected_index]}회")
         else:
-            print(f"  📱 이미 첫 번째 옵션 (1회)")
+            print(f"  [INFO] 이미 첫 번째 옵션 (1회)")
     
     def on_button_b(self):
         """버튼 B (아래) 처리 - 다음 복용 횟수로 이동"""
@@ -367,15 +367,15 @@ class DoseCountScreen:
         
         if self.selected_index < len(self.dose_options) - 1:
             next_index = self.selected_index + 1
-            print(f"  📱 롤러 선택 업데이트: 인덱스 {next_index}")
+            print(f"  [INFO] 롤러 선택 업데이트: 인덱스 {next_index}")
             
             # 롤러 직접 조작 (애니메이션과 함께)
             try:
                 self.dose_roller.set_selected(next_index, lv.ANIM.ON)
-                print(f"  📱 롤러 애니메이션과 함께 설정 완료")
+                print(f"  [INFO] 롤러 애니메이션과 함께 설정 완료")
             except AttributeError:
                 self.dose_roller.set_selected(next_index, 1)
-                print(f"  📱 롤러 애니메이션 없이 설정 완료")
+                print(f"  [INFO] 롤러 애니메이션 없이 설정 완료")
             
             # 강제 업데이트
             try:
@@ -384,9 +384,9 @@ class DoseCountScreen:
                 pass
             
             self.selected_index = next_index
-            print(f"  ✅ 롤러 선택 업데이트 완료: {self.dose_options[self.selected_index]}회")
+            print(f"  [OK] 롤러 선택 업데이트 완료: {self.dose_options[self.selected_index]}회")
         else:
-            print(f"  📱 이미 마지막 옵션 (3회)")
+            print(f"  [INFO] 이미 마지막 옵션 (3회)")
     
     def on_button_c(self):
         """버튼 C (뒤로가기) 처리"""
@@ -396,11 +396,11 @@ class DoseCountScreen:
         if 'wifi_password' in self.screen_manager.screens:
             self.screen_manager.show_screen('wifi_password')
         else:
-            print("  📱 Wi-Fi 패스워드 화면이 없어서 Wi-Fi 스캔으로 돌아갑니다")
+            print("  [INFO] Wi-Fi 패스워드 화면이 없어서 Wi-Fi 스캔으로 돌아갑니다")
             if 'wifi_scan' in self.screen_manager.screens:
                 self.screen_manager.show_screen('wifi_scan')
             else:
-                print("  📱 Wi-Fi 스캔 화면도 없습니다")
+                print("  [INFO] Wi-Fi 스캔 화면도 없습니다")
     
     def on_button_d(self):
         """버튼 D (선택) 처리 - 복용 횟수 선택 완료"""
@@ -412,30 +412,30 @@ class DoseCountScreen:
         self.selected_dose_count = selected_dose_count
         
         # 복용 시간 화면으로 이동
-        print(f"  📱 복용 시간 설정 화면으로 이동... (복용 횟수: {selected_dose_count}회)")
+        print(f"  [INFO] 복용 시간 설정 화면으로 이동... (복용 횟수: {selected_dose_count}회)")
         
         try:
-            print(f"  📱 복용 시간 화면 생성 시작...")
+            print(f"  [INFO] 복용 시간 화면 생성 시작...")
             
             # 새로운 복용 시간 화면 생성 (항상 새로 생성)
             from screens.dose_time_screen import DoseTimeScreen
             dose_time_screen = DoseTimeScreen(self.screen_manager, dose_count=selected_dose_count)
             
-            print(f"  📱 복용 시간 화면 등록 시작...")
+            print(f"  [INFO] 복용 시간 화면 등록 시작...")
             self.screen_manager.register_screen('dose_time', dose_time_screen)
-            print(f"  📱 복용 시간 화면 등록 완료")
+            print(f"  [INFO] 복용 시간 화면 등록 완료")
             
-            print(f"  📱 복용 시간 화면으로 이동 시작...")
+            print(f"  [INFO] 복용 시간 화면으로 이동 시작...")
             # 복용 시간 화면으로 이동
             self.screen_manager.show_screen('dose_time')
-            print(f"  ✅ 복용 시간 화면으로 이동 완료")
+            print(f"  [OK] 복용 시간 화면으로 이동 완료")
             
         except Exception as e:
-            print(f"  ❌ 복용 시간 화면으로 이동 실패: {e}")
+            print(f"  [ERROR] 복용 시간 화면으로 이동 실패: {e}")
             import sys
             sys.print_exception(e)
-            print(f"  📱 복용 횟수 설정 완료! (현재 화면에 머물기)")
-            print(f"  📱 선택된 복용 횟수: {selected_dose_count}회")
+            print(f"  [INFO] 복용 횟수 설정 완료! (현재 화면에 머물기)")
+            print(f"  [INFO] 선택된 복용 횟수: {selected_dose_count}회")
     
     def on_button_a(self):
         """A 버튼: 위로 이동"""
@@ -445,9 +445,9 @@ class DoseCountScreen:
                 if current_selected > 0:
                     self.dose_roller.set_selected(current_selected - 1, True)  # True = 애니메이션 있음
                     self.selected_index = current_selected - 1
-                    print(f"  📱 복용 횟수: {self.dose_options[self.selected_index]}회")
+                    print(f"  [INFO] 복용 횟수: {self.dose_options[self.selected_index]}회")
         except Exception as e:
-            print(f"  ❌ A 버튼 처리 실패: {e}")
+            print(f"  [ERROR] A 버튼 처리 실패: {e}")
     
     def on_button_b(self):
         """B 버튼: 아래로 이동"""
@@ -457,17 +457,17 @@ class DoseCountScreen:
                 if current_selected < len(self.dose_options) - 1:
                     self.dose_roller.set_selected(current_selected + 1, True)  # True = 애니메이션 있음
                     self.selected_index = current_selected + 1
-                    print(f"  📱 복용 횟수: {self.dose_options[self.selected_index]}회")
+                    print(f"  [INFO] 복용 횟수: {self.dose_options[self.selected_index]}회")
         except Exception as e:
-            print(f"  ❌ B 버튼 처리 실패: {e}")
+            print(f"  [ERROR] B 버튼 처리 실패: {e}")
     
     def on_button_c(self):
         """C 버튼: 뒤로가기"""
         try:
-            print(f"  📱 뒤로가기 - Wi-Fi 스캔 화면으로 이동")
+            print(f"  [INFO] 뒤로가기 - Wi-Fi 스캔 화면으로 이동")
             self.screen_manager.show_screen('wifi_scan')
         except Exception as e:
-            print(f"  ❌ C 버튼 처리 실패: {e}")
+            print(f"  [ERROR] C 버튼 처리 실패: {e}")
     
     def on_button_d(self):
         """D 버튼: 선택/확인"""
@@ -475,58 +475,58 @@ class DoseCountScreen:
             if hasattr(self, 'dose_roller'):
                 self.selected_index = self.dose_roller.get_selected()
             selected_dose_count = self.dose_options[self.selected_index]
-            print(f"  📱 복용 횟수 {selected_dose_count}회 선택됨")
+            print(f"  [INFO] 복용 횟수 {selected_dose_count}회 선택됨")
             
             # 다음 화면으로 이동 (복용 시간 설정)
             self._go_to_next_screen(selected_dose_count)
         except Exception as e:
-            print(f"  ❌ D 버튼 처리 실패: {e}")
+            print(f"  [ERROR] D 버튼 처리 실패: {e}")
     
     def _go_to_next_screen(self, selected_dose_count):
         """다음 화면으로 이동 (복용 시간 설정)"""
         try:
-            print(f"  📱 복용 시간 설정 화면으로 이동")
+            print(f"  [INFO] 복용 시간 설정 화면으로 이동")
             
             # 복용 시간 설정 화면이 등록되어 있으면 이동, 없으면 생성
             if 'dose_time' in self.screen_manager.screens:
                 self.screen_manager.show_screen('dose_time')
             else:
-                print("  📱 dose_time 화면을 생성합니다.")
+                print("  [INFO] dose_time 화면을 생성합니다.")
                 
                 # 메모리 정리
                 import gc
                 gc.collect()
-                print("  ✅ 화면 생성 전 메모리 정리 완료")
+                print("  [OK] 화면 생성 전 메모리 정리 완료")
                 
                 # 추가 메모리 정리
                 gc.collect()
-                print("  ✅ 추가 메모리 정리 완료")
+                print("  [OK] 추가 메모리 정리 완료")
                 
                 try:
                     from screens.dose_time_screen import DoseTimeScreen
-                    print("  📱 DoseTimeScreen 클래스 로드 완료")
+                    print("  [INFO] DoseTimeScreen 클래스 로드 완료")
                     
                     # 메모리 정리
                     gc.collect()
                     
                     dose_time_screen = DoseTimeScreen(self.screen_manager, selected_dose_count)
-                    print("  📱 DoseTimeScreen 객체 생성 완료")
+                    print("  [INFO] DoseTimeScreen 객체 생성 완료")
                     
                     # 메모리 정리
                     gc.collect()
                     
                     self.screen_manager.register_screen('dose_time', dose_time_screen)
-                    print("✅ dose_time 화면 생성 및 등록 완료")
+                    print("[OK] dose_time 화면 생성 및 등록 완료")
                     
                     # 메모리 정리
                     gc.collect()
                     
                     self.screen_manager.show_screen('dose_time')
                 except Exception as e:
-                    print(f"❌ dose_time 화면 생성 실패: {e}")
-                    print("  📱 복용 횟수 설정 화면에 머물기")
+                    print(f"[ERROR] dose_time 화면 생성 실패: {e}")
+                    print("  [INFO] 복용 횟수 설정 화면에 머물기")
         except Exception as e:
-            print(f"  ❌ 다음 화면으로 이동 실패: {e}")
+            print(f"  [ERROR] 다음 화면으로 이동 실패: {e}")
             import sys
             sys.print_exception(e)
     
@@ -535,5 +535,5 @@ class DoseCountScreen:
         try:
             return self.dose_options[self.selected_index]
         except Exception as e:
-            print(f"  ❌ 선택된 복용 횟수 가져오기 실패: {e}")
+            print(f"  [ERROR] 선택된 복용 횟수 가져오기 실패: {e}")
             return 1  # 기본값

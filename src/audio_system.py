@@ -6,7 +6,7 @@
 import time
 import os
 from machine import Pin, I2S
-from audio_files_info import audio_files_info
+from audio_files_info import get_audio_files_info
 
 class AudioSystem:
     """음성 안내 시스템 클래스"""
@@ -22,10 +22,10 @@ class AudioSystem:
         self.i2s = None
         self._init_audio_hardware()
         
-        # 오디오 파일 정보 사용
-        self.audio_files_info = audio_files_info
+        # 오디오 파일 정보 사용 (지연 로딩)
+        self.audio_files_info = None
         
-        print("✅ AudioSystem 초기화 완료")
+        print("[OK] AudioSystem 초기화 완료")
     
     def _init_audio_hardware(self):
         """오디오 하드웨어 초기화"""
@@ -43,9 +43,9 @@ class AudioSystem:
                 rate=16000,
                 ibuf=2048
             )
-            print("✅ I2S 오디오 하드웨어 초기화 완료")
+            print("[OK] I2S 오디오 하드웨어 초기화 완료")
         except Exception as e:
-            print(f"⚠️ I2S 오디오 하드웨어 초기화 실패: {e}")
+            print(f"[WARN] I2S 오디오 하드웨어 초기화 실패: {e}")
             self.audio_enabled = False
     
     def play_voice(self, audio_file, blocking=False):
@@ -54,9 +54,11 @@ class AudioSystem:
             print(f"🔇 오디오 비활성화: {audio_file}")
             return
         
+        if self.audio_files_info is None:
+            self.audio_files_info = get_audio_files_info()
         file_info = self.audio_files_info.get_file_info(audio_file)
         if not file_info:
-            print(f"❌ 알 수 없는 오디오 파일: {audio_file}")
+            print(f"[ERROR] 알 수 없는 오디오 파일: {audio_file}")
             return
         
         print(f"🔊 안내 음성 재생: {file_info['description']}")
@@ -77,29 +79,33 @@ class AudioSystem:
     def _play_audio_blocking(self, audio_file):
         """블로킹 방식으로 오디오 재생"""
         try:
+            if self.audio_files_info is None:
+                self.audio_files_info = get_audio_files_info()
             file_path = self.audio_files_info.get_full_path(audio_file)
             if not self._file_exists(file_path):
-                print(f"❌ 오디오 파일 없음: {file_path}")
+                print(f"[ERROR] 오디오 파일 없음: {file_path}")
                 return
             
+            if self.audio_files_info is None:
+                self.audio_files_info = get_audio_files_info()
             file_info = self.audio_files_info.get_file_info(audio_file)
             duration = file_info["duration"] if file_info else 1000
             
-            print(f"🎵 {audio_file} 재생 시작...")
+            print(f"[NOTE] {audio_file} 재생 시작...")
             
             # I2S가 초기화되었는지 확인
             if self.i2s is None:
-                print(f"⚠️ I2S 미초기화, 시뮬레이션 재생")
+                print(f"[WARN] I2S 미초기화, 시뮬레이션 재생")
                 time.sleep_ms(duration)
                 return
             
             # WAV 파일 재생 시뮬레이션 (실제 구현 시 wav_player.py 로직 사용)
             self._play_wav_file(file_path, duration)
             
-            print(f"🎵 {audio_file} 재생 완료")
+            print(f"[NOTE] {audio_file} 재생 완료")
             
         except Exception as e:
-            print(f"❌ 오디오 재생 실패: {e}")
+            print(f"[ERROR] 오디오 재생 실패: {e}")
     
     def _play_wav_file(self, file_path, duration):
         """WAV 파일 재생 (wav_player_mono.py 방식)"""
@@ -110,7 +116,7 @@ class AudioSystem:
                 time.sleep_ms(duration)
                 return
             
-            print(f"🎵 WAV 파일 재생: {file_path}")
+            print(f"[NOTE] WAV 파일 재생: {file_path}")
             
             # TODO: 실제 WAV 파일 재생 로직
             # wav_player_mono.py의 play_wav_file() 함수 로직을 여기에 구현
@@ -118,7 +124,7 @@ class AudioSystem:
             time.sleep_ms(duration)
             
         except Exception as e:
-            print(f"❌ WAV 재생 실패: {e}")
+            print(f"[ERROR] WAV 재생 실패: {e}")
             time.sleep_ms(duration)  # 시뮬레이션으로 대체
     
     def _play_audio_async(self, audio_file):
@@ -128,10 +134,10 @@ class AudioSystem:
             self.audio_queue.append(audio_file)
             
             # TODO: 백그라운드에서 오디오 재생
-            print(f"🎵 {audio_file} 큐에 추가됨")
+            print(f"[NOTE] {audio_file} 큐에 추가됨")
             
         except Exception as e:
-            print(f"❌ 오디오 큐 추가 실패: {e}")
+            print(f"[ERROR] 오디오 큐 추가 실패: {e}")
     
     def _file_exists(self, file_path):
         """파일 존재 여부 확인"""
@@ -143,6 +149,8 @@ class AudioSystem:
     
     def _get_audio_duration(self, audio_file):
         """오디오 파일 재생 시간 반환 (ms)"""
+        if self.audio_files_info is None:
+            self.audio_files_info = get_audio_files_info()
         file_info = self.audio_files_info.get_file_info(audio_file)
         return file_info["duration"] if file_info else 1000
     
@@ -180,6 +188,93 @@ class AudioSystem:
             self._play_audio_blocking(next_audio)
             self.current_audio = None
     
+    def play_alarm_sound(self):
+        """알람 소리 재생"""
+        try:
+            print("🔊 알람 소리 재생 시작")
+            
+            # I2S가 실패해도 부저는 사용 가능하므로 강제로 알람 톤 재생
+            self._play_alarm_tone()
+                
+        except Exception as e:
+            print(f"[ERROR] 알람 소리 재생 실패: {e}")
+            # 실패 시 기본 톤으로 대체
+            self._play_alarm_tone()
+    
+    def stop_alarm_sound(self):
+        """알람 소리 정지"""
+        try:
+            print("🔇 알람 소리 정지")
+            self.stop_all_audio()
+        except Exception as e:
+            print(f"[ERROR] 알람 소리 정지 실패: {e}")
+    
+    def _play_alarm_tone(self):
+        """기본 알람 톤 재생 (부저 또는 I2S)"""
+        try:
+            print("🔔 기본 알람 톤 재생")
+            
+            # 부저 핀을 사용한 실제 알람 톤 재생
+            self._play_buzzer_alarm()
+                
+        except Exception as e:
+            print(f"[ERROR] 알람 톤 재생 실패: {e}")
+            time.sleep_ms(500)  # 시뮬레이션으로 대체
+    
+    def _play_buzzer_alarm(self):
+        """부저를 사용한 알람 톤 재생"""
+        try:
+            from machine import Pin
+            
+            # 부저 핀 (GPIO 18 사용 - HARDWARE.md 참조)
+            buzzer_pin = Pin(18, Pin.OUT)
+            
+            # 알람 패턴: 3번의 짧은 비프음
+            for i in range(3):
+                # 1000Hz 톤 (0.2초)
+                self._generate_tone(buzzer_pin, 1000, 200)
+                time.sleep_ms(100)  # 0.1초 간격
+            
+            print("🔔 부저 알람 톤 재생 완료")
+            
+        except Exception as e:
+            print(f"[ERROR] 부저 알람 톤 재생 실패: {e}")
+            print("📢 알람 톤 재생 (시뮬레이션)")
+            time.sleep_ms(1000)
+    
+    def _generate_tone(self, pin, frequency, duration_ms):
+        """부저로 톤 생성"""
+        try:
+            # 간단한 톤 생성 (PWM 사용)
+            from machine import PWM
+            
+            pwm = PWM(pin)
+            pwm.freq(frequency)
+            pwm.duty(512)  # 50% 듀티 사이클
+            
+            time.sleep_ms(duration_ms)
+            pwm.deinit()
+            
+        except Exception as e:
+            print(f"[ERROR] 톤 생성 실패: {e}")
+            # PWM이 실패하면 단순히 핀을 토글
+            for _ in range(frequency * duration_ms // 2000):
+                pin.value(1)
+                time.sleep_us(500000 // frequency)
+                pin.value(0)
+                time.sleep_us(500000 // frequency)
+    
+    def _play_tone_i2s(self, frequency, duration_ms):
+        """I2S로 톤 재생"""
+        try:
+            # 간단한 사인파 생성 및 재생
+            # TODO: 실제 I2S 톤 재생 로직 구현
+            print(f"🎵 I2S 톤 재생: {frequency}Hz, {duration_ms}ms")
+            time.sleep_ms(duration_ms)
+        except Exception as e:
+            print(f"[ERROR] I2S 톤 재생 실패: {e}")
+            time.sleep_ms(duration_ms)
+    
     def get_audio_info(self):
         """오디오 시스템 정보 반환"""
         return {
@@ -187,6 +282,6 @@ class AudioSystem:
             'volume': self.volume,
             'current_audio': self.current_audio,
             'queue_length': len(self.audio_queue),
-            'available_files': self.audio_files_info.list_all_files(),
-            'total_files': self.audio_files_info.get_file_count()
+            'available_files': self.audio_files_info.list_all_files() if self.audio_files_info else [],
+            'total_files': self.audio_files_info.get_file_count() if self.audio_files_info else 0
         }

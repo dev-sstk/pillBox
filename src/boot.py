@@ -76,13 +76,13 @@ if __name__ == "__main__":
     print("ESP32-C6 필박스 부팅 초기화")
     print("=" * 50)
     
-    # ⚡ 메모리 부족 해결: 부팅 시 메모리 정리
+    # [FAST] 메모리 부족 해결: 부팅 시 메모리 정리
     import gc
     print("🧹 부팅 시 메모리 정리 시작...")
     for i in range(5):  # 5회 가비지 컬렉션
         gc.collect()
         time.sleep(0.02)  # 0.02초 대기
-    print("✅ 부팅 시 메모리 정리 완료")
+    print("[OK] 부팅 시 메모리 정리 완료")
     
     # 스테퍼 모터 핀 초기화
     initialize_stepper_motor_pins()
@@ -91,4 +91,27 @@ if __name__ == "__main__":
     
     print("부팅 초기화 완료")
     print("=" * 50)
-
+    
+    # mpy 파일 경로 설정 및 메인 프로그램 실행
+    # print("메인 프로그램 실행 시작...")
+    # try:
+    #     import sys
+    #     sys.path.append('/screens')
+    #     print("  [OK] /screens 경로 추가 완료")
+        
+    #     print("  [INFO] main.mpy 파일 확인 중...")
+    #     import main   # main.mpy import
+    #     print("  [OK] main.mpy import 완료")
+        
+    #     print("  [INFO] main.main() 함수 실행 중...")
+    #     main.main()   # main.main() 함수 실행
+    #     print("  [OK] main.main() 실행 완료")
+        
+    # except ImportError as e:
+    #     print(f"  [ERROR] main.mpy import 실패: {e}")
+    #     print("  [INFO] main.py 파일을 찾을 수 없습니다.")
+    #     print("  [INFO] ESP32에 파일이 업로드되었는지 확인해주세요.")
+    # except Exception as e:
+    #     print(f"  [ERROR] 메인 프로그램 실행 실패: {e}")
+    #     import sys
+    #     sys.print_exception(e)

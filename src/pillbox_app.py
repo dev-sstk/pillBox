@@ -12,7 +12,8 @@ from screen_manager import ScreenManager
 from ui_style import UIStyle
 from audio_system import AudioSystem
 from motor_control import PillBoxMotorSystem
-from wifi_manager import wifi_manager
+from wifi_manager import get_wifi_manager
+from led_controller import LEDController
 
 class PillBoxApp:
     """필박스 메인 애플리케이션 클래스"""
@@ -22,10 +23,11 @@ class PillBoxApp:
         # 메모리 정리 (test_lvgl.py 방식)
         import gc
         gc.collect()
-        print("✅ 메모리 정리 완료")
+        print("[OK] 메모리 정리 완료")
         
         self.ui_style = UIStyle()
         self.audio_system = AudioSystem()
+        self.led_controller = LEDController()  # LED 컨트롤러 추가
         self.button_interface = ButtonInterface()
         self.motor_system = PillBoxMotorSystem()  # 모터 시스템 추가
         self.wifi_manager = wifi_manager  # WiFi 시스템 추가
@@ -35,7 +37,7 @@ class PillBoxApp:
         # 버튼 콜백 설정
         self._setup_button_callbacks()
         
-        print("✅ PillBoxApp 초기화 완료")
+        print("[OK] PillBoxApp 초기화 완료")
     
     def _setup_button_callbacks(self):
         """버튼 콜백 함수들 설정"""
@@ -70,7 +72,7 @@ class PillBoxApp:
     
     def start(self):
         """앱 시작"""
-        print("🚀 PillBoxApp 시작")
+        print("[ROCKET] PillBoxApp 시작")
         self.running = True
         
         # 시작 화면으로 이동
@@ -127,3 +129,32 @@ class PillBoxApp:
     def get_wifi_manager(self):
         """WiFi 시스템 반환"""
         return self.wifi_manager
+    
+    def create_and_register_screen(self, screen_name, **kwargs):
+        """화면 동적 생성 및 등록"""
+        try:
+            if screen_name == "advanced_settings":
+                from screens.advanced_settings_screen import AdvancedSettingsScreen
+                screen_instance = AdvancedSettingsScreen(self.screen_manager)
+                self.screen_manager.register_screen(screen_name, screen_instance)
+                print(f"[OK] {screen_name} 화면 생성 및 등록 완료")
+                return True
+            elif screen_name == "data_management":
+                from screens.data_management_screen import DataManagementScreen
+                screen_instance = DataManagementScreen(self.screen_manager)
+                self.screen_manager.register_screen(screen_name, screen_instance)
+                print(f"[OK] {screen_name} 화면 생성 및 등록 완료")
+                return True
+            elif screen_name == "disk_selection":
+                from screens.disk_selection_screen import DiskSelectionScreen
+                dose_info = kwargs.get('dose_info', None)
+                screen_instance = DiskSelectionScreen(self.screen_manager, dose_info=dose_info)
+                self.screen_manager.register_screen(screen_name, screen_instance)
+                print(f"[OK] {screen_name} 화면 생성 및 등록 완료")
+                return True
+            else:
+                print(f"[ERROR] 지원하지 않는 화면: {screen_name}")
+                return False
+        except Exception as e:
+            print(f"[ERROR] 화면 생성 실패: {screen_name}, 오류: {e}")
+            return False

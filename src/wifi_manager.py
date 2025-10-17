@@ -42,12 +42,11 @@ class WiFiManager:
             'kr.pool.ntp.org'
         ]
         self.time_synced = False
-        self.timezone_offset = 9 * 3600  # 한국 시간 (UTC+9)
         
         # 자동 연결은 StartupScreen에서 처리 (부팅 속도 향상)
         # self._load_saved_config()  # 제거됨
         
-        print("✅ WiFiManager 초기화 완료 (자동 연결 안함)")
+        print("[OK] WiFiManager 초기화 완료 (자동 연결 안함)")
     
     def scan_networks(self, force=False):
         """WiFi 네트워크 스캔"""
@@ -93,17 +92,17 @@ class WiFiManager:
                             }
                             self.scanned_networks.append(network_info)
                     except Exception as e:
-                        print(f"    ❌ 스캔 결과 #{idx+1} 파싱 실패: {e}")
+                        print(f"    [ERROR] 스캔 결과 #{idx+1} 파싱 실패: {e}")
                         continue
                 
                 # 신호 강도순으로 정렬 (높은 순)
                 self.scanned_networks.sort(key=lambda x: x['signal'], reverse=True)
             else:
-                print("  ⚠️ 스캔 결과가 비어있음")
+                print("  [WARN] 스캔 결과가 비어있음")
             
             self.last_scan_time = current_time
             
-            print(f"✅ {len(self.scanned_networks)}개 네트워크 스캔 완료")
+            print(f"[OK] {len(self.scanned_networks)}개 네트워크 스캔 완료")
             
             # 스캔 결과 출력
             for i, network in enumerate(self.scanned_networks):
@@ -112,7 +111,7 @@ class WiFiManager:
             return self.scanned_networks
             
         except Exception as e:
-            print(f"❌ WiFi 스캔 실패: {e}")
+            print(f"[ERROR] WiFi 스캔 실패: {e}")
             import sys
             sys.print_exception(e)
             return []
@@ -146,7 +145,7 @@ class WiFiManager:
             start_time = time.ticks_ms()
             while not self.wifi.isconnected():
                 if time.ticks_diff(time.ticks_ms(), start_time) > timeout:
-                    print(f"❌ WiFi 연결 타임아웃: {ssid}")
+                    print(f"[ERROR] WiFi 연결 타임아웃: {ssid}")
                     return False
                 time.sleep_ms(100)
             
@@ -157,7 +156,7 @@ class WiFiManager:
             
             # 연결 정보 출력
             ip_info = self.wifi.ifconfig()
-            print(f"✅ WiFi 연결 성공: {ssid}")
+            print(f"[OK] WiFi 연결 성공: {ssid}")
             print(f"   IP: {ip_info[0]}")
             print(f"   Subnet: {ip_info[1]}")
             print(f"   Gateway: {ip_info[2]}")
@@ -172,7 +171,7 @@ class WiFiManager:
             return True
             
         except Exception as e:
-            print(f"❌ WiFi 연결 실패: {e}")
+            print(f"[ERROR] WiFi 연결 실패: {e}")
             self.connection_attempts += 1
             return False
     
@@ -227,10 +226,10 @@ class WiFiManager:
             with open(self.config_file, 'w') as f:
                 json.dump(config, f)
             
-            print(f"💾 WiFi 설정 저장됨: {ssid}")
+            print(f"[SAVE] WiFi 설정 저장됨: {ssid}")
             
         except Exception as e:
-            print(f"❌ WiFi 설정 저장 실패: {e}")
+            print(f"[ERROR] WiFi 설정 저장 실패: {e}")
     
     def _load_saved_config(self):
         """저장된 WiFi 설정 불러오기"""
@@ -247,7 +246,7 @@ class WiFiManager:
                 self.connect_to_network(ssid, password, timeout=5000)
             
         except Exception as e:
-            print(f"⚠️ 저장된 WiFi 설정 없음: {e}")
+            print(f"[WARN] 저장된 WiFi 설정 없음: {e}")
     
     def try_auto_connect(self, timeout=5000):
         """저장된 WiFi 설정으로 자동 연결 시도 (Public 메서드)"""
@@ -263,11 +262,11 @@ class WiFiManager:
                 # 자동 연결 시도
                 return self.connect_to_network(ssid, password, timeout=timeout)
             else:
-                print("⚠️ 저장된 WiFi 설정 없음")
+                print("[WARN] 저장된 WiFi 설정 없음")
                 return False
             
         except Exception as e:
-            print(f"⚠️ 저장된 WiFi 설정 없음: {e}")
+            print(f"[WARN] 저장된 WiFi 설정 없음: {e}")
             return False
     
     def forget_network(self):
@@ -278,7 +277,7 @@ class WiFiManager:
             self.disconnect()
             print("🗑️ WiFi 설정 삭제됨")
         except Exception as e:
-            print(f"❌ WiFi 설정 삭제 실패: {e}")
+            print(f"[ERROR] WiFi 설정 삭제 실패: {e}")
     
     def get_saved_password(self, ssid):
         """저장된 비밀번호 확인"""
@@ -291,12 +290,12 @@ class WiFiManager:
             
             # 요청한 SSID와 저장된 SSID가 일치하면 비밀번호 반환
             if saved_ssid == ssid:
-                print(f"💾 저장된 비밀번호 발견: {ssid}")
+                print(f"[SAVE] 저장된 비밀번호 발견: {ssid}")
                 return saved_password
             else:
                 return None
         except Exception as e:
-            print(f"⚠️ 저장된 비밀번호 확인 실패: {e}")
+            print(f"[WARN] 저장된 비밀번호 확인 실패: {e}")
             return None
     
     def get_network_list(self):
@@ -335,10 +334,10 @@ class WiFiManager:
             # 간단한 연결 테스트 (DNS 조회)
             import socket
             socket.getaddrinfo('www.google.com', 80)
-            print("✅ 인터넷 연결 테스트 성공")
+            print("[OK] 인터넷 연결 테스트 성공")
             return True
         except Exception as e:
-            print(f"❌ 인터넷 연결 테스트 실패: {e}")
+            print(f"[ERROR] 인터넷 연결 테스트 실패: {e}")
             return False
     
     def get_wifi_info(self):
@@ -359,12 +358,12 @@ class WiFiManager:
         if self.wifi.isconnected():
             if not self.is_connected:
                 self.is_connected = True
-                print("✅ WiFi 재연결됨")
+                print("[OK] WiFi 재연결됨")
         else:
             if self.is_connected:
                 self.is_connected = False
                 self.connected_ssid = None
-                print("❌ WiFi 연결 끊어짐")
+                print("[ERROR] WiFi 연결 끊어짐")
         
         # 주기적 스캔
         current_time = time.ticks_ms()
@@ -374,7 +373,7 @@ class WiFiManager:
     def _sync_ntp_time(self):
         """NTP 서버에서 시간 동기화 (한국 시간)"""
         if not self.is_connected:
-            print("⚠️ WiFi 연결 필요")
+            print("[WARN] WiFi 연결 필요")
             return False
         
         print("🕐 NTP 시간 동기화 시작...")
@@ -385,28 +384,35 @@ class WiFiManager:
                 ntptime.host = ntp_server
                 ntptime.settime()
                 
-                # 한국 시간으로 보정
-                current_time = time.time()
-                kst_time = current_time + self.timezone_offset
-                time.localtime(kst_time)
+                # NTP 시간 동기화 완료 (UTC 시간으로 설정됨)
+                utc_time = time.localtime()
+                print(f"[OK] 시간 동기화 성공: {ntp_server}")
+                print(f"   NTP 동기화된 시간 (UTC): {utc_time}")
+                
+                # UTC 시간에 9시간 오프셋 적용하여 한국시간으로 변환하고 ESP32 시간 설정
+                kst_timestamp = time.mktime(utc_time) + (9 * 3600)  # 9시간 추가
+                kst_time = time.localtime(kst_timestamp)
+                print(f"   한국 시간 변환 후: {kst_time}")
+                
+                # ESP32의 시간을 한국시간으로 설정
+                import machine
+                machine.RTC().datetime((kst_time[0], kst_time[1], kst_time[2], kst_time[6], kst_time[3], kst_time[4], kst_time[5], 0))
+                print(f"   ESP32 시간을 한국시간으로 설정 완료")
                 
                 self.time_synced = True
-                print(f"✅ 시간 동기화 성공: {ntp_server}")
-                print(f"   한국 시간: {self.get_kst_time()}")
                 return True
                 
             except Exception as e:
-                print(f"❌ {ntp_server} 동기화 실패: {e}")
+                print(f"[ERROR] {ntp_server} 동기화 실패: {e}")
                 continue
         
-        print("❌ 모든 NTP 서버 동기화 실패")
+        print("[ERROR] 모든 NTP 서버 동기화 실패")
         return False
     
     def get_kst_time(self):
         """현재 한국 시간 반환"""
-        current_time = time.time()
-        kst_time = current_time + self.timezone_offset
-        return time.localtime(kst_time)
+        # ESP32의 time.localtime()이 이미 한국 시간으로 설정되어 있음
+        return time.localtime()
     
     def get_formatted_time(self):
         """포맷된 한국 시간 문자열 반환"""
@@ -417,9 +423,15 @@ class WiFiManager:
         """시간 동기화 상태 반환"""
         return {
             'synced': self.time_synced,
-            'kst_time': self.get_formatted_time(),
-            'timezone_offset': self.timezone_offset
+            'kst_time': self.get_formatted_time()
         }
 
-# 전역 인스턴스
-wifi_manager = WiFiManager()
+# 전역 인스턴스 (지연 초기화)
+wifi_manager = None
+
+def get_wifi_manager():
+    """WiFi 매니저 인스턴스 반환 (지연 초기화)"""
+    global wifi_manager
+    if wifi_manager is None:
+        wifi_manager = WiFiManager()
+    return wifi_manager

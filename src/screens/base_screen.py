@@ -39,51 +39,51 @@ class BaseScreen:
         # 화면 생성
         self._create_screen()
         
-        print(f"✅ {screen_name} 화면 초기화 완료")
+        print(f"[OK] {screen_name} 화면 초기화 완료")
     
     def _create_screen(self):
         """화면 UI 생성"""
-        print(f"  📱 {self.screen_name} 화면 UI 생성 시작...")
+        print(f"  [INFO] {self.screen_name} 화면 UI 생성 시작...")
         
         # 메모리 정리 (test_lvgl.py 방식)
-        print(f"  📱 메모리 정리...")
+        print(f"  [INFO] 메모리 정리...")
         import gc
         gc.collect()
-        print(f"  ✅ 메모리 정리 완료")
+        print(f"  [OK] 메모리 정리 완료")
         
         # 메인 화면 객체 생성 (test_lvgl.py 방식)
-        print(f"  📱 메인 화면 객체 생성...")
+        print(f"  [INFO] 메인 화면 객체 생성...")
         try:
             # LVGL 상태 확인 및 재초기화
-            print(f"  📱 LVGL 상태 확인...")
+            print(f"  [INFO] LVGL 상태 확인...")
             if not lv.is_initialized():
-                print(f"  📱 LVGL 재초기화...")
+                print(f"  [INFO] LVGL 재초기화...")
                 lv.init()
-                print(f"  ✅ LVGL 재초기화 완료")
+                print(f"  [OK] LVGL 재초기화 완료")
             else:
-                print(f"  ✅ LVGL 이미 초기화됨")
+                print(f"  [OK] LVGL 이미 초기화됨")
             
             # 더 안전한 방법으로 화면 객체 생성
-            print(f"  📱 화면 객체 생성 시도...")
+            print(f"  [INFO] 화면 객체 생성 시도...")
             self.screen_obj = lv.obj()
-            print(f"  📱 배경색 설정...")
+            print(f"  [INFO] 배경색 설정...")
             self.screen_obj.set_style_bg_color(lv.color_hex(0x000000), 0)
-            print(f"  ✅ 메인 화면 객체 생성 완료")
+            print(f"  [OK] 메인 화면 객체 생성 완료")
         except Exception as e:
-            print(f"  ❌ 메인 화면 객체 생성 실패: {e}")
+            print(f"  [ERROR] 메인 화면 객체 생성 실패: {e}")
             import sys
             sys.print_exception(e)
             # 대안: 기본 화면 사용
-            print(f"  📱 기본 화면 사용 시도...")
+            print(f"  [INFO] 기본 화면 사용 시도...")
             try:
                 self.screen_obj = lv.screen_active()
-                print(f"  ✅ 기본 화면 사용 성공")
+                print(f"  [OK] 기본 화면 사용 성공")
             except Exception as e2:
-                print(f"  ❌ 기본 화면 사용도 실패: {e2}")
+                print(f"  [ERROR] 기본 화면 사용도 실패: {e2}")
                 raise
         
         # 제목 라벨 생성 (test_lvgl.py 방식)
-        print(f"  📱 제목 라벨 생성...")
+        print(f"  [INFO] 제목 라벨 생성...")
         self.title_label = lv.label(self.screen_obj)
         self.title_label.set_text(self.get_title())
         self.title_label.set_style_text_color(lv.color_hex(0xFFFFFF), 0)
@@ -92,30 +92,30 @@ class BaseScreen:
         if korean_font:
             self.title_label.set_style_text_font(korean_font, 0)
         self.title_label.align(lv.ALIGN.TOP_MID, 0, 15)
-        print(f"  ✅ 제목 라벨 생성 완료")
+        print(f"  [OK] 제목 라벨 생성 완료")
         
         # 콘텐츠 영역 생성
-        print(f"  📱 콘텐츠 영역 생성...")
+        print(f"  [INFO] 콘텐츠 영역 생성...")
         self.content_area = lv.obj(self.screen_obj)
         self.content_area.set_size(120, 100)
         self.content_area.align(lv.ALIGN.CENTER, 0, 0)
         self.content_area.set_style_bg_opa(0, 0)  # 투명 배경
-        print(f"  ✅ 콘텐츠 영역 생성 완료")
+        print(f"  [OK] 콘텐츠 영역 생성 완료")
         
         # 버튼 힌트 생성 (test_lvgl.py 방식)
-        print(f"  📱 버튼 힌트 생성...")
+        print(f"  [INFO] 버튼 힌트 생성...")
         self.button_hints = lv.label(self.screen_obj)
         self.button_hints.set_text(self.get_button_hints())
         self.button_hints.set_style_text_color(lv.color_hex(0x888888), 0)
         if korean_font:
             self.button_hints.set_style_text_font(korean_font, 0)
         self.button_hints.align(lv.ALIGN.BOTTOM_MID, 0, -15)
-        print(f"  ✅ 버튼 힌트 생성 완료")
+        print(f"  [OK] 버튼 힌트 생성 완료")
         
         # 화면별 콘텐츠 생성
-        print(f"  📱 화면별 콘텐츠 생성...")
+        print(f"  [INFO] 화면별 콘텐츠 생성...")
         self._create_content()
-        print(f"  ✅ 화면별 콘텐츠 생성 완료")
+        print(f"  [OK] 화면별 콘텐츠 생성 완료")
     
     
     def _create_content(self):
@@ -191,10 +191,10 @@ class BaseScreen:
     
     def create_label(self, text, x=0, y=0, style_name='text_body', color=None):
         """라벨 생성 헬퍼"""
-        print(f"      📱 라벨 생성: '{text}' (스타일: {style_name})")
+        print(f"      [INFO] 라벨 생성: '{text}' (스타일: {style_name})")
         label = self.ui_style.create_label(self.content_area, text, style_name, color)
         label.align(lv.ALIGN.CENTER, x, y)
-        print(f"      ✅ 라벨 생성 완료: '{text}'")
+        print(f"      [OK] 라벨 생성 완료: '{text}'")
         return label
     
     def create_button(self, text, x=0, y=0, width=80, height=40):
