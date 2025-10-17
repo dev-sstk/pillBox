@@ -607,7 +607,15 @@ class PillLoadingScreen:
             guide_label.set_text("메인 화면으로\n이동합니다...")
             guide_label.align(lv.ALIGN.CENTER, 0, 20)
             guide_label.set_style_text_color(lv.color_hex(0x666666), 0)
-            guide_label.set_style_text_font(lv.font_montserrat_12, 0)
+            # 폰트 설정 (기본 폰트 사용)
+            try:
+                korean_font = getattr(lv, "font_notosans_kr_regular", None)
+                if korean_font:
+                    guide_label.set_style_text_font(korean_font, 0)
+                else:
+                    guide_label.set_style_text_font(lv.font_default, 0)
+            except Exception as e:
+                guide_label.set_style_text_font(lv.font_default, 0)
             guide_label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
             
             print("[OK] 간단한 완료 메시지 표시 완료")

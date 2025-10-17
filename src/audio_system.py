@@ -12,26 +12,35 @@ class AudioSystem:
     """음성 안내 시스템 클래스"""
     
     def __init__(self):
-        """음성 안내 시스템 초기화"""
+        """음성 안내 시스템 초기화 (지연 초기화)"""
         self.audio_enabled = True
         self.volume = 80  # 0-100
         self.current_audio = None
         self.audio_queue = []
         
-        # I2S 오디오 설정 (MAX98357A)
+        # I2S 오디오 설정 (지연 초기화)
         self.i2s = None
-        self._init_audio_hardware()
+        self.i2s_initialized = False
         
         # 오디오 파일 정보 사용 (지연 로딩)
         self.audio_files_info = None
         
-        print("[OK] AudioSystem 초기화 완료")
+        print("[OK] AudioSystem 초기화 완료 (지연 초기화)")
     
-    def _init_audio_hardware(self):
-        """오디오 하드웨어 초기화"""
+    def _ensure_i2s_initialized(self):
+        """I2S 하드웨어 지연 초기화"""
+        if self.i2s_initialized:
+            return True
+            
         try:
-            # I2S 설정 (MAX98357A) - wav_player_mono.py 설정 사용
+            # 메모리 정리 후 I2S 초기화 시도
+            import gc
+            gc.collect()
+            print("[INFO] I2S 지연 초기화 시작 - 메모리 정리 완료")
+            
+            # I2S 설정 (MAX98357A) - 메모리 사용량 최적화
             # BCLK: GPIO 6, LRCLK: GPIO 7, DIN: GPIO 5
+            # 버퍼 크기를 줄여서 메모리 사용량 감소
             self.i2s = I2S(
                 0,
                 sck=Pin(6),      # Bit Clock
@@ -41,12 +50,38 @@ class AudioSystem:
                 bits=16,
                 format=I2S.MONO,
                 rate=16000,
-                ibuf=2048
+                ibuf=1024        # 2048 → 1024로 줄여서 메모리 절약
             )
-            print("[OK] I2S 오디오 하드웨어 초기화 완료")
+            self.i2s_initialized = True
+            print("[OK] I2S 오디오 하드웨어 지연 초기화 완료 (메모리 최적화)")
+            return True
         except Exception as e:
-            print(f"[WARN] I2S 오디오 하드웨어 초기화 실패: {e}")
-            self.audio_enabled = False
+            print(f"[WARN] I2S 오디오 하드웨어 지연 초기화 실패: {e}")
+            # 메모리 부족 시 더 작은 버퍼로 재시도
+            try:
+                print("[INFO] 작은 버퍼로 I2S 재시도...")
+                import gc
+                gc.collect()
+                self.i2s = I2S(
+                    0,
+                    sck=Pin(6),
+                    ws=Pin(7),
+                    sd=Pin(5),
+                    mode=I2S.TX,
+                    bits=16,
+                    format=I2S.MONO,
+                    rate=16000,
+                    ibuf=512      # 더 작은 버퍼로 재시도
+                )
+                self.i2s_initialized = True
+                print("[OK] I2S 오디오 하드웨어 지연 초기화 완료 (작은 버퍼)")
+                return True
+            except Exception as e2:
+                print(f"[WARN] I2S 재시도도 실패: {e2}")
+                self.audio_enabled = False
+                self.i2s = None
+                self.i2s_initialized = False
+                return False
     
     def play_voice(self, audio_file, blocking=False):
         """안내 음성 재생"""
@@ -93,9 +128,9 @@ class AudioSystem:
             
             print(f"[NOTE] {audio_file} 재생 시작...")
             
-            # I2S가 초기화되었는지 확인
-            if self.i2s is None:
-                print(f"[WARN] I2S 미초기화, 시뮬레이션 재생")
+            # I2S 지연 초기화 시도
+            if not self._ensure_i2s_initialized():
+                print(f"[WARN] I2S 초기화 실패, 시뮬레이션 재생")
                 time.sleep_ms(duration)
                 return
             
@@ -193,7 +228,10 @@ class AudioSystem:
         try:
             print("🔊 알람 소리 재생 시작")
             
-            # I2S가 실패해도 부저는 사용 가능하므로 강제로 알람 톤 재생
+            # I2S 초기화 시도 (실패해도 부저는 사용 가능)
+            self._ensure_i2s_initialized()
+            
+            # 부저 알람 톤 재생 (I2S 실패해도 동작)
             self._play_alarm_tone()
                 
         except Exception as e:

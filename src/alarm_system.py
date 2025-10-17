@@ -263,17 +263,22 @@ class AlarmSystem:
             print(f"[ERROR] 복용 실패 처리 실패: {e}")
     
     def _play_alarm_sound(self):
-        """알람 소리 재생"""
+        """알람 소리 재생 (버저 + 음성)"""
         try:
             if not self.alarm_settings["sound_enabled"]:
                 return
             
             if self.audio_system:
-                # 실제 오디오 시스템이 있으면 사용
+                # 1. 버저 알람 소리 재생
                 self.audio_system.play_alarm_sound()
+                
+                # 2. take_medicine.wav 음성 파일 재생
+                print("🔊 알람 시 복용 안내 음성 재생")
+                self.audio_system.play_voice("take_medicine.wav", blocking=False)
             else:
                 # 시뮬레이션
                 print("🔊 알람 소리 재생 (시뮬레이션)")
+                print("🔊 복용 안내 음성 재생 (시뮬레이션)")
                 
         except Exception as e:
             print(f"[ERROR] 알람 소리 재생 실패: {e}")

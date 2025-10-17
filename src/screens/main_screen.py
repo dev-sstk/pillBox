@@ -60,8 +60,13 @@ class MainScreen:
         # 알람 시스템 초기화 (오디오 시스템과 LED 컨트롤러 전달)
         print("[DEBUG] 알람 시스템 초기화 시작")
         
-        # 직접 오디오 시스템과 LED 컨트롤러 생성
+        # 직접 오디오 시스템과 LED 컨트롤러 생성 (메모리 최적화)
         try:
+            # 메모리 정리 후 오디오 시스템 초기화
+            import gc
+            gc.collect()
+            print("[DEBUG] 오디오 시스템 초기화 전 메모리 정리 완료")
+            
             from audio_system import AudioSystem
             from led_controller import LEDController
             audio_system = AudioSystem()
@@ -69,8 +74,20 @@ class MainScreen:
             print("[DEBUG] 오디오 시스템과 LED 컨트롤러 직접 생성 완료")
         except Exception as e:
             print(f"[ERROR] 오디오 시스템/LED 컨트롤러 생성 실패: {e}")
-            audio_system = None
-            led_controller = None
+            # 메모리 부족 시 추가 정리 후 재시도
+            try:
+                import gc
+                for i in range(3):
+                    gc.collect()
+                    time.sleep(0.01)
+                print("[DEBUG] 메모리 부족으로 인한 추가 정리 후 재시도...")
+                audio_system = AudioSystem()
+                led_controller = LEDController()
+                print("[DEBUG] 오디오 시스템과 LED 컨트롤러 재시도 생성 완료")
+            except Exception as e2:
+                print(f"[ERROR] 오디오 시스템/LED 컨트롤러 재시도도 실패: {e2}")
+                audio_system = None
+                led_controller = None
         
         self.alarm_system = AlarmSystem(self.data_manager, audio_system, led_controller)
         print("[DEBUG] 알람 시스템 초기화 완료")
@@ -196,8 +213,9 @@ class MainScreen:
             self.screen_obj = lv.obj()
             print(f"  [INFO] 화면 객체 생성됨: {self.screen_obj}")
             
-            # 화면 배경 스타일 적용 (Modern 스타일)
-            self.ui_style.apply_screen_style(self.screen_obj)
+            # 간단한 배경 설정 (스타일 시스템 사용 안함 - 메모리 절약)
+            self.screen_obj.set_style_bg_color(lv.color_hex(0xFFFFFF), 0)
+            self.screen_obj.set_style_bg_opa(255, 0)
             
             # 스크롤바 완전 비활성화
             self.screen_obj.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
@@ -242,17 +260,39 @@ class MainScreen:
             
         except Exception as e:
             print(f"  [ERROR] Modern 화면 생성 중 오류 발생: {e}")
-            import sys
-            sys.print_exception(e)
-            # 기본 화면 생성 시도
-            print(f"  [INFO] {self.screen_name} 기본 화면 생성 시도...")
+            # 메모리 부족 시 더 간단한 UI 생성
             try:
-                self._create_basic_screen()
-                print(f"  [OK] {self.screen_name} 기본 화면 초기화 완료")
+                self._create_minimal_ui()
             except Exception as e2:
-                print(f"  [ERROR] {self.screen_name} 기본 화면 초기화도 실패: {e2}")
-                import sys
-                sys.print_exception(e2)
+                print(f"  [ERROR] 최소 UI 생성도 실패: {e2}")
+    def _create_minimal_ui(self):
+        """최소한의 UI 생성 (메모리 절약)"""
+        try:
+            print("  [INFO] 최소 UI 생성 시작...")
+            
+            # 제목 라벨만 생성
+            title_label = lv.label(self.screen_obj)
+            title_label.set_text("복용 알림")
+            title_label.align(lv.ALIGN.TOP_MID, 0, 10)
+            title_label.set_style_text_color(lv.color_hex(0x333333), 0)
+            
+            # 시간 표시 라벨
+            time_label = lv.label(self.screen_obj)
+            time_label.set_text("11:35")
+            time_label.align(lv.ALIGN.CENTER, 0, -20)
+            time_label.set_style_text_color(lv.color_hex(0x666666), 0)
+            
+            # 상태 라벨
+            status_label = lv.label(self.screen_obj)
+            status_label.set_text("정상")
+            status_label.align(lv.ALIGN.BOTTOM_MID, 0, -10)
+            status_label.set_style_text_color(lv.color_hex(0x4CAF50), 0)
+            
+            print("  [OK] 최소 UI 생성 완료")
+            
+        except Exception as e:
+            print(f"  [ERROR] 최소 UI 생성 실패: {e}")
+            raise e
     
     def _create_title_area(self):
         """제목 영역 생성"""
@@ -863,6 +903,9 @@ class MainScreen:
                         print(f"  [OK] 모든 디스크 배출 완료")
                         self._update_status("배출 완료")
                         
+                        # 배출 성공 시 음성 안내 재생
+                        self._play_dispense_voice()
+                        
                         self.dose_schedule[self.current_dose_index]["status"] = "completed"
                         
                         self.data_manager.log_dispense(self.current_dose_index, True)
@@ -911,6 +954,9 @@ class MainScreen:
             if success:
                 print(f"[OK] 알람 배출 성공: {alarm_info['meal_name']}")
                 self._update_status("알람 배출 완료")
+                
+                # 알람 배출 성공 시 음성 안내 재생
+                self._play_dispense_voice()
             else:
                 print(f"[ERROR] 알람 배출 실패: {alarm_info['meal_name']}")
                 self._update_status("알람 배출 실패")
@@ -1033,26 +1079,26 @@ class MainScreen:
     
     
     def _check_auto_dispense(self):
-        """자동 배출 시간 확인"""
+        """자동 배출 시간 확인 (메모리 최적화)"""
         if not self.auto_dispense_enabled:
             return
         
         try:
             current_time = self._get_current_time()
             
-            # 시간이 변경되었을 때만 확인
+            # 시간이 변경되었을 때만 확인 (메모리 절약)
             if current_time == self.last_check_time:
                 return
             
             self.last_check_time = current_time
-            print(f"🕐 시간 확인: {current_time}")
+            # 디버그 출력 최소화
+            # print(f"🕐 시간 확인: {current_time}")
             
-            # 각 일정 확인
+            # 각 일정 확인 (간소화)
             for i, schedule in enumerate(self.dose_schedule):
                 if schedule["status"] == "pending" and schedule["time"] == current_time:
                     # 데이터 매니저를 사용하여 같은 시간에 배출 여부 확인
                     if self.data_manager.was_dispensed_today(i, schedule['time']):
-                        print(f"⏭️ 일정 {i+1} ({schedule['time']}) 이미 같은 시간에 배출됨")
                         continue
                     
                     print(f"⏰ 알람 트리거: 일정 {i+1} ({schedule['time']})")
@@ -1159,7 +1205,7 @@ class MainScreen:
             sys.print_exception(e)
     
     def _get_selected_disks_for_dose(self, dose_index):
-        """복용 일정에 대한 선택된 디스크들 반환"""
+        """복용 일정에 대한 선택된 디스크들 반환 (순차 소진 방식)"""
         try:
             # dose_time_screen에서 복용 시간 정보 가져오기
             dose_times = []
@@ -1170,25 +1216,87 @@ class MainScreen:
             
             if dose_times and dose_index < len(dose_times):
                 dose_info = dose_times[dose_index]
-                selected_disks = dose_info.get('selected_disks', [dose_index + 1])  # 기본값: 해당 일정의 디스크
-                return selected_disks
+                selected_disks = dose_info.get('selected_disks', None)
+                
+                # selected_disks가 설정되어 있으면 사용
+                if selected_disks:
+                    print(f"[INFO] 복용 일정 {dose_index + 1}의 선택된 디스크: {selected_disks}")
+                    return selected_disks
+                else:
+                    # selected_disks가 없으면 순차 소진 방식으로 현재 사용 가능한 디스크 반환
+                    available_disk = self._get_next_available_disk()
+                    print(f"[INFO] 복용 일정 {dose_index + 1}에 selected_disks 정보 없음, 순차 소진 방식으로 디스크 {available_disk} 사용")
+                    return [available_disk] if available_disk else []
             else:
-                # 기본 로직: 해당 일정의 디스크만 반환
-                return [dose_index + 1]
+                # dose_times 정보가 없으면 순차 소진 방식으로 현재 사용 가능한 디스크 반환
+                available_disk = self._get_next_available_disk()
+                print(f"[INFO] 복용 일정 {dose_index + 1}에 dose_times 정보 없음, 순차 소진 방식으로 디스크 {available_disk} 사용")
+                return [available_disk] if available_disk else []
                 
         except Exception as e:
             print(f"[ERROR] 선택된 디스크 가져오기 실패: {e}")
-            # 오류 시 기본값 반환
-            return [dose_index + 1]
+            # 오류 시 순차 소진 방식으로 현재 사용 가능한 디스크 반환
+            available_disk = self._get_next_available_disk()
+            print(f"[INFO] 오류 발생으로 순차 소진 방식으로 디스크 {available_disk} 사용")
+            return [available_disk] if available_disk else []
+    
+    def _get_next_available_disk(self):
+        """순차 소진 방식으로 다음 사용 가능한 디스크 반환 (최적화)"""
+        try:
+            # 디스크 1, 2, 3 순서로 확인하여 약물이 있는 첫 번째 디스크 반환
+            for disk_num in [1, 2, 3]:
+                current_count = self.data_manager.get_disk_count(disk_num)
+                
+                if current_count > 0:
+                    print(f"[INFO] 순차 소진: 디스크 {disk_num} 사용 가능 ({current_count}개 남음)")
+                    return disk_num
+            
+            # 모든 디스크가 비어있으면 None 반환
+            print(f"[WARN] 순차 소진: 모든 디스크가 비어있음")
+            return None
+            
+        except Exception as e:
+            print(f"[ERROR] 다음 사용 가능한 디스크 확인 실패: {e}")
+            return None
+    
+    def _play_dispense_voice(self):
+        """배출 완료 시 음성 안내 재생"""
+        try:
+            print("🔊 배출 완료 음성 안내 재생 시작")
+            
+            # 알람 시스템의 오디오 시스템을 통해 음성 재생
+            if hasattr(self.alarm_system, 'audio_system') and self.alarm_system.audio_system:
+                # take_medicine.wav 파일 재생
+                self.alarm_system.audio_system.play_voice("take_medicine.wav", blocking=False)
+                print("🔊 take_medicine.wav 음성 재생 완료")
+            else:
+                print("🔊 오디오 시스템 없음, 음성 재생 시뮬레이션")
+                import time
+                time.sleep(1)  # 시뮬레이션
+                
+        except Exception as e:
+            print(f"[ERROR] 배출 완료 음성 재생 실패: {e}")
     
     def _dispense_from_selected_disks(self, motor_system, selected_disks):
         """선택된 디스크들에서 순차적으로 배출"""
         try:
             print(f"[INFO] 선택된 디스크들 순차 배출 시작: {selected_disks}")
             
+            # 선택된 디스크가 없으면 실패
+            if not selected_disks:
+                print(f"[ERROR] 배출할 디스크가 없음")
+                self._update_status("배출할 디스크 없음")
+                return False
+            
             for i, disk_num in enumerate(selected_disks):
                 print(f"[INFO] 디스크 {disk_num} 배출 중... ({i+1}/{len(selected_disks)})")
                 self._update_status(f"디스크 {disk_num} 배출 중...")
+                
+                # 배출 전 디스크 수량 재확인 (순차 소진 방식)
+                current_count = self.data_manager.get_disk_count(disk_num)
+                if current_count <= 0:
+                    print(f"[WARN] 디스크 {disk_num}가 비어있음, 다음 디스크로 넘어감")
+                    continue
                 
                 # 1. 디스크 회전
                 disk_success = motor_system.rotate_disk(disk_num, 1)  # 1칸만 회전

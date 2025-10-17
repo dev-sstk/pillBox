@@ -145,9 +145,25 @@ class event_loop:
     def task_handler(self, _):
         try:
             if lv._nesting.value == 0:
-                lv.task_handler()
+                # 메모리 부족 시 태스크 핸들러 건너뛰기
+                try:
+                    lv.task_handler()
+                except MemoryError:
+                    # 메모리 부족 시 가비지 컬렉션 후 재시도
+                    import gc
+                    gc.collect()
+                    try:
+                        lv.task_handler()
+                    except MemoryError:
+                        # 여전히 메모리 부족하면 건너뛰기
+                        pass
+                
                 if self.refresh_cb:
-                    self.refresh_cb()
+                    try:
+                        self.refresh_cb()
+                    except MemoryError:
+                        # 리프레시 콜백도 메모리 부족 시 건너뛰기
+                        pass
             self.scheduled -= 1
         except Exception as e:
             if self.exception_sink:

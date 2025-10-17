@@ -107,6 +107,12 @@ class AudioFilesInfo:
                 "duration": 100,
                 "category": "effect",
                 "priority": "low"
+            },
+            "take_medicine.wav": {
+                "description": "복용 안내 음성",
+                "duration": 3000,
+                "category": "voice",
+                "priority": "high"
             }
         }
         

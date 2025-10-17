@@ -35,10 +35,15 @@ class DataManager:
         self.medication_file = "/data/medication.json"
         self.dispense_log_file = "/data/dispense_log.json"
         
+        # 메모리 최적화: 데이터 캐싱
+        self._medication_cache = None
+        self._cache_timestamp = 0
+        self._cache_timeout = 30000  # 30초 캐시 유지 (메모리 절약)
+        
         # 데이터 디렉토리 생성
         self._ensure_data_directory()
         
-        print("[OK] DataManager 초기화 완료")
+        print("[OK] DataManager 초기화 완료 (캐싱 활성화)")
     
     def _ensure_data_directory(self):
         """데이터 디렉토리 존재 확인 및 생성"""
@@ -111,10 +116,15 @@ class DataManager:
     # ===== 약물 관리 =====
     
     def save_medication_data(self, medication_data):
-        """약물 데이터 저장"""
+        """약물 데이터 저장 (캐시 무효화)"""
         try:
             with open(self.medication_file, 'w') as f:
                 json.dump(medication_data, f)
+            
+            # 캐시 무효화
+            self._medication_cache = None
+            self._cache_timestamp = 0
+            
             print(f"[OK] 약물 데이터 저장 완료: {self.medication_file}")
             return True
         except Exception as e:
@@ -122,10 +132,24 @@ class DataManager:
             return False
     
     def load_medication_data(self):
-        """약물 데이터 로드"""
+        """약물 데이터 로드 (캐싱 적용)"""
         try:
+            import time
+            current_time = time.ticks_ms()
+            
+            # 캐시가 유효한지 확인
+            if (self._medication_cache is not None and 
+                time.ticks_diff(current_time, self._cache_timestamp) < self._cache_timeout):
+                return self._medication_cache
+            
+            # 캐시가 없거나 만료된 경우 파일에서 로드
             with open(self.medication_file, 'r') as f:
                 medication_data = json.load(f)
+            
+            # 캐시 업데이트
+            self._medication_cache = medication_data
+            self._cache_timestamp = current_time
+            
             print(f"[OK] 약물 데이터 로드 완료: {self.medication_file}")
             return medication_data
         except OSError:
@@ -294,20 +318,19 @@ class DataManager:
             return False
     
     def get_disk_count(self, disk_num):
-        """디스크 약물 수량 조회"""
+        """디스크 약물 수량 조회 (최적화)"""
         try:
             medication_data = self.load_medication_data()
             disk_key = str(disk_num)
             
             if disk_key in medication_data["disks"]:
                 current_count = medication_data["disks"][disk_key]["current_count"]
-                print(f"[DEBUG] 디스크 {disk_num} 수량 조회: {current_count}개")
+                # 디버그 출력 최소화 (메모리 절약)
                 return current_count
             else:
-                print(f"[DEBUG] 디스크 {disk_num} 데이터 없음, 0 반환")
                 return 0
         except Exception as e:
-            print(f"[ERROR] 디스크 수량 조회 실패: {e}")
+            # 메모리 부족 시 조용히 실패
             return 0
     
     def is_disk_low_stock(self, disk_num):
