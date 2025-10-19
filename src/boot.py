@@ -76,18 +76,18 @@ if __name__ == "__main__":
     print("ESP32-C6 필박스 부팅 초기화")
     print("=" * 50)
     
-    # [FAST] 메모리 부족 해결: 부팅 시 메모리 정리
+    # [SMOOTH] 부팅 시 메모리 정리 최소화 - 화면 깜빡임 완전 방지
     import gc
     print("🧹 부팅 시 메모리 정리 시작...")
-    for i in range(5):  # 5회 가비지 컬렉션
+    for i in range(2):  # 3회 → 2회로 최적화 (화면 깜빡임 완전 방지)
         gc.collect()
-        time.sleep(0.02)  # 0.02초 대기
+        time.sleep(0.005)  # 0.01초 → 0.005초로 최적화
     print("[OK] 부팅 시 메모리 정리 완료")
     
     # 스테퍼 모터 핀 초기화
     initialize_stepper_motor_pins()
-    # 짧은 지연 후 메인 프로그램으로 진행
-    time.sleep_ms(100)
+    # 짧은 지연 후 메인 프로그램으로 진행 (화면 깜빡임 방지)
+    time.sleep_ms(50)  # 100ms → 50ms로 최적화
     
     print("부팅 초기화 완료")
     print("=" * 50)

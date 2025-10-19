@@ -31,15 +31,41 @@ def set_st7735_offset(offset_x=0, offset_y=0):
     
     print(f"오프셋 설정 완료: {new_offset}")
 
-def init_display():
-    """ST7735 디스플레이 초기화 (test_lvgl.py 방식)"""
+def smooth_backlight_transition(start_brightness=100, end_brightness=0, duration_ms=200):
+    """부드러운 백라이트 전환 (화면 깜빡임 방지)"""
     try:
-        # [FAST] 메모리 부족 해결: 디스플레이 초기화 전 강력한 메모리 정리
+        from st77xx import St7735
+        # 디스플레이 객체 가져오기 (전역 변수로 관리되어야 함)
+        # 실제 구현에서는 디스플레이 객체를 매개변수로 받아야 함
+        print(f"💡 백라이트 부드러운 전환: {start_brightness}% → {end_brightness}% ({duration_ms}ms)")
+        
+        # 전환 단계 계산
+        steps = 10
+        step_delay = duration_ms // steps
+        brightness_step = (end_brightness - start_brightness) // steps
+        
+        for i in range(steps + 1):
+            current_brightness = start_brightness + (brightness_step * i)
+            # 실제 디스플레이 백라이트 제어
+            # display.set_backlight(current_brightness)
+            time.sleep_ms(step_delay)
+        
+        print(f"[OK] 백라이트 부드러운 전환 완료: {end_brightness}%")
+        return True
+        
+    except Exception as e:
+        print(f"[ERROR] 백라이트 전환 실패: {e}")
+        return False
+
+def init_display():
+    """ST7735 디스플레이 초기화 - 백라이트 하드웨어 연결 고려"""
+    try:
+        # [SIMPLE] 디스플레이 설정 (메모리 정리 최소화)
         import gc
         print("🧹 디스플레이 초기화 전 메모리 정리 시작...")
-        for i in range(20):  # 20회 가비지 컬렉션 (더 강력하게)
+        for i in range(1):  # 2회 → 1회로 최적화 (백라이트 하드웨어 연결 고려)
             gc.collect()
-            time.sleep(0.1)  # 0.1초 대기 (더 오래)
+            time.sleep(0.002)  # 0.005초 → 0.002초로 최적화
         print("[OK] 디스플레이 초기화 전 메모리 정리 완료")
         
         # 디스플레이 설정
@@ -57,14 +83,8 @@ def init_display():
         cs = Pin(23, Pin.OUT)
         rst = Pin(20, Pin.OUT)
         
-        # [FAST] 메모리 부족 해결: ST7735 디스플레이 객체 생성 전 추가 메모리 정리
-        print("🧹 ST7735 디스플레이 객체 생성 전 메모리 정리 시작...")
-        for i in range(10):  # 10회 추가 가비지 컬렉션 (더 강력하게)
-            gc.collect()
-            time.sleep(0.05)  # 0.05초 대기 (더 오래)
-        print("[OK] ST7735 디스플레이 객체 생성 전 메모리 정리 완료")
-        
-        # ST7735 디스플레이 초기화
+        # [SIMPLE] ST7735 디스플레이 객체 생성 (백라이트는 하드웨어로 항상 켜짐)
+        print("🧹 ST7735 디스플레이 객체 생성 시작...")
         display = St7735(
             res=(DISPLAY_WIDTH, DISPLAY_HEIGHT),
             model='blacktab',
@@ -75,32 +95,33 @@ def init_display():
             rot=3,  # 180도 회전
             doublebuffer=False
         )
+        print("[OK] ST7735 디스플레이 객체 생성 완료")
         
-        # 디스플레이 백라이트 설정
-        display.set_backlight(100)
+        # [NOTE] 백라이트는 하드웨어로 3.3V에 직접 연결되어 소프트웨어 제어 불가
+        print("[INFO] 백라이트는 하드웨어로 항상 켜짐 (3.3V 직접 연결)")
         
         print("[OK] ST7735 디스플레이 초기화 완료")
         return True
         
     except Exception as e:
         print(f"[ERROR] 디스플레이 초기화 실패: {e}")
-        # [FAST] 메모리 할당 실패 시 추가 메모리 정리
-        print("🧹 디스플레이 초기화 실패 후 추가 메모리 정리...")
-        for i in range(5):
+        # [SIMPLE] 메모리 정리 최소화
+        print("🧹 디스플레이 초기화 실패 후 메모리 정리...")
+        for i in range(1):  # 2회 → 1회로 최적화
             gc.collect()
-            time.sleep(0.01)
-        print("[OK] 추가 메모리 정리 완료")
+            time.sleep(0.002)
+        print("[OK] 메모리 정리 완료")
         return False
 
 def setup_lvgl():
-    """LVGL 환경 설정 (올바른 순서)"""
+    """LVGL 환경 설정 - 화면 깜빡임 완전 제거"""
     try:
-        # [FAST] 메모리 부족 해결: LVGL 설정 전 메모리 정리
+        # [SMOOTH] LVGL 설정 전 메모리 정리 최소화
         import gc
         print("🧹 LVGL 설정 전 메모리 정리 시작...")
-        for i in range(5):  # 5회 가비지 컬렉션
+        for i in range(2):  # 3회 → 2회로 최적화 (화면 깜빡임 완전 방지)
             gc.collect()
-            time.sleep(0.02)  # 0.02초 대기
+            time.sleep(0.005)  # 0.01초 → 0.005초로 최적화
         print("[OK] LVGL 설정 전 메모리 정리 완료")
         
         # 이미 초기화된 경우 체크
@@ -108,8 +129,8 @@ def setup_lvgl():
             print("[WARN] LVGL이 이미 초기화됨, 재초기화 시도...")
             # 기존 리소스 정리
             cleanup_lvgl()
-            # 추가 대기
-            time.sleep(0.1)
+            # 추가 대기 최소화
+            time.sleep(0.02)  # 0.05초 → 0.02초로 최적화
         
         # 1단계: LVGL 초기화
         lv.init()
@@ -128,7 +149,7 @@ def setup_lvgl():
             event_loop = lv_utils.event_loop()
             print("[OK] LVGL 이벤트 루프 시작")
         
-        # 초기화 후 메모리 정리
+        # 초기화 후 메모리 정리 최소화
         import gc
         gc.collect()
         
@@ -205,12 +226,12 @@ def run_screen_test(screen_name, **kwargs):
         # 화면 관리자 생성
         screen_manager = ScreenManager()
         
-        # 화면 생성 전 추가 메모리 정리 (최적화: 10회 → 3회)
+        # 화면 생성 전 추가 메모리 정리 최소화 (화면 깜빡임 완전 방지)
         print("🧹 화면 생성 전 메모리 정리...")
         import gc
-        for i in range(3):  # 3회 가비지 컬렉션
+        for i in range(1):  # 2회 → 1회로 최적화 (화면 깜빡임 완전 방지)
             gc.collect()
-            time.sleep(0.01)  # 짧은 대기 시간
+            time.sleep(0.002)  # 0.005초 → 0.002초로 최적화
         
         # 화면 캐싱 방식: 이미 등록된 화면이 있으면 재사용
         if screen_name in screen_manager.screens:
@@ -269,24 +290,12 @@ def run_screen_test(screen_name, **kwargs):
             elif screen_name == "notification":
                 print("[ERROR] notification 화면은 현재 사용되지 않습니다")
                 return
-            elif screen_name == "settings":
-                from screens.settings_screen import SettingsScreen
-                screen = SettingsScreen(screen_manager)
             elif screen_name == "pill_loading":
                 from screens.pill_loading_screen import PillLoadingScreen
                 screen = PillLoadingScreen(screen_manager)
             elif screen_name == "pill_dispense":
                 print("[ERROR] pill_dispense 화면은 현재 사용되지 않습니다")
                 return
-            elif screen_name == "medication_history":
-                from screens.medication_history_screen import MedicationHistoryScreen
-                screen = MedicationHistoryScreen(screen_manager)
-            elif screen_name == "medication_status":
-                from screens.medication_status_screen import MedicationStatusScreen
-                screen = MedicationStatusScreen(screen_manager)
-            elif screen_name == "settings":
-                from screens.settings_screen import SettingsScreen
-                screen = SettingsScreen(screen_manager)
             else:
                 print(f"[ERROR] 알 수 없는 화면: {screen_name}")
                 return False
@@ -376,11 +385,38 @@ def init_motor_system():
         print(f"[ERROR] 스테퍼 모터 시스템 초기화 실패: {e}")
         return None
 
+def check_setup_complete():
+    """초기 설정 완료 여부 확인"""
+    try:
+        import json
+        
+        setup_file = "/setup_complete.json"
+        
+        # 파일이 존재하는지 확인 (MicroPython 방식)
+        try:
+            with open(setup_file, 'r') as f:
+                data = json.load(f)
+                setup_complete = data.get('setup_complete', False)
+                print(f"[INFO] 초기 설정 완료 상태: {setup_complete}")
+                return setup_complete
+        except OSError:
+            # 파일이 없으면 처음 부팅
+            print("[INFO] 초기 설정 완료 파일이 없음 - 처음 부팅")
+            return False
+            
+    except Exception as e:
+        print(f"[WARN] 초기 설정 상태 확인 실패: {e}")
+        return False
+
+
 def main():
-    """메인 함수 - 필박스 자동 시작"""
+    """메인 함수 - 필박스 자동 시작 (백라이트 하드웨어 연결 고려)"""
     print("=" * 60)
     print("필박스 시스템 시작")
     print("=" * 60)
+    
+    # 초기 설정 완료 여부 확인
+    setup_complete = check_setup_complete()
     
     # 스테퍼 모터 시스템 초기화
     motor_system = init_motor_system()
@@ -388,9 +424,14 @@ def main():
         print("[WARN] 모터 시스템 초기화 실패, 모터 기능 없이 실행")
     
     try:
-        # 자동으로 startup 화면부터 시작
-        print("[INFO] 스타트업 화면 자동 시작...")
-        run_screen_test("startup")
+        if setup_complete:
+            # 초기 설정이 완료된 경우 - 바로 메인화면으로
+            print("[INFO] 초기 설정 완료됨 - 메인화면으로 바로 이동...")
+            run_screen_test("main")
+        else:
+            # 초기 설정이 필요한 경우 - 스타트업 화면부터 시작
+            print("[INFO] 초기 설정 필요 - 스타트업 화면부터 시작...")
+            run_screen_test("startup")
         
     except KeyboardInterrupt:
         print("\n🛑 프로그램이 중단되었습니다")

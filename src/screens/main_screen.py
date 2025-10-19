@@ -15,7 +15,7 @@ class MainScreen:
     """메인 화면 클래스 - Modern UI 스타일 + 자동 배출 기능"""
     
     def __init__(self, screen_manager):
-        """메인 화면 초기화"""
+        """메인 화면 초기화 - 메모리 최적화"""
         self.screen_manager = screen_manager
         self.screen_name = 'main'
         self.screen_obj = None
@@ -23,113 +23,168 @@ class MainScreen:
         self.dose_schedule = []  # 복용 일정
         self.last_update_time = 0
         
-        # 실시간 정보
-        self.rtc = RTC()
+        # 실시간 정보 (최소한만 초기화)
         self.current_time = "00:00"  # 기본값으로 설정
         self.next_dose_time = ""
         self.time_until_next = ""
-        self.wifi_status = {"connected": False, "ssid": None}
         
-        # 필박스 상태
-        self.disk_states = {"disk_1": 0, "disk_2": 0, "disk_3": 0}  # 각 디스크의 충전된 칸 수
-        self.battery_level = 85  # 배터리 레벨 (시뮬레이션)
+        # 필박스 상태 (최소한만 초기화)
         self.wifi_connected = True  # WiFi 연결 상태 (시뮬레이션)
-        self.is_charging = False  # 충전 상태 (고정값)
-        self.current_date = "2025-10-17"  # 현재 날짜 (기본값)
         
         # UI 업데이트 타이머
         self.ui_update_counter = 0
-        self.battery_simulation_step = 0  # 배터리 시뮬레이션 단계 (0: 완충, 1: 3단계, 2: 2단계, 3: 1단계, 4: 방전)
         
-        # 지연 초기화를 위한 플래그들
+        # 지연 초기화를 위한 플래그들 (모든 무거운 객체들을 지연 로딩)
         self._ui_style = None
         self._data_manager = None
         self._medication_tracker = None
         self._alarm_system = None
         self._wifi_manager = None
         self._motor_system = None
+        self._rtc = None  # RTC도 지연 로딩
+        self._disk_states = None  # 디스크 상태도 지연 로딩
+        self._wifi_status = None  # WiFi 상태도 지연 로딩
+        self._current_date = None  # 현재 날짜도 지연 로딩
         
-        # 시간 초기화를 지연 초기화 플래그들 설정 후 실행
-        self._initialize_time()
-        
-        # 지연 초기화: 알람 시스템은 필요할 때만 로드
-        print("[DEBUG] 메인 화면 초기화 - 지연 로딩 방식")
-        
-        # 시간 모니터링 (자동 배출용)
+        # 시간 모니터링 (자동 배출용) - 최소한만 초기화
         self.last_check_time = ""
         self.auto_dispense_enabled = True
         self.last_dispense_time = {}
         
-        # 약물 상태 모니터링용
-        self.last_medication_check = ""
-        self.medication_alerts = []
+        # NTP 동기화 관련 속성
+        self._ntp_sync_enabled = False
+        self._last_ntp_sync_time = 0
         
-        # 알람 상태 모니터링
-        self.last_alarm_check = ""
+        # 약물 상태 모니터링용 - 지연 로딩
+        self._last_medication_check = None
+        self._medication_alerts = None
+        
+        # 알람 상태 모니터링 - 지연 로딩
+        self._last_alarm_check = None
+        
+        # 시간 초기화를 지연 초기화 플래그들 설정 후 실행
+        self._initialize_time()
+        
+        print("[DEBUG] 메인 화면 초기화 - 메모리 최적화 지연 로딩 방식")
         
         # 샘플 데이터 초기화
         self._init_sample_data()
     
+    @property
+    def rtc(self):
+        """RTC 지연 로딩"""
+        if self._rtc is None:
+            self._rtc = RTC()
+        return self._rtc
+    
+    @property
+    def disk_states(self):
+        """디스크 상태 지연 로딩"""
+        if self._disk_states is None:
+            self._disk_states = {"disk_1": 0, "disk_2": 0, "disk_3": 0}
+        return self._disk_states
+    
+    @property
+    def wifi_status(self):
+        """WiFi 상태 지연 로딩"""
+        if self._wifi_status is None:
+            self._wifi_status = {"connected": False, "ssid": None}
+        return self._wifi_status
+    
+    @property
+    def current_date(self):
+        """현재 날짜 지연 로딩"""
+        if self._current_date is None:
+            self._current_date = "2025-10-17"
+        return self._current_date
+    
+    @property
+    def last_medication_check(self):
+        """약물 체크 시간 지연 로딩"""
+        if self._last_medication_check is None:
+            self._last_medication_check = ""
+        return self._last_medication_check
+    
+    @property
+    def medication_alerts(self):
+        """약물 알림 지연 로딩"""
+        if self._medication_alerts is None:
+            self._medication_alerts = []
+        return self._medication_alerts
+    
+    @property
+    def last_alarm_check(self):
+        """알람 체크 시간 지연 로딩"""
+        if self._last_alarm_check is None:
+            self._last_alarm_check = ""
+        return self._last_alarm_check
+    
     def _initialize_time(self):
-        """시간 초기화 (가장 먼저 실행)"""
+        """시간 초기화 (가장 먼저 실행) - WiFi 자동 연결 및 NTP 설정 포함"""
         try:
-            print("[DEBUG] 시간 초기화 시작")
+            print("[DEBUG] 시간 초기화 시작 - WiFi 자동 연결 및 NTP 설정")
             
-            # WiFi 매니저 지연 로딩으로 시간 가져오기 (안전하게)
+            # WiFi 매니저 지연 로딩
+            wifi_manager = self.wifi_manager
+            
+            # 1단계: 저장된 WiFi 설정으로 자동 연결 시도 (재시도 포함)
             try:
-                wifi_manager = self.wifi_manager
-                if wifi_manager and wifi_manager.is_connected and wifi_manager.time_synced:
-                    kst_time = wifi_manager.get_kst_time()
-                    hour = kst_time[3]
-                    minute = kst_time[4]
-                    self.current_time = f"{hour:02d}:{minute:02d}"
-                    self.wifi_status = {"connected": True, "ssid": wifi_manager.connected_ssid}
-                    self.wifi_connected = True  # WiFi 연결 상태 설정
-                    self.current_date = f"{kst_time[0]}-{kst_time[1]:02d}-{kst_time[2]:02d}"
-                    print(f"[DEBUG] NTP 시간으로 초기화: {self.current_time}")
-                else:
-                    raise Exception("WiFi 매니저 사용 불가")
-            except:
-                # WiFi 연결이 없으면 RTC 사용
-                current = self.rtc.datetime()
-                hour = current[4]
-                minute = current[5]
-                self.current_time = f"{hour:02d}:{minute:02d}"
-                self.wifi_status = {"connected": False, "ssid": None}
-                self.wifi_connected = False  # WiFi 연결 상태 설정
-                self.current_date = f"{current[0]}-{current[1]:02d}-{current[2]:02d}"
-                print(f"[DEBUG] RTC 시간으로 초기화: {self.current_time}")
-                
-            # WiFi 연결 상태를 실제로 확인하여 업데이트
-            try:
-                # WiFi 매니저 지연 로딩 시도
-                wifi_manager = self.wifi_manager
                 if wifi_manager:
-                    # 실제 연결 상태 확인
-                    connection_status = wifi_manager.get_connection_status()
-                    self.wifi_connected = connection_status['connected']
-                    print(f"[DEBUG] WiFi 연결 상태 확인: {self.wifi_connected}")
-                    if self.wifi_connected:
-                        print(f"[DEBUG] 연결된 SSID: {connection_status.get('ssid', 'Unknown')}")
+                    print("[INFO] 저장된 WiFi 설정으로 자동 연결 시도...")
+                    success = self._try_wifi_connection_with_retry(wifi_manager)
+                    if success:
+                        print(f"[OK] WiFi 자동 연결 성공: {wifi_manager.connected_ssid}")
+                        
+                        # 2단계: NTP 시간 동기화 시도
+                        print("[INFO] NTP 시간 동기화 시도...")
+                        ntp_success = wifi_manager.sync_ntp_time()
+                        if ntp_success:
+                            print("[OK] NTP 시간 동기화 성공")
+                            kst_time = wifi_manager.get_kst_time()
+                            hour = kst_time[3]
+                            minute = kst_time[4]
+                            self.current_time = f"{hour:02d}:{minute:02d}"
+                            self._wifi_status = {"connected": True, "ssid": wifi_manager.connected_ssid}
+                            self.wifi_connected = True
+                            self._current_date = f"{kst_time[0]}-{kst_time[1]:02d}-{kst_time[2]:02d}"
+                            print(f"[OK] NTP 시간으로 초기화: {self.current_time}")
+                            return
+                        else:
+                            print("[WARN] NTP 시간 동기화 실패")
+                    else:
+                        print("[WARN] WiFi 자동 연결 최종 실패 (모든 재시도 완료)")
                 else:
-                    self.wifi_connected = False
-                    print("[DEBUG] WiFi 매니저 로드 실패, 연결 상태: False")
+                    print("[WARN] WiFi 매니저 사용 불가")
             except Exception as e:
-                self.wifi_connected = False
-                print(f"[DEBUG] WiFi 상태 확인 실패: {e}")
-                
+                print(f"[WARN] WiFi 자동 연결 중 오류: {e}")
+            
+            # 3단계: WiFi 연결 실패 시 RTC 시간 사용
+            print("[INFO] WiFi 연결 실패 - RTC 시간 사용")
+            current = self.rtc.datetime()
+            hour = current[4]
+            minute = current[5]
+            self.current_time = f"{hour:02d}:{minute:02d}"
+            self._wifi_status = {"connected": False, "ssid": None}
+            self.wifi_connected = False
+            self._current_date = f"{current[0]}-{current[1]:02d}-{current[2]:02d}"
+            print(f"[OK] RTC 시간으로 초기화: {self.current_time}")
         except Exception as e:
             print(f"[ERROR] 시간 초기화 실패: {e}")
             self.current_time = "00:00"
-            self.wifi_status = {"connected": False, "ssid": None}
+            self._wifi_status = {"connected": False, "ssid": None}
             self.wifi_connected = False  # WiFi 연결 상태 설정
-            self.current_date = "2025-10-17"
+            self._current_date = "2025-10-17"
         
         # 복용 일정 데이터 초기화
         self._init_sample_data()
         
         # Modern 화면 생성
         self._create_modern_screen()
+        
+        # 시간 초기화 (WiFi 자동 연결 및 NTP 설정)
+        print("[INFO] MainScreen 시간 초기화 시작...")
+        self._initialize_time()
+        print("[INFO] MainScreen 시간 초기화 완료")
         
         print(f"[OK] {self.screen_name} 화면 초기화 완료")
     
@@ -165,18 +220,12 @@ class MainScreen:
     def alarm_system(self):
         """알람 시스템 지연 로딩"""
         if self._alarm_system is None:
-            from alarm_system import AlarmSystem
-            from audio_system import AudioSystem
-            from led_controller import LEDController
-            
-            # 메모리 정리 후 초기화
             import gc
             gc.collect()
             
             try:
-                audio_system = AudioSystem()
-                led_controller = LEDController()
-                self._alarm_system = AlarmSystem(self.data_manager, audio_system, led_controller)
+                from alarm_system import AlarmSystem
+                self._alarm_system = AlarmSystem(self.data_manager, self)  # 메인 화면 참조 전달
                 print("[DEBUG] 알람 시스템 지연 로딩 완료")
             except Exception as e:
                 print(f"[ERROR] 알람 시스템 지연 로딩 실패: {e}")
@@ -249,32 +298,62 @@ class MainScreen:
             month, day = 12, 25
             print(f"  [WARN] 날짜 설정 오류, 기본값 사용: {month}월 {day}일 ({e})")
         
-        # global_data에서 설정한 시간 가져오기
+        # 자동 할당된 디스크 정보에서 시간 가져오기 (우선)
         try:
-            from global_data import global_data
-            dose_times = global_data.get_dose_times()
-            if dose_times:
+            from data_manager import DataManager
+            data_manager = DataManager()
+            auto_assigned_disks = data_manager.get_auto_assigned_disks()
+            
+            if auto_assigned_disks:
+                # 자동 할당된 디스크만 표시
                 self.dose_schedule = []
-                for dose_time in dose_times:
-                    # dose_time이 딕셔너리인 경우 'time' 키 사용, 문자열인 경우 그대로 사용
-                    if isinstance(dose_time, dict):
-                        time_str = dose_time.get('time', '08:00')
-                    else:
-                        time_str = dose_time
-                    
+                for disk_info in auto_assigned_disks:
                     self.dose_schedule.append({
-                        "time": time_str,
-                        "status": "pending"
+                        "time": disk_info['time'],
+                        "status": "pending",
+                        "meal_name": disk_info['meal_name'],
+                        "disk_number": disk_info['disk_number']
                     })
-                print(f"  [INFO] global_data에서 설정한 시간 가져옴: {dose_times}")
+                print(f"  [INFO] 자동 할당된 디스크에서 시간 가져옴: {len(auto_assigned_disks)}개")
+                for disk_info in auto_assigned_disks:
+                    print(f"    - {disk_info['meal_name']}: {disk_info['time']} (디스크 {disk_info['disk_number']})")
             else:
-                # 설정된 시간이 없으면 기본값 사용
-                self.dose_schedule = [
-                    {"time": "08:00", "status": "pending"},
-                    {"time": "12:00", "status": "pending"},
-                    {"time": "18:00", "status": "pending"}
-                ]
-                print("  [INFO] 설정된 시간 없음, 기본값 사용")
+                # 자동 할당 정보가 없으면 DataManager에서 설정한 시간 가져오기
+                from data_manager import DataManager
+                data_manager = DataManager()
+                dose_times = data_manager.get_dose_times()
+                
+                if dose_times:
+                    self.dose_schedule = []
+                    for dose_time in dose_times:
+                        # dose_time이 딕셔너리인 경우 'time' 키 사용, 문자열인 경우 그대로 사용
+                        if isinstance(dose_time, dict):
+                            time_str = dose_time.get('time', '08:00')
+                            meal_name = dose_time.get('meal_name', '알 수 없음')
+                            selected_disks = dose_time.get('selected_disks', [])
+                        else:
+                            time_str = dose_time
+                            meal_name = '알 수 없음'
+                            selected_disks = []
+                        
+                        self.dose_schedule.append({
+                            "time": time_str,
+                            "status": "pending",
+                            "meal_name": meal_name,
+                            "selected_disks": selected_disks
+                        })
+                    print(f"  [INFO] DataManager에서 설정한 시간 가져옴: {len(dose_times)}개")
+                    for dose_time in dose_times:
+                        if isinstance(dose_time, dict):
+                            print(f"    - {dose_time.get('meal_name', '알 수 없음')}: {dose_time.get('time', '알 수 없음')}")
+                else:
+                    # 설정된 시간이 없으면 기본값 사용
+                    self.dose_schedule = [
+                        {"time": "08:00", "status": "pending"},
+                        {"time": "12:00", "status": "pending"},
+                        {"time": "18:00", "status": "pending"}
+                    ]
+                    print("  [INFO] 설정된 시간 없음, 기본값 사용")
         except Exception as e:
             # 오류 시 기본값 사용
             self.dose_schedule = [
@@ -282,9 +361,9 @@ class MainScreen:
                 {"time": "12:00", "status": "pending"},
                 {"time": "18:00", "status": "pending"}
             ]
-            print(f"  [WARN] dose_time_screen에서 시간 가져오기 실패, 기본값 사용: {e}")
+            print(f"  [WARN] 복용 시간 가져오기 실패, 기본값 사용: {e}")
         
-        self.current_date = f"{year}-{month:02d}-{day:02d}"
+        self._current_date = f"{year}-{month:02d}-{day:02d}"
     
     def _create_modern_screen(self):
         """Modern 스타일 화면 생성"""
@@ -408,8 +487,7 @@ class MainScreen:
             # WiFi 심볼을 상단 중앙에 독립적으로 배치
             self._create_wifi_indicator()
         
-            # 배터리 상태 표시기 (오른쪽만)
-            self._create_battery_indicators()
+            # 배터리 상태 표시기 삭제됨
         
         except Exception as e:
             print(f"  [ERROR] 현재 시간과 상태 표시기 생성 실패: {e}")
@@ -424,48 +502,13 @@ class MainScreen:
             wifi_icon = lv.SYMBOL.WIFI if wifi_connected else lv.SYMBOL.CLOSE
             self.wifi_label = lv.label(self.main_container)
             self.wifi_label.set_text(wifi_icon)
-            self.wifi_label.align(lv.ALIGN.TOP_MID, 0, -10)  # 배터리와 같은 y축 위치
+            self.wifi_label.align(lv.ALIGN.TOP_MID, 0, -10)  # 상단 중앙 위치
             self.wifi_label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
             self.wifi_label.set_style_text_color(lv.color_hex(0x007AFF) if wifi_connected else lv.color_hex(0xFF3B30), 0)
             print("  [OK] WiFi 심볼을 상단 중앙에 배치 완료")
         except Exception as e:
             print(f"  [ERROR] WiFi 심볼 생성 실패: {e}")
 
-    def _create_battery_indicators(self):
-        """배터리 상태 표시기 생성 (오른쪽만)"""
-        try:
-            # 배터리 상태 확인 (속성이 없으면 기본값 사용)
-            is_charging = getattr(self, 'is_charging', False)
-            battery_level = getattr(self, 'battery_level', 85)
-            
-            # 배터리 아이콘 (오른쪽 상단)
-            if is_charging:
-                battery_icon = lv.SYMBOL.CHARGE
-            elif battery_level > 75:
-                battery_icon = lv.SYMBOL.BATTERY_FULL
-            elif battery_level > 50:
-                battery_icon = lv.SYMBOL.BATTERY_3
-            elif battery_level > 25:
-                battery_icon = lv.SYMBOL.BATTERY_2
-            elif battery_level > 0:
-                battery_icon = lv.SYMBOL.BATTERY_1
-            else:
-                battery_icon = lv.SYMBOL.BATTERY_EMPTY
-        
-            self.battery_icon_label = lv.label(self.main_container)
-            self.battery_icon_label.set_text(battery_icon)
-            self.battery_icon_label.align(lv.ALIGN.TOP_RIGHT, -30, -10)  # 원래 위치로 되돌림
-            self.battery_icon_label.set_style_text_color(lv.color_hex(0x34C759), 0)
-        
-            # 배터리 텍스트 (오른쪽 상단, 아이콘 옆)
-            self.battery_text_label = lv.label(self.main_container)
-            self.battery_text_label.set_text("100%")  # 고정값으로 변경
-            self.battery_text_label.align(lv.ALIGN.TOP_RIGHT, 11, -10)  # 오른쪽으로 16픽셀 이동 (-5 + 16 = 11)
-            self.battery_text_label.set_style_text_align(lv.TEXT_ALIGN.RIGHT, 0)
-            self.battery_text_label.set_style_text_color(lv.color_hex(0x34C759), 0)
-            print("  [OK] 배터리 상태 표시기 생성 완료")
-        except Exception as e:
-            print(f"  [ERROR] 배터리 상태 표시기 생성 실패: {e}")
 
     def _create_schedule_area(self):
         """복용 일정 영역 생성"""
@@ -613,7 +656,7 @@ class MainScreen:
         
         # 버튼 힌트 텍스트 (일정 이동 + 배출 + 고급 설정) - 기본 폰트 사용
         self.hints_text = lv.label(self.hints_container)
-        self.hints_text.set_text(f"A:{lv.SYMBOL.DOWNLOAD} B:{lv.SYMBOL.UP} C:{lv.SYMBOL.DOWN}")
+        self.hints_text.set_text(f"A:{lv.SYMBOL.DOWNLOAD} B:{lv.SYMBOL.UP} C:{lv.SYMBOL.DOWN} D:{lv.SYMBOL.SETTINGS}")
         self.hints_text.align(lv.ALIGN.CENTER, 0, 0)  # 컨테이너 중앙에 배치
         self.hints_text.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
         self.hints_text.set_style_text_color(lv.color_hex(0x8E8E93), 0)  # 모던 라이트 그레이
@@ -641,19 +684,6 @@ class MainScreen:
             self.screen_obj = lv.obj()
             self.screen_obj.set_size(160, 128)
 
-    def cleanup_unused_screens(self):
-        """사용하지 않는 화면들 정리 (메모리 절약)"""
-        try:
-            if hasattr(self.screen_manager, 'cleanup_unused_screens'):
-                deleted_count = self.screen_manager.cleanup_unused_screens()
-                print(f"[INFO] 메인 화면에서 {deleted_count}개 화면 정리 완료")
-                return deleted_count
-            else:
-                print("[WARN] ScreenManager에 cleanup_unused_screens 메서드가 없음")
-            return 0
-        except Exception as e:
-            print(f"[ERROR] 화면 정리 실패: {e}")
-            return 0
 
     def get_memory_info(self):
         """메모리 사용 정보 반환"""
@@ -718,8 +748,11 @@ class MainScreen:
         return self.motor_system
     
     def show(self):
-        """화면 표시"""
+        """화면 표시 - 메모리 최적화"""
+        from memory_monitor import log_memory, cleanup_memory
+        
         print(f"[INFO] {self.screen_name} UI 통합 모드 표시")
+        log_memory("MainScreen show() 시작")
         
         if hasattr(self, 'screen_obj') and self.screen_obj:
             lv.screen_load(self.screen_obj)
@@ -731,16 +764,202 @@ class MainScreen:
                 time.sleep(0.01)
             print(f"[OK] {self.screen_name} 화면 업데이트 완료")
             
-            # 자동 배출 모니터링 시작
+            # 자동 배출 모니터링 시작 (메모리 사용량 고려)
             self._start_auto_dispense_monitoring()
+            
+            # 주기적 NTP 시간 동기화 시작
+            self._start_periodic_ntp_sync()
+            
+            # 자동 배출 모니터링 후 메모리 정리
+            import gc
+            gc.collect()
+            print("[INFO] MainScreen 자동 배출 모니터링 후 메모리 정리 완료")
+            
+            # ST7735 디스플레이 PWM 정리 (메모리 누수 방지)
+            self._cleanup_display_pwm()
+            
+            # 화면 표시 완료 후 메모리 상태 모니터링
+            memory_info = log_memory("MainScreen show() 완료")
+            
+            # 메모리 사용률이 높으면 추가 정리
+            if memory_info and memory_info['usage_percent'] > 85:
+                print("[WARN] MainScreen 메모리 사용률이 높음, 추가 정리 수행")
+                cleanup_memory("MainScreen show() 후 정리")
+                log_memory("MainScreen show() 후 정리 완료")
         else:
-            print(f"[ERROR] {self.screen_name} 화면 객체가 없음")
+            print(f"[WARN] {self.screen_name} 화면 객체가 없음 - 화면 생성 시도")
+            # 화면이 없으면 생성
+            self._create_modern_screen()
+            if hasattr(self, 'screen_obj') and self.screen_obj:
+                lv.screen_load(self.screen_obj)
+                print(f"[OK] {self.screen_name} 화면 재생성 및 로드 완료")
+                
+                # 화면 강제 업데이트
+                for i in range(3):
+                    lv.timer_handler()
+                    time.sleep(0.01)
+                print(f"[OK] {self.screen_name} 화면 업데이트 완료")
+                
+                # 자동 배출 모니터링 시작
+                self._start_auto_dispense_monitoring()
+                
+                # 주기적 NTP 시간 동기화 시작
+                self._start_periodic_ntp_sync()
+                
+                # 메모리 정리
+                import gc
+                gc.collect()
+                print("[INFO] MainScreen 자동 배출 모니터링 후 메모리 정리 완료")
+                
+                # ST7735 디스플레이 PWM 정리
+                self._cleanup_display_pwm()
+                
+                print(f"[OK] {self.screen_name} 화면 실행됨")
+            else:
+                print(f"[ERROR] {self.screen_name} 화면 생성 실패")
     
-    def hide(self):
-        """화면 숨기기"""
-        print(f"[INFO] {self.screen_name} 화면 숨기기")
+        
         # 캐싱된 화면은 메모리에서 제거하지 않음
         pass
+    
+    def _cleanup_references(self):
+        """참조 정리 - 메모리 최적화"""
+        try:
+            print("[INFO] MainScreen 참조 정리 시작")
+            
+            # 지연 로딩된 객체들 정리
+            self._ui_style = None
+            self._data_manager = None
+            self._medication_tracker = None
+            self._alarm_system = None
+            self._wifi_manager = None
+            self._motor_system = None
+            self._rtc = None
+            self._disk_states = None
+            self._wifi_status = None
+            self._current_date = None
+            self._last_medication_check = None
+            self._medication_alerts = None
+            self._last_alarm_check = None
+            
+            print("[OK] MainScreen 참조 정리 완료")
+            
+        except Exception as e:
+            print(f"[ERROR] MainScreen 참조 정리 실패: {e}")
+    
+    def _force_garbage_collection(self):
+        """강제 가비지 컬렉션 - 메모리 최적화"""
+        try:
+            from memory_utils import standard_garbage_collection
+            
+            print("[INFO] MainScreen 강제 가비지 컬렉션 시작")
+            
+            # 참조 정리 먼저 수행
+            self._cleanup_references()
+            
+            # 표준 가비지 컬렉션 수행
+            standard_garbage_collection("MainScreen")
+            
+            print("[OK] MainScreen 강제 가비지 컬렉션 완료")
+            
+        except Exception as e:
+            print(f"[ERROR] MainScreen 가비지 컬렉션 실패: {e}")
+    
+    def _cleanup_display_pwm(self):
+        """ST7735 디스플레이 PWM 정리 - 메모리 누수 방지"""
+        try:
+            print("[INFO] ST7735 디스플레이 PWM 정리 시작")
+            
+            # 디스플레이 객체가 있으면 PWM 정리
+            if hasattr(self, 'screen_manager') and self.screen_manager:
+                if hasattr(self.screen_manager, 'app') and self.screen_manager.app:
+                    app = self.screen_manager.app
+                    if hasattr(app, 'display') and app.display:
+                        try:
+                            # ST7735 cleanup 메서드 호출
+                            if hasattr(app.display, 'cleanup'):
+                                app.display.cleanup()
+                                print("[OK] ST7735 디스플레이 PWM 정리 완료")
+                            else:
+                                # cleanup 메서드가 없으면 off() 메서드 호출
+                                app.display.off()
+                                print("[OK] ST7735 디스플레이 백라이트 끄기 완료")
+                        except Exception as e:
+                            print(f"[WARN] ST7735 디스플레이 정리 실패: {e}")
+            
+            print("[OK] ST7735 디스플레이 PWM 정리 완료")
+            
+        except Exception as e:
+            print(f"[ERROR] ST7735 디스플레이 PWM 정리 실패: {e}")
+    
+    def _monitor_memory(self, label):
+        """메모리 사용량 모니터링 (MicroPython만)"""
+        try:
+            import micropython
+            
+            # MicroPython 메모리 정보만 확인
+            mem_info = micropython.mem_info()
+            print(f"[{label}] MicroPython 메모리:")
+            print(f"  {mem_info}")
+                    
+        except Exception as e:
+            print(f"[WARN] 메모리 모니터 실패: {e}")
+    
+    def _cleanup_lvgl(self):
+        """화면 전환 전 LVGL 객체 안전 정리 (ChatGPT 추천 방법)"""
+        import lvgl as lv
+        import gc
+        import time
+        
+        print("[INFO] MainScreen LVGL 정리 시작")
+        
+        # 메모리 모니터링 (정리 전)
+        self._monitor_memory("BEFORE CLEANUP")
+        
+        try:
+            # 1️⃣ 현재 화면 객체가 존재하면 자식부터 모두 삭제
+            if hasattr(self, 'screen_obj') and self.screen_obj:
+                try:
+                    # 모든 자식 객체 삭제
+                    while self.screen_obj.get_child_count() > 0:
+                        child = self.screen_obj.get_child(0)
+                        if child:
+                            child.delete()
+                    print("[OK] LVGL 자식 객체 삭제 완료")
+                except Exception as e:
+                    print(f"[WARN] 자식 삭제 중 오류: {e}")
+                
+                # 화면 자체 삭제
+                try:
+                    self.screen_obj.delete()
+                    print("[OK] 화면 객체 삭제 완료")
+                except Exception as e:
+                    print(f"[WARN] 화면 객체 삭제 실패: {e}")
+                
+                self.screen_obj = None  # Python 참조 제거
+            
+            # 2️⃣ 스타일 / 폰트 등 Python 객체 참조 해제
+            if hasattr(self, 'ui_style'):
+                self.ui_style = None
+            
+            # 3️⃣ LVGL 내부 타이머 및 큐 정리
+            try:
+                lv.timer_handler()
+            except:
+                pass
+            
+            # 4️⃣ 가비지 컬렉션 (여러 번 수행)
+            for i in range(3):
+                gc.collect()
+                time.sleep_ms(10)
+            
+            # 메모리 모니터링 (정리 후)
+            self._monitor_memory("AFTER CLEANUP")
+            
+            print("[OK] MainScreen LVGL 정리 완료")
+            
+        except Exception as e:
+            print(f"[ERROR] LVGL 정리 실패: {e}")
     
     def update(self):
         """화면 업데이트 (ScreenManager에서 주기적으로 호출) - 메모리 최적화"""
@@ -769,13 +988,53 @@ class MainScreen:
                 self._check_medication_status()
                 self.last_medication_update = current_time_ms
             
+            # 재알람 확인 (1초마다)
+            self._check_reminder_alarms()
+            
             # 알람 시스템 모니터링 (5초마다)
             if not hasattr(self, 'last_alarm_update') or time.ticks_diff(current_time_ms, self.last_alarm_update) >= 5000:
                 self._check_alarm_system()
                 self.last_alarm_update = current_time_ms
             
+            # WiFi 연결 상태 모니터링 및 재연결 시도 (30초마다)
+            if not hasattr(self, 'last_wifi_check') or time.ticks_diff(current_time_ms, self.last_wifi_check) >= 30000:
+                self._check_and_reconnect_wifi()
+                self.last_wifi_check = current_time_ms
+            
+            # NTP 시간 동기화 (1시간마다)
+            if not hasattr(self, 'last_ntp_sync') or time.ticks_diff(current_time_ms, self.last_ntp_sync) >= 3600000:  # 1시간 = 3600000ms
+                self._sync_ntp_time()
+                self.last_ntp_sync = current_time_ms
+            
         except Exception as e:
             print(f"[ERROR] 메인 스크린 업데이트 실패: {e}")
+    
+    def _sync_ntp_time(self):
+        """NTP 시간 동기화 (1시간마다 실행)"""
+        try:
+            print("[INFO] 주기적 NTP 시간 동기화 시작...")
+            
+            # WiFi 매니저 지연 로딩
+            wifi_manager = self.wifi_manager
+            if wifi_manager and wifi_manager.is_connected:
+                # WiFi 매니저의 NTP 동기화 함수 호출
+                if hasattr(wifi_manager, 'sync_ntp_time'):
+                    success = wifi_manager.sync_ntp_time()
+                    if success:
+                        print("[OK] 주기적 NTP 시간 동기화 성공")
+                        
+                        # 동기화 후 시간 업데이트
+                        self._update_current_time()
+                        self._update_time_display()
+                    else:
+                        print("[WARN] 주기적 NTP 시간 동기화 실패")
+                else:
+                    print("[WARN] WiFi 매니저에 NTP 동기화 함수가 없음")
+            else:
+                print("[WARN] WiFi 연결되지 않음 - NTP 동기화 건너뜀")
+                
+        except Exception as e:
+            print(f"[ERROR] 주기적 NTP 시간 동기화 실패: {e}")
     
     def save_current_settings(self):
         """현재 설정을 데이터 매니저에 저장"""
@@ -802,14 +1061,28 @@ class MainScreen:
             return False
     
     def get_medication_summary(self):
-        """약물 상태 요약 정보 반환"""
+        """약물 상태 요약 정보 반환 (자동 할당된 디스크만)"""
         try:
-            summary = {
-                "disk_counts": {
+            # 자동 할당된 디스크 정보 가져오기
+            auto_assigned_disks = self.data_manager.get_auto_assigned_disks()
+            
+            if auto_assigned_disks:
+                # 자동 할당된 디스크만 표시
+                disk_counts = {}
+                for disk_info in auto_assigned_disks:
+                    disk_number = disk_info['disk_number']
+                    disk_counts[str(disk_number)] = self.data_manager.get_disk_count(disk_number)
+                    print(f"[DEBUG] 자동 할당 디스크 {disk_number} ({disk_info['meal_name']}): {disk_counts[str(disk_number)]}개")
+            else:
+                # 자동 할당 정보가 없으면 모든 디스크 표시
+                disk_counts = {
                     "1": self.data_manager.get_disk_count(1),
                     "2": self.data_manager.get_disk_count(2),
                     "3": self.data_manager.get_disk_count(3)
-                },
+                }
+            
+            summary = {
+                "disk_counts": disk_counts,
                 "low_stock_disks": [],
                 "today_dispense_count": len(self.data_manager.get_today_dispense_logs())
             }
@@ -1023,14 +1296,14 @@ class MainScreen:
                 hour = kst_time[3]
                 minute = kst_time[4]
                 self.current_time = f"{hour:02d}:{minute:02d}"
-                self.wifi_status = {"connected": True, "ssid": wifi_manager.connected_ssid}
+                self._wifi_status = {"connected": True, "ssid": wifi_manager.connected_ssid}
             else:
                 # WiFi 연결이 없으면 RTC 사용
                 current = self.rtc.datetime()
                 hour = current[4]
                 minute = current[5]
                 self.current_time = f"{hour:02d}:{minute:02d}"
-                self.wifi_status = {"connected": False, "ssid": None}
+                self._wifi_status = {"connected": False, "ssid": None}
         except Exception as e:
             print(f"  [ERROR] 현재 시간 업데이트 실패: {e}")
             self.current_time = "00:00"
@@ -1060,11 +1333,78 @@ class MainScreen:
         except Exception as e:
             print(f"  [ERROR] 알약 개수 표시 업데이트 실패: {e}")
     
+    def _get_selected_disks_from_dose_time(self):
+        """복용 시간 정보에서 선택된 디스크들 가져오기 (DataManager 사용)"""
+        try:
+            print(f"[DEBUG] _get_selected_disks_from_dose_time 호출됨")
+            
+            # DataManager에서 복용 시간 정보 가져오기
+            from data_manager import DataManager
+            data_manager = DataManager()
+            dose_times = data_manager.get_dose_times()
+            
+            print(f"[DEBUG] dose_times 전체 데이터: {dose_times}")
+            
+            if dose_times and len(dose_times) > 0:
+                first_dose_info = dose_times[0]
+                print(f"[DEBUG] 첫 번째 복용 정보: {first_dose_info}")
+                print(f"[DEBUG] first_dose_info 타입: {type(first_dose_info)}")
+                
+                if isinstance(first_dose_info, dict):
+                    print(f"[DEBUG] first_dose_info 키들: {list(first_dose_info.keys())}")
+                    if 'selected_disks' in first_dose_info:
+                        selected_disks = first_dose_info['selected_disks']
+                        print(f"[DEBUG] DataManager에서 선택된 디스크 불러오기: {selected_disks}")
+                        return selected_disks
+                    else:
+                        print("[DEBUG] selected_disks 키가 없음 - 테스트용 데이터 추가")
+                        # 테스트용으로 selected_disks 추가
+                        test_selected_disks = [1, 2]  # 디스크 1, 2 선택
+                        data_manager.add_selected_disks_to_current_data(test_selected_disks)
+                        return test_selected_disks
+                else:
+                    print(f"[DEBUG] first_dose_info가 딕셔너리가 아님: {type(first_dose_info)}")
+            
+            print("[WARN] 선택된 디스크 정보 없음, 기본값 사용")
+            return [1]  # 기본값
+        except Exception as e:
+            print(f"[ERROR] 선택된 디스크 불러오기 실패: {e}")
+            import sys
+            sys.print_exception(e)
+            return [1]  # 기본값
+    
+    def _get_selected_disks_for_dose(self, dose_index):
+        """특정 복용 시간에 대한 선택된 디스크들 가져오기 (global_data 직접 사용)"""
+        try:
+            # global_data에서 직접 복용 시간 정보 가져오기
+            from global_data import global_data
+            dose_times = global_data.get_dose_times()
+            
+            if dose_times and len(dose_times) > dose_index:
+                dose_info = dose_times[dose_index]
+                if isinstance(dose_info, dict) and 'selected_disks' in dose_info:
+                    selected_disks = dose_info['selected_disks']
+                    print(f"[DEBUG] 일정 {dose_index + 1} 선택된 디스크: {selected_disks}")
+                    return selected_disks
+            
+            # 기본값: 모든 복용 시간에 동일한 디스크 사용
+            selected_disks = self._get_selected_disks_from_dose_time()
+            print(f"[DEBUG] 일정 {dose_index + 1} 기본 디스크 사용: {selected_disks}")
+            return selected_disks
+            
+        except Exception as e:
+            print(f"[ERROR] 일정 {dose_index + 1} 디스크 정보 불러오기 실패: {e}")
+            return [1]  # 기본값
+    
+    
     def _update_total_pill_count_display(self):
         """1일 1회일 때 선택된 디스크들의 총합 알약 개수 표시"""
         try:
+            print(f"[DEBUG] _update_total_pill_count_display 호출됨")
+            
             # 선택된 디스크들 가져오기
             selected_disks = self._get_selected_disks_from_dose_time()
+            print(f"[DEBUG] 선택된 디스크 목록: {selected_disks}")
             
             # 선택된 디스크들의 총합 계산
             total_count = 0
@@ -1072,8 +1412,11 @@ class MainScreen:
             
             for disk_num in selected_disks:
                 current_count = self.data_manager.get_disk_count(disk_num)
+                print(f"[DEBUG] 디스크 {disk_num}: {current_count}개")
                 total_count += current_count
                 total_capacity += 15  # 디스크당 최대 15칸
+            
+            print(f"[DEBUG] 총합 계산: {total_count}/{total_capacity}")
             
             # 모든 일정에 동일한 총합 표시
             for i, pill_count_label in enumerate(self.pill_count_labels):
@@ -1088,36 +1431,66 @@ class MainScreen:
             print(f"  [ERROR] 총합 알약 개수 표시 실패: {e}")
     
     def _update_individual_pill_count_display(self):
-        """1일 2회 이상일 때 개별 디스크 알약 개수 표시"""
+        """1일 2회 이상일 때 개별 디스크 알약 개수 표시 (자동 할당된 디스크 정보 우선 사용)"""
         try:
-            for i, pill_count_label in enumerate(self.pill_count_labels):
-                if i < len(self.dose_schedule):
-                    current_dose = self.dose_schedule[i]
-                    
-                    # dose_time_screen에서 설정한 selected_disks 정보 사용
-                    selected_disks = current_dose.get('selected_disks', [i + 1])
-                    if selected_disks:
-                        disk_num = selected_disks[0]  # 첫 번째 선택된 디스크 사용
-                    else:
-                        disk_num = i + 1  # 기본값
-                    
-                    # 디스크의 현재 개수와 최대 용량 가져오기
-                    data_manager = self.data_manager
-                    if data_manager:
-                        current_count = data_manager.get_disk_count(disk_num)
-                    else:
-                        current_count = 15  # 기본값
-                    
-                    max_capacity = 15  # 디스크당 최대 15칸
-                    
-                    # 표시 텍스트 업데이트
-                    count_text = f"{current_count}/{max_capacity}"
-                    pill_count_label.set_text(count_text)
-                    
-                    # 개수에 따른 색상 변경
-                    # 알약 개수는 항상 검정색으로 표시
-                    pill_count_label.set_style_text_color(lv.color_hex(0x000000), 0)
-                    
+            # 자동 할당된 디스크 정보 우선 확인
+            auto_assigned_disks = self.data_manager.get_auto_assigned_disks()
+            
+            if auto_assigned_disks and len(auto_assigned_disks) > 0:
+                # 자동 할당된 디스크 정보 사용
+                print(f"[DEBUG] 자동 할당된 디스크 정보로 개별 수량 표시: {len(auto_assigned_disks)}개")
+                
+                for i, pill_count_label in enumerate(self.pill_count_labels):
+                    if i < len(auto_assigned_disks):
+                        disk_info = auto_assigned_disks[i]
+                        disk_number = disk_info['disk_number']
+                        meal_name = disk_info['meal_name']
+                        
+                        # 디스크의 현재 개수와 최대 용량 가져오기
+                        current_count = self.data_manager.get_disk_count(disk_number)
+                        max_capacity = 15  # 디스크당 최대 15칸
+                        
+                        # 표시 텍스트 업데이트
+                        count_text = f"{current_count}/{max_capacity}"
+                        pill_count_label.set_text(count_text)
+                        
+                        # 개수에 따른 색상 변경
+                        pill_count_label.set_style_text_color(lv.color_hex(0x000000), 0)
+                        
+                        print(f"[DEBUG] 자동 할당 디스크 {disk_number} ({meal_name}): {current_count}/{max_capacity}")
+                        
+            else:
+                # 자동 할당 정보가 없으면 기존 방식 사용
+                print("[DEBUG] 자동 할당 정보 없음 - 기존 방식으로 개별 수량 표시")
+                
+                for i, pill_count_label in enumerate(self.pill_count_labels):
+                    if i < len(self.dose_schedule):
+                        current_dose = self.dose_schedule[i]
+                        
+                        # dose_time_screen에서 설정한 selected_disks 정보 사용
+                        selected_disks = current_dose.get('selected_disks', [i + 1])
+                        if selected_disks:
+                            disk_num = selected_disks[0]  # 첫 번째 선택된 디스크 사용
+                        else:
+                            disk_num = i + 1  # 기본값
+                        
+                        # 디스크의 현재 개수와 최대 용량 가져오기
+                        data_manager = self.data_manager
+                        if data_manager:
+                            current_count = data_manager.get_disk_count(disk_num)
+                        else:
+                            current_count = 15  # 기본값
+                        
+                        max_capacity = 15  # 디스크당 최대 15칸
+                        
+                        # 표시 텍스트 업데이트
+                        count_text = f"{current_count}/{max_capacity}"
+                        pill_count_label.set_text(count_text)
+                        
+                        # 개수에 따른 색상 변경
+                        # 알약 개수는 항상 검정색으로 표시
+                        pill_count_label.set_style_text_color(lv.color_hex(0x000000), 0)
+                        
         except Exception as e:
             print(f"  [ERROR] 개별 알약 개수 표시 실패: {e}")
     
@@ -1139,6 +1512,12 @@ class MainScreen:
                 self._update_status("수동 배출 중...")
                 
                 try:
+                    # 1단계: 먼저 알람 실행 (메모리 절약)
+                    print(f"  [DEBUG] 알람 실행 시작...")
+                    self._play_dispense_voice()
+                    print(f"  [DEBUG] 알람 실행 완료")
+                    
+                    # 2단계: 알람 실행 후 모터 시스템 초기화 (필요할 때만)
                     print(f"  [DEBUG] 모터 시스템 초기화 시작...")
                     motor_system = self._init_motor_system()
                     print(f"  [DEBUG] 모터 시스템 초기화 완료")
@@ -1152,7 +1531,7 @@ class MainScreen:
                     print(f"  📋 필요한 디스크: {required_disks}")
                     
                     print(f"  [DEBUG] 배출 함수 호출 시작...")
-                    success = self._dispense_from_selected_disks(motor_system, required_disks)
+                    success = self._dispense_from_selected_disks_no_alarm(motor_system, required_disks)
                     print(f"  [DEBUG] 배출 함수 호출 완료, 결과: {success}")
                     
                     if success:
@@ -1186,7 +1565,7 @@ class MainScreen:
             self._update_status("버튼 A 처리 실패")
     
     def _trigger_dispense_from_alarm(self):
-        """알람에서 배출 트리거"""
+        """알람에서 배출 트리거 - 수동 배출 알림 후 배출"""
         try:
             active_alarms = self.alarm_system.get_active_alarms()
             
@@ -1200,10 +1579,14 @@ class MainScreen:
             
             print(f"🔔 알람 배출 트리거: {alarm_info['meal_name']} (일정 {dose_index + 1})")
             
-            # 알람 확인 처리
+            # 1단계: 수동 배출 알림 재생 (버저 → LED → 음성)
+            print("🔊 수동 배출 알림 시작 (버저 → LED → 음성)")
+            self._play_dispense_voice()
+            
+            # 2단계: 알람 확인 처리
             self.alarm_system.confirm_dispense(dose_index)
             
-            # 배출 시퀀스 실행
+            # 3단계: 배출 시퀀스 실행
             self._update_status("알람 배출 중...")
             success = self._execute_dispense_sequence(dose_index)
             
@@ -1221,24 +1604,59 @@ class MainScreen:
             self._update_status("알람 배출 실패")
     
     def _execute_dispense_sequence(self, dose_index):
-        """배출 시퀀스 실행 (기존 자동 배출 로직 재사용)"""
+        """배출 시퀀스 실행 - 실제 알약 배출 수행"""
         try:
             print(f"🔔 알람 배출 시퀀스 시작: 일정 {dose_index + 1}")
             
-            # 기존 자동 배출 메서드 재사용
-            self._execute_auto_dispense(dose_index)
+            # 1단계: 선택된 디스크 확인
+            required_disks = self._get_selected_disks_for_dose(dose_index)
+            print(f"  [INFO] 선택된 디스크들: {required_disks}")
             
-            # 배출 성공 여부 확인 (일정 상태로 판단)
-            if dose_index < len(self.dose_schedule):
-                if self.dose_schedule[dose_index]["status"] == "completed":
+            if not required_disks:
+                print(f"  [ERROR] 선택된 디스크가 없음: 일정 {dose_index + 1}")
+                return False
+            
+            # 2단계: 모터 시스템 초기화
+            motor_system = self._init_motor_system()
+            if not motor_system:
+                print(f"  [ERROR] 모터 시스템 초기화 실패")
+                return False
+            
+            # 3단계: 실제 배출 실행
+            print(f"  [DEBUG] 배출 함수 호출 시작...")
+            success = self._dispense_from_selected_disks_no_alarm(motor_system, required_disks)
+            print(f"  [DEBUG] 배출 함수 호출 완료, 결과: {success}")
+            
+            # 4단계: 배출 결과 처리
+            if success:
+                # 배출 성공 시 일정 상태 업데이트
+                if dose_index < len(self.dose_schedule):
+                    self.dose_schedule[dose_index]["status"] = "completed"
+                    
+                    # 데이터 매니저에 배출 성공 기록 저장
+                    self.data_manager.log_dispense(dose_index, True)
+                    
+                    # UI 업데이트
+                    self._update_schedule_display()
+                    
                     print(f"[OK] 알람 배출 성공: 일정 {dose_index + 1}")
                     return True
                 else:
-                    print(f"[ERROR] 알람 배출 실패: 일정 {dose_index + 1}")
+                    print(f"[ERROR] 잘못된 일정 인덱스: {dose_index}")
                     return False
             else:
-                print(f"[ERROR] 잘못된 일정 인덱스: {dose_index}")
-                return False
+                # 배출 실패 시 상태 업데이트
+                if dose_index < len(self.dose_schedule):
+                    self.dose_schedule[dose_index]["status"] = "failed"
+                    
+                    # 데이터 매니저에 배출 실패 기록 저장
+                    self.data_manager.log_dispense(dose_index, False)
+                    
+                    print(f"[ERROR] 알람 배출 실패: 일정 {dose_index + 1}")
+                    return False
+                else:
+                    print(f"[ERROR] 잘못된 일정 인덱스: {dose_index}")
+                    return False
                 
         except Exception as e:
             print(f"[ERROR] 알람 배출 시퀀스 실행 실패: {e}")
@@ -1273,15 +1691,88 @@ class MainScreen:
             self._update_status("일정 이동 실패")
     
     def on_button_d(self):
-        """버튼 D - 고급 설정 화면으로 전환"""
-        print("🟢 버튼 D: 고급 설정 화면으로 전환")
+        """버튼 D - 흰색 화면 만들기 후 재부팅"""
+        print("🟢 버튼 D: 흰색 화면 만들기 후 재부팅")
+        self._update_status("흰색 화면 만들기 후 재부팅...")
         
+        # 흰색 화면 만들기
+        self._make_screen_white()
+        
+        # 잠시 대기 후 재부팅
+        import time
+        time.sleep(0.1)  # 2초 대기
+        
+        # 재부팅 실행
+        self._restart_to_startup_menu()
+    
+    def _make_screen_white(self):
+        """화면을 흰색으로 만들기 (디스플레이 테스트용)"""
         try:
-            self.screen_manager.show_screen("advanced_settings")
-            print("[OK] 고급 설정 화면으로 전환")
+            print("[INFO] 화면을 흰색으로 변경 시작...")
+            
+            # 현재 화면 객체가 있는지 확인
+            if hasattr(self, 'screen_obj') and self.screen_obj:
+                # 화면 배경을 흰색으로 설정
+                self.screen_obj.set_style_bg_color(lv.color_hex(0xFFFFFF), 0)  # 흰색
+                print("[OK] 화면 배경을 흰색으로 변경 완료")
+                
+                # 모든 자식 객체 숨기기 (깔끔한 흰색 화면을 위해)
+                if hasattr(self, 'main_container') and self.main_container:
+                    self.main_container.delete()  # 메인 컨테이너 삭제
+                    print("[OK] 기존 UI 요소 제거 완료")
+                
+                # 새로운 빈 컨테이너 생성 (흰색 배경만)
+                self.main_container = lv.obj(self.screen_obj)
+                self.main_container.set_size(lv.pct(100), lv.pct(100))
+                self.main_container.set_style_bg_color(lv.color_hex(0xFFFFFF), 0)  # 흰색
+                self.main_container.set_style_border_width(0, 0)  # 테두리 없음
+                self.main_container.center()
+                
+                print("[OK] 흰색 화면 설정 완료")
+                self._update_status("화면이 흰색으로 변경됨")
+                
+            else:
+                print("[ERROR] 화면 객체가 없음")
+                self._update_status("화면 변경 실패")
+                
         except Exception as e:
-            print(f"[ERROR] 고급 설정 화면 전환 실패: {e}")
-            self._update_status("고급 설정 화면 전환 실패")
+            print(f"[ERROR] 화면을 흰색으로 변경 실패: {e}")
+            self._update_status("화면 변경 실패")
+    
+    def _restart_to_startup_menu(self):
+        """재부팅 후 스타트업 메뉴 사용을 위한 처리"""
+        try:
+            print("[INFO] 재부팅 후 스타트업 메뉴 사용 준비 중...")
+            
+            # 설정 완료 플래그를 false로 변경 (스타트업 메뉴 사용 가능하게)
+            self._reset_setup_flag()
+            
+            print("[INFO] 즉시 재부팅합니다...")
+            
+            print("[INFO] ESP 재부팅 시작...")
+            import machine
+            machine.reset()
+            
+        except Exception as e:
+            print(f"[ERROR] 재부팅 처리 실패: {e}")
+            self._update_status("재부팅 실패")
+    
+    def _reset_setup_flag(self):
+        """설정 완료 플래그를 false로 리셋 (스타트업 메뉴 사용 가능하게)"""
+        try:
+            import json
+            
+            setup_data = {"setup_complete": False}
+            setup_file = "/setup_complete.json"
+            
+            # 설정 완료 플래그를 false로 변경
+            with open(setup_file, 'w') as f:
+                json.dump(setup_data, f)
+            
+            print("[OK] 설정 완료 플래그를 false로 리셋 완료")
+            
+        except Exception as e:
+            print(f"[WARN] 설정 완료 플래그 리셋 실패: {e}")
             
     
     def on_show(self):
@@ -1292,26 +1783,119 @@ class MainScreen:
         """화면이 숨겨질 때 호출"""
         pass
     
-    def get_title(self):
-        """화면 제목"""
-        return "메인 화면"
-    
-    def get_button_hints(self):
-        """버튼 힌트"""
-        return "A:UP  B:DOWN  C:DOWNLOAD  D:SETTINGS"
-    
-    def get_voice_file(self):
-        """안내 음성 파일"""
-        return "wav_main_screen.wav"
-    
-    def get_effect_file(self):
-        """효과음 파일"""
-        return "wav_select.wav"
     
     def _start_auto_dispense_monitoring(self):
         """자동 배출 모니터링 시작"""
         print("🕐 자동 배출 모니터링 시작")
         self._update_status("자동 배출 모니터링 중...")
+    
+    def _try_wifi_connection_with_retry(self, wifi_manager, max_retries=3, retry_delay=2):
+        """WiFi 연결 재시도 로직"""
+        print(f"[INFO] WiFi 자동 연결 시작 (최대 {max_retries}회 재시도)")
+        
+        for attempt in range(max_retries):
+            try:
+                print(f"[INFO] WiFi 연결 시도 {attempt + 1}/{max_retries}...")
+                success = wifi_manager.try_auto_connect()
+                
+                if success:
+                    print(f"[OK] WiFi 연결 성공 (시도 {attempt + 1})")
+                    return True
+                else:
+                    print(f"[WARN] WiFi 연결 실패 (시도 {attempt + 1})")
+                    
+                    # 마지막 시도가 아니면 대기 후 재시도
+                    if attempt < max_retries - 1:
+                        print(f"[INFO] {retry_delay}초 후 재시도...")
+                        import time
+                        time.sleep(retry_delay)
+                        
+                        # 재시도 전에 WiFi 재초기화
+                        try:
+                            wifi_manager.disconnect()
+                            time.sleep(1)
+                            print("[INFO] WiFi 재초기화 완료")
+                        except Exception as e:
+                            print(f"[WARN] WiFi 재초기화 실패: {e}")
+                    
+            except Exception as e:
+                print(f"[ERROR] WiFi 연결 시도 {attempt + 1} 중 오류: {e}")
+                if attempt < max_retries - 1:
+                    import time
+                    time.sleep(retry_delay)
+        
+        print(f"[ERROR] WiFi 연결 최종 실패 ({max_retries}회 시도 완료)")
+        return False
+    
+    def _check_and_reconnect_wifi(self):
+        """WiFi 연결 상태 확인 및 재연결 시도"""
+        try:
+            wifi_manager = self.wifi_manager
+            if not wifi_manager:
+                print("[DEBUG] WiFi 매니저 없음 - 재연결 시도 건너뜀")
+                return
+            
+            # 현재 연결 상태 확인
+            is_connected = wifi_manager.is_connected
+            print(f"[DEBUG] WiFi 연결 상태 확인: {is_connected}")
+            
+            if not is_connected:
+                print("[INFO] WiFi 연결 끊어짐 - 재연결 시도 시작")
+                self._update_status("WiFi 재연결 중...")
+                
+                # 재연결 시도
+                success = self._try_wifi_connection_with_retry(wifi_manager, max_retries=2, retry_delay=3)
+                
+                if success:
+                    print("[OK] WiFi 재연결 성공")
+                    self.wifi_connected = True
+                    self._wifi_status = {"connected": True, "ssid": wifi_manager.connected_ssid}
+                    
+                    # NTP 시간 동기화도 다시 시도
+                    try:
+                        ntp_success = wifi_manager.sync_ntp_time()
+                        if ntp_success:
+                            print("[OK] WiFi 재연결 후 NTP 동기화 성공")
+                        else:
+                            print("[WARN] WiFi 재연결 후 NTP 동기화 실패")
+                    except Exception as e:
+                        print(f"[WARN] WiFi 재연결 후 NTP 동기화 오류: {e}")
+                    
+                    self._update_status("WiFi 재연결 완료")
+                else:
+                    print("[WARN] WiFi 재연결 실패")
+                    self.wifi_connected = False
+                    self._wifi_status = {"connected": False, "ssid": None}
+                    self._update_status("WiFi 연결 안됨")
+            else:
+                # 연결되어 있으면 상태 업데이트
+                if not self.wifi_connected:
+                    print("[INFO] WiFi 연결 상태 복구됨")
+                    self.wifi_connected = True
+                    self._wifi_status = {"connected": True, "ssid": wifi_manager.connected_ssid}
+                
+        except Exception as e:
+            print(f"[WARN] WiFi 연결 상태 확인 중 오류: {e}")
+    
+    def _start_periodic_ntp_sync(self):
+        """주기적 NTP 시간 동기화 시작"""
+        print("🕐 주기적 NTP 시간 동기화 시작...")
+        
+        try:
+            # WiFi 매니저가 연결되어 있으면 주기적 동기화 시작
+            wifi_manager = self.wifi_manager
+            if wifi_manager and wifi_manager.is_connected:
+                print("[INFO] WiFi 연결됨 - 주기적 NTP 동기화 활성화")
+                # 5분마다 NTP 동기화 (실제로는 update() 메서드에서 처리)
+                self._ntp_sync_enabled = True
+                self._last_ntp_sync_time = 0
+            else:
+                print("[INFO] WiFi 연결 안됨 - NTP 동기화 비활성화")
+                self._ntp_sync_enabled = False
+                
+        except Exception as e:
+            print(f"[WARN] 주기적 NTP 동기화 설정 실패: {e}")
+            self._ntp_sync_enabled = False
     
     def _get_current_time(self):
         """현재 시간 가져오기 (WiFi 우선, RTC 백업)"""
@@ -1370,6 +1954,16 @@ class MainScreen:
                     
         except Exception as e:
             print(f"[ERROR] 자동 배출 확인 실패: {e}")
+    
+    def _check_reminder_alarms(self):
+        """재알람 확인 - 5분 간격으로 최대 5회"""
+        try:
+            # 알람 시스템이 로드되어 있으면 재알람 확인
+            alarm_system = self.alarm_system
+            if alarm_system:
+                alarm_system.check_reminder_alarms()
+        except Exception as e:
+            print(f"[ERROR] 재알람 확인 실패: {e}")
     
     def _execute_auto_dispense(self, dose_index):
         """자동 배출 실행"""
@@ -1478,58 +2072,47 @@ class MainScreen:
             print(f"[ERROR] 순차 배출 순서 결정 실패: {e}")
             return [1]  # 기본값
     
-    def _get_selected_disks_from_dose_time(self):
-        """dose_time_screen에서 선택된 디스크들 가져오기"""
-        try:
-            # dose_time_screen에서 복용 시간 정보 가져오기
-            dose_times = []
-            if hasattr(self.screen_manager, 'screens') and 'dose_time' in self.screen_manager.screens:
-                dose_time_screen = self.screen_manager.screens['dose_time']
-                if hasattr(dose_time_screen, 'get_dose_times'):
-                    dose_times = dose_time_screen.get_dose_times()
-            
-            if dose_times and len(dose_times) > 0:
-                # 첫 번째 복용 시간의 선택된 디스크들 사용
-                dose_info = dose_times[0]
-                selected_disks = dose_info.get('selected_disks', [1])  # 기본값: 디스크1
-                print(f"[INFO] dose_time_screen에서 선택된 디스크들: {selected_disks}")
-                return selected_disks
-            else:
-                print("[WARN] dose_times 정보 없음, 기본값 사용")
-                return [1]  # 기본값
-                
-        except Exception as e:
-            print(f"[ERROR] 선택된 디스크 가져오기 실패: {e}")
-            return [1]  # 기본값
     
     def _get_individual_disk_for_dose(self, dose_index):
-        """1일 2회 이상일 때 개별 디스크 반환"""
+        """1일 2회 이상일 때 개별 디스크 반환 (자동 할당된 디스크 정보 사용)"""
         try:
-            # dose_time_screen에서 복용 시간 정보 가져오기
-            dose_times = []
-            if hasattr(self.screen_manager, 'screens') and 'dose_time' in self.screen_manager.screens:
-                dose_time_screen = self.screen_manager.screens['dose_time']
-                if hasattr(dose_time_screen, 'get_dose_times'):
-                    dose_times = dose_time_screen.get_dose_times()
+            # 자동 할당된 디스크 정보에서 찾기
+            from data_manager import DataManager
+            data_manager = DataManager()
+            auto_assigned_disks = data_manager.get_auto_assigned_disks()
             
-            if dose_times and dose_index < len(dose_times):
-                dose_info = dose_times[dose_index]
-                selected_disks = dose_info.get('selected_disks', None)
-                
-                # selected_disks가 설정되어 있으면 사용
-                if selected_disks:
-                    print(f"[INFO] 복용 일정 {dose_index + 1}의 선택된 디스크: {selected_disks}")
-                    return selected_disks
-                else:
-                    # selected_disks가 없으면 일정 인덱스에 따라 해당 디스크 사용
-                    disk_num = dose_index + 1  # 일정 0 → 디스크 1, 일정 1 → 디스크 2, 일정 2 → 디스크 3
-                    print(f"[INFO] 복용 일정 {dose_index + 1}에 selected_disks 정보 없음, 일정 인덱스 기반으로 디스크 {disk_num} 사용")
-                    return [disk_num]
+            if auto_assigned_disks and dose_index < len(auto_assigned_disks):
+                disk_info = auto_assigned_disks[dose_index]
+                disk_number = disk_info['disk_number']
+                meal_name = disk_info['meal_name']
+                print(f"[INFO] 복용 일정 {dose_index + 1} ({meal_name})의 자동 할당된 디스크: {disk_number}")
+                return [disk_number]
             else:
-                # dose_times 정보가 없으면 일정 인덱스에 따라 해당 디스크 사용
-                disk_num = dose_index + 1  # 일정 0 → 디스크 1, 일정 1 → 디스크 2, 일정 2 → 디스크 3
-                print(f"[INFO] 복용 일정 {dose_index + 1}에 dose_times 정보 없음, 일정 인덱스 기반으로 디스크 {disk_num} 사용")
-                return [disk_num]
+                # 자동 할당 정보가 없으면 dose_times에서 찾기
+                dose_times = []
+                if hasattr(self.screen_manager, 'screens') and 'dose_time' in self.screen_manager.screens:
+                    dose_time_screen = self.screen_manager.screens['dose_time']
+                    if hasattr(dose_time_screen, 'get_dose_times'):
+                        dose_times = dose_time_screen.get_dose_times()
+                
+                if dose_times and dose_index < len(dose_times):
+                    dose_info = dose_times[dose_index]
+                    selected_disks = dose_info.get('selected_disks', None)
+                    
+                    # selected_disks가 설정되어 있으면 사용
+                    if selected_disks:
+                        print(f"[INFO] 복용 일정 {dose_index + 1}의 선택된 디스크: {selected_disks}")
+                        return selected_disks
+                    else:
+                        # selected_disks가 없으면 일정 인덱스에 따라 해당 디스크 사용
+                        disk_num = dose_index + 1  # 일정 0 → 디스크 1, 일정 1 → 디스크 2, 일정 2 → 디스크 3
+                        print(f"[INFO] 복용 일정 {dose_index + 1}에 selected_disks 정보 없음, 일정 인덱스 기반으로 디스크 {disk_num} 사용")
+                        return [disk_num]
+                else:
+                    # dose_times 정보가 없으면 일정 인덱스에 따라 해당 디스크 사용
+                    disk_num = dose_index + 1  # 일정 0 → 디스크 1, 일정 1 → 디스크 2, 일정 2 → 디스크 3
+                    print(f"[INFO] 복용 일정 {dose_index + 1}에 dose_times 정보 없음, 일정 인덱스 기반으로 디스크 {disk_num} 사용")
+                    return [disk_num]
                 
         except Exception as e:
             print(f"[ERROR] 선택된 디스크 가져오기 실패: {e}")
@@ -1558,35 +2141,149 @@ class MainScreen:
             return None
     
     def _play_dispense_voice(self):
-        """배출 완료 시 버저 → LED → 음성 순서로 안내"""
+        """배출 완료 시 버저 → LED → 음성 순서로 안내 (메모리 최적화)"""
         try:
             print("🔊 배출 완료 안내 시작 (버저 → LED → 음성)")
             
             # 1단계: 버저 소리 재생
+            print("🔔 1단계: 버저 소리 재생")
             self._play_buzzer_sound()
             
+            # 버저 사용 후 참조 정리 및 가비지 컬렉션
+            print("[INFO] 버저 사용 후 참조 정리 및 메모리 정리")
+            self._cleanup_audio_system()
+            self._force_garbage_collection()
+            
             # 2단계: LED 켜기
+            print("💡 2단계: LED 켜기")
             self._turn_on_led()
             
-            # 3단계: 음성 재생
-            self._play_voice_audio()
+            # LED 사용 후 참조 정리 및 가비지 컬렉션
+            print("[INFO] LED 사용 후 참조 정리 및 메모리 정리")
+            self._cleanup_led_controller()
+            self._force_garbage_collection()
+            
+            # 3단계: 음성 재생 (메모리 정리 후)
+            print("🔊 3단계: 음성 재생 (메모리 정리 완료 후)")
+            self._play_voice_audio_after_cleanup()
                 
         except Exception as e:
             print(f"[ERROR] 배출 완료 안내 실패: {e}")
+        finally:
+            # 최종 가비지 컬렉션
+            self._force_garbage_collection()
+            print("[DEBUG] 배출 완료 안내 후 최종 가비지 컬렉션 완료")
+    
+    def _play_voice_audio_after_cleanup(self):
+        """메모리 정리 후 음성 재생 (I2S 초기화 포함)"""
+        try:
+            print("🔊 메모리 정리 완료 후 음성 재생 시작")
+            
+            # 오디오 시스템 새로 로딩 (메모리 정리 후)
+            # audio_system이 없으면 새로 생성
+            if not hasattr(self, 'audio_system') or self.audio_system is None:
+                from audio_system import AudioSystem
+                self.audio_system = AudioSystem()
+            
+            if self.audio_system:
+                print("🔊 dispense_medicine.wav 음성 파일 재생 (I2S 초기화 포함)")
+                self.audio_system.play_voice("dispense_medicine.wav", blocking=True)
+                
+                # 음성 재생 후 참조 정리
+                self._cleanup_audio_system()
+            else:
+                print("🔊 배출 완료 음성 재생 (시뮬레이션)")
+                
+        except Exception as e:
+            print(f"[ERROR] 음성 재생 실패: {e}")
+    
+    def _cleanup_audio_system(self):
+        """오디오 시스템 참조 정리"""
+        try:
+            if hasattr(self, 'audio_system') and self.audio_system:
+                print("[INFO] 오디오 시스템 참조 정리 시작...")
+                self.audio_system = None
+                print("[OK] 오디오 시스템 참조 정리 완료")
+        except Exception as e:
+            print(f"[WARN] 오디오 시스템 참조 정리 실패: {e}")
+    
+    def _cleanup_led_controller(self):
+        """LED 컨트롤러 참조 정리"""
+        try:
+            if hasattr(self, '_led_controller') and self._led_controller:
+                print("[INFO] LED 컨트롤러 참조 정리 시작...")
+                self._led_controller = None
+                print("[OK] LED 컨트롤러 참조 정리 완료")
+        except Exception as e:
+            print(f"[WARN] LED 컨트롤러 참조 정리 실패: {e}")
+    
+    def _force_garbage_collection(self):
+        """강제 가비지 컬렉션 수행 - 표준화된 시스템 사용"""
+        try:
+            from memory_utils import aggressive_garbage_collection
+            
+            print("[INFO] MainScreen 강제 가비지 컬렉션 시작")
+            
+            # 표준화된 적극적인 가비지 컬렉션 사용
+            result = aggressive_garbage_collection("MainScreen")
+            
+            if result and result['usage_percent'] > 94:
+                print("[WARN] 메모리 사용률이 높음, 추가 정리 수행")
+                # 모든 캐시 정리
+                self._cleanup_all_caches()
+                
+                # 추가 가비지 컬렉션
+                from memory_utils import standard_garbage_collection
+                standard_garbage_collection(10, 100, "MainScreen_추가정리")
+            
+            print("[OK] MainScreen 강제 가비지 컬렉션 완료")
+            
+        except Exception as e:
+            print(f"[ERROR] 가비지 컬렉션 실패: {e}")
+    
+    def _cleanup_all_caches(self):
+        """모든 캐시 정리"""
+        try:
+            print("[INFO] 모든 캐시 정리 시작")
+            
+            # DataManager 캐시 정리
+            if hasattr(self, 'data_manager') and self.data_manager:
+                self.data_manager._medication_cache = None
+                self.data_manager._dose_times = None
+                self.data_manager._selected_meals = None
+            
+            # AudioSystem 캐시 정리
+            if hasattr(self, 'audio_system') and self.audio_system:
+                self.audio_system._clear_all_caches()
+            
+            print("[OK] 모든 캐시 정리 완료")
+            
+        except Exception as e:
+            print(f"[ERROR] 캐시 정리 실패: {e}")
     
     def _play_buzzer_sound(self):
-        """버저 소리 재생"""
+        """버저 소리 재생 (PWM으로 실제 재생)"""
         try:
-            print("🔔 버저 소리 재생 시작")
+            print("🔔 버저 소리 재생 시작 (PWM)")
             
-            # 알람 시스템의 오디오 시스템을 통해 버저 소리 재생
-            if hasattr(self.alarm_system, 'audio_system') and self.alarm_system.audio_system:
-                self.alarm_system.audio_system.play_alarm_sound()
-                print("🔔 버저 소리 재생 완료")
-            else:
-                print("🔔 버저 시스템 없음, 버저 시뮬레이션")
-                import time
-                time.sleep(0.5)  # 시뮬레이션
+            # PWM으로 실제 버저 소리 재생
+            from machine import Pin, PWM
+            import time
+            
+            # 버저 핀 설정 (GPIO 18 - HARDWARE.md 참조)
+            buzzer_pin = Pin(18, Pin.OUT)
+            buzzer = PWM(buzzer_pin)
+            
+            # 1000Hz 톤으로 0.5초 재생
+            buzzer.freq(1000)
+            buzzer.duty(512)  # 50% 듀티 사이클
+            time.sleep(0.5)
+            
+            # 버저 끄기
+            buzzer.deinit()
+            buzzer_pin.value(0)
+            
+            print("🔔 버저 소리 재생 완료 (PWM)")
                 
         except Exception as e:
             print(f"[ERROR] 버저 소리 재생 실패: {e}")
@@ -1596,19 +2293,26 @@ class MainScreen:
         try:
             print("💡 LED 켜기 시작")
             
-            # 알람 시스템의 LED 컨트롤러를 통해 LED 켜기
-            if hasattr(self.alarm_system, 'led_controller') and self.alarm_system.led_controller:
-                # 성공 표시용 LED 켜기
-                self.alarm_system.led_controller.show_alarm_led()
-                print("💡 LED 켜기 완료")
-                
-                # 1초 후 LED 끄기
-                import time
-                time.sleep(1)
-                self.alarm_system.led_controller.hide_alarm_led()
-                print("💡 LED 끄기 완료")
+            # 알람 시스템을 통해 LED 켜기
+            if self.alarm_system:
+                # 알람 시스템의 LED 컨트롤러 가져오기
+                led_controller = self.alarm_system._get_led_controller()
+                if led_controller:
+                    # 성공 표시용 LED 켜기
+                    led_controller.show_alarm_led()
+                    print("💡 LED 켜기 완료")
+                    
+                    # 1초 후 LED 끄기
+                    import time
+                    time.sleep(1)
+                    led_controller.hide_alarm_led()
+                    print("💡 LED 끄기 완료")
+                else:
+                    print("💡 LED 컨트롤러 없음, LED 시뮬레이션")
+                    import time
+                    time.sleep(1)  # 시뮬레이션
             else:
-                print("💡 LED 시스템 없음, LED 시뮬레이션")
+                print("💡 알람 시스템 없음, LED 시뮬레이션")
                 import time
                 time.sleep(1)  # 시뮬레이션
                 
@@ -1659,7 +2363,7 @@ class MainScreen:
             print(f"[ERROR] 음성 재생 실패: {e}")
     
     def _dispense_from_selected_disks(self, motor_system, selected_disks):
-        """선택된 디스크들에서 순차적으로 배출"""
+        """선택된 디스크들에서 순차적으로 배출 (알람 포함)"""
         try:
             print(f"[INFO] 선택된 디스크들 순차 배출 시작: {selected_disks}")
             print(f"[DEBUG] motor_system 타입: {type(motor_system)}")
@@ -1673,6 +2377,65 @@ class MainScreen:
             
             # 배출 시작 전 안내 (버저 → LED → 음성)
             self._play_dispense_voice()
+            
+            for i, disk_num in enumerate(selected_disks):
+                print(f"[INFO] 디스크 {disk_num} 배출 중... ({i+1}/{len(selected_disks)})")
+                self._update_status(f"디스크 {disk_num} 배출 중...")
+                
+                # 배출 전 디스크 수량 재확인 (순차 소진 방식)
+                current_count = self.data_manager.get_disk_count(disk_num)
+                if current_count <= 0:
+                    print(f"[WARN] 디스크 {disk_num}가 비어있음, 다음 디스크로 넘어감")
+                    continue
+                
+                # 1. 디스크 회전
+                disk_success = motor_system.rotate_disk(disk_num, 1)  # 1칸만 회전
+                if not disk_success:
+                    print(f"[ERROR] 디스크 {disk_num} 회전 실패")
+                    return False
+                
+                # 2. 배출구 열림 (디스크별 단계)
+                open_success = motor_system.control_motor3_direct(disk_num)  # 디스크 번호 = 단계
+                if not open_success:
+                    print(f"[ERROR] 디스크 {disk_num} 배출구 열림 실패")
+                    return False
+                
+                # 3. 약이 떨어질 시간 대기
+                import time
+                time.sleep(2)  # 2초 대기
+                
+                print(f"[OK] 디스크 {disk_num} 배출 완료")
+                
+                # 배출된 디스크의 수량 감소
+                self._decrease_disk_count(disk_num)
+                
+                # 마지막 디스크가 아니면 잠시 대기
+                if i < len(selected_disks) - 1:
+                    time.sleep(1)  # 1초 간격
+            
+            print(f"[OK] 모든 디스크 배출 완료: {selected_disks}")
+            return True
+            
+        except Exception as e:
+            print(f"[ERROR] 선택된 디스크 배출 실패: {e}")
+            import sys
+            sys.print_exception(e)
+            return False
+    
+    def _dispense_from_selected_disks_no_alarm(self, motor_system, selected_disks):
+        """선택된 디스크들에서 순차적으로 배출 (알람 없음)"""
+        try:
+            print(f"[INFO] 선택된 디스크들 순차 배출 시작: {selected_disks}")
+            print(f"[DEBUG] motor_system 타입: {type(motor_system)}")
+            print(f"[DEBUG] selected_disks 타입: {type(selected_disks)}, 값: {selected_disks}")
+            
+            # 선택된 디스크가 없으면 실패
+            if not selected_disks:
+                print(f"[ERROR] 배출할 디스크가 없음")
+                self._update_status("배출할 디스크 없음")
+                return False
+            
+            # 알람 없이 바로 배출 시작
             
             for i, disk_num in enumerate(selected_disks):
                 print(f"[INFO] 디스크 {disk_num} 배출 중... ({i+1}/{len(selected_disks)})")

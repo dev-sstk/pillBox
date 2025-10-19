@@ -95,26 +95,65 @@ class PillBoxApp:
             print("[DEBUG] 화면 관리자 지연 로딩 완료")
         return self._screen_manager
     
+    def _cleanup_references(self):
+        """참조 정리 - 메모리 최적화"""
+        try:
+            print("[INFO] PillBoxApp 참조 정리 시작...")
+            
+            # 모든 지연 로딩된 객체들 정리
+            if self._ui_style:
+                self._ui_style = None
+                print("[DEBUG] UI 스타일 참조 정리")
+            
+            if self._audio_system:
+                self._audio_system = None
+                print("[DEBUG] 오디오 시스템 참조 정리")
+            
+            if self._led_controller:
+                self._led_controller = None
+                print("[DEBUG] LED 컨트롤러 참조 정리")
+            
+            if self._button_interface:
+                self._button_interface = None
+                print("[DEBUG] 버튼 인터페이스 참조 정리")
+            
+            if self._motor_system:
+                self._motor_system = None
+                print("[DEBUG] 모터 시스템 참조 정리")
+            
+            if self._wifi_manager:
+                self._wifi_manager = None
+                print("[DEBUG] WiFi 관리자 참조 정리")
+            
+            if self._screen_manager:
+                self._screen_manager = None
+                print("[DEBUG] 화면 관리자 참조 정리")
+            
+            print("[OK] PillBoxApp 참조 정리 완료")
+            
+        except Exception as e:
+            print(f"[WARN] 참조 정리 실패: {e}")
+    
+    def _force_garbage_collection(self):
+        """강제 가비지 컬렉션 - 표준화된 시스템 사용"""
+        try:
+            from memory_utils import cleanup_references_and_gc
+            
+            print("[INFO] PillBoxApp 강제 가비지 컬렉션 시작")
+            
+            # 표준화된 참조 정리 및 가비지 컬렉션 사용
+            result = cleanup_references_and_gc(self, "PillBoxApp")
+            
+            print("[OK] PillBoxApp 강제 가비지 컬렉션 완료")
+            return result
+            
+        except Exception as e:
+            print(f"[ERROR] 가비지 컬렉션 실패: {e}")
+            return None
+    
     def cleanup_unused_modules(self):
-        """사용하지 않는 모듈들 정리"""
-        import gc
-        
-        # 사용하지 않는 모듈들 해제
-        if hasattr(self, '_audio_system') and self._audio_system:
-            self._audio_system = None
-            print("[DEBUG] 오디오 시스템 메모리 해제")
-        
-        if hasattr(self, '_motor_system') and self._motor_system:
-            self._motor_system = None
-            print("[DEBUG] 모터 시스템 메모리 해제")
-        
-        if hasattr(self, '_led_controller') and self._led_controller:
-            self._led_controller = None
-            print("[DEBUG] LED 컨트롤러 메모리 해제")
-        
-        # 가비지 컬렉션 실행
-        gc.collect()
-        print("[DEBUG] 메모리 정리 완료")
+        """사용하지 않는 모듈들 정리 - 레거시 메서드"""
+        self._force_garbage_collection()
     
     def _setup_button_callbacks(self):
         """버튼 콜백 함수들 설정"""
@@ -210,19 +249,7 @@ class PillBoxApp:
     def create_and_register_screen(self, screen_name, **kwargs):
         """화면 동적 생성 및 등록"""
         try:
-            if screen_name == "advanced_settings":
-                from screens.advanced_settings_screen import AdvancedSettingsScreen
-                screen_instance = AdvancedSettingsScreen(self.screen_manager)
-                self.screen_manager.register_screen(screen_name, screen_instance)
-                print(f"[OK] {screen_name} 화면 생성 및 등록 완료")
-                return True
-            elif screen_name == "data_management":
-                from screens.data_management_screen import DataManagementScreen
-                screen_instance = DataManagementScreen(self.screen_manager)
-                self.screen_manager.register_screen(screen_name, screen_instance)
-                print(f"[OK] {screen_name} 화면 생성 및 등록 완료")
-                return True
-            elif screen_name == "disk_selection":
+            if screen_name == "disk_selection":
                 from screens.disk_selection_screen import DiskSelectionScreen
                 dose_info = kwargs.get('dose_info', None)
                 screen_instance = DiskSelectionScreen(self.screen_manager, dose_info=dose_info)

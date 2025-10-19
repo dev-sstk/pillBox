@@ -9,17 +9,33 @@ from ui_style import UIStyle
 
 class WifiPasswordScreen:
     def __init__(self, screen_manager, selected_network="Wi-Fi 네트워크"):
+        # 메모리 모니터링
+        from memory_monitor import log_memory
+        log_memory("WifiPasswordScreen 초기화 시작")
+        
+        # 메모리 정리
+        import gc
+        gc.collect()
+        
         self.screen_manager = screen_manager
         self.screen_name = "wifi_password"
         self.selected_network = selected_network
         self._password = ""
         
-        # UI 스타일 초기화
-        self.ui_style = UIStyle()
-        
-        # [FAST] 메모리 부족 해결: 지연 초기화 (화면 생성은 나중에)
+        # 지연 로딩을 위한 캐시
+        self.ui_style = None
         self.screen_obj = None
         self._initialized = False
+        
+        log_memory("WifiPasswordScreen 초기화 완료")
+        print("[OK] WifiPasswordScreen 초기화 완료 (메모리 최적화 적용)")
+    
+    def _get_ui_style(self):
+        """UI 스타일 지연 로딩"""
+        if self.ui_style is None:
+            self.ui_style = UIStyle()
+            print("[DEBUG] UI 스타일 지연 로딩 완료")
+        return self.ui_style
     
     def _create_modern_screen(self):
         """Modern 스타일 화면 생성"""
@@ -35,7 +51,7 @@ class WifiPasswordScreen:
             self.screen_obj = lv.obj()
            
             # 화면 배경 스타일 적용 (Modern 스타일)
-            self.ui_style.apply_screen_style(self.screen_obj)
+            self._get_ui_style().apply_screen_style(self.screen_obj)
             
             # 스크롤바 비활성화
             self.screen_obj.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
@@ -410,9 +426,6 @@ class WifiPasswordScreen:
             print(f"[ERROR] WiFi 연결 오류: {e}")
             # 연결 오류 시 현재 화면에 머물기 (팝업 제거)
     
-    def get_title(self):
-        """화면 제목"""
-        return "Wi-Fi 비밀번호"
     
     
     def on_button_a(self):
@@ -729,7 +742,40 @@ class WifiPasswordScreen:
             import sys
             sys.print_exception(e)
     
-    def hide(self):
-        """화면 숨기기"""
-        # 화면 숨기기 로직 (필요시 구현)
-        pass
+    def _cleanup_references(self):
+        """참조 정리 - 메모리 최적화"""
+        try:
+            print("[INFO] WifiPasswordScreen 참조 정리 시작...")
+            
+            # UI 스타일 참조 정리
+            if self.ui_style:
+                self.ui_style = None
+                print("[DEBUG] UI 스타일 참조 정리")
+            
+            # 화면 객체 참조 정리
+            if self.screen_obj:
+                self.screen_obj = None
+                print("[DEBUG] 화면 객체 참조 정리")
+            
+            print("[OK] WifiPasswordScreen 참조 정리 완료")
+            
+        except Exception as e:
+            print(f"[WARN] 참조 정리 실패: {e}")
+    
+    def _force_garbage_collection(self):
+        """강제 가비지 컬렉션 - 표준화된 시스템 사용"""
+        try:
+            from memory_utils import quick_garbage_collection
+            
+            print("[INFO] WifiPasswordScreen 강제 가비지 컬렉션 시작")
+            
+            # 표준화된 빠른 가비지 컬렉션 사용
+            result = quick_garbage_collection("WifiPasswordScreen")
+            
+            print("[OK] WifiPasswordScreen 강제 가비지 컬렉션 완료")
+            return result
+            
+        except Exception as e:
+            print(f"[ERROR] 가비지 컬렉션 실패: {e}")
+            return None
+    

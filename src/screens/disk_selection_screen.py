@@ -11,12 +11,21 @@ from global_data import global_data
 class DiskSelectionScreen:
     """디스크 선택 화면 클래스 - meal_time_screen.py와 동일한 구조"""
     
-    def __init__(self, screen_manager, dose_info=None):
+    def __init__(self, screen_manager):
         self.screen_manager = screen_manager
         self.screen_name = "disk_selection"
         self.screen_obj = None
         self.ui_style = None
-        self.dose_info = dose_info or {}
+        
+        # 자동 할당된 디스크 정보 초기화 (1회 복용 시 수동 선택을 위해)
+        self._clear_auto_assigned_disks()
+        
+        # JSON에서 데이터 불러오기
+        dose_times = global_data.get_dose_times()
+        if dose_times and len(dose_times) > 0:
+            self.dose_info = dose_times[0].copy()  # 첫 번째 복용 시간 정보 복사
+        else:
+            self.dose_info = {}  # 빈 딕셔너리로 초기화
         
         # 선택된 디스크들 (중복 선택 가능)
         self.selected_disks = {
@@ -34,9 +43,35 @@ class DiskSelectionScreen:
         
         print(f"[INFO] {self.screen_name} 화면 초기화 완료")
         print(f"[INFO] 복용 정보: {self.dose_info}")
+        if self.dose_info:
+            print(f"[INFO] 복용 정보 상세:")
+            for key, value in self.dose_info.items():
+                print(f"  - {key}: {value}")
+        else:
+            print(f"[WARN] 복용 정보가 비어있습니다")
         
         # 화면 자동 생성
         self.create_screen()
+    
+    def _clear_auto_assigned_disks(self):
+        """자동 할당된 디스크 정보 초기화 (1회 복용 시 수동 선택을 위해)"""
+        try:
+            from data_manager import DataManager
+            data_manager = DataManager()
+            
+            # 자동 할당된 디스크 정보가 있는지 확인
+            auto_assigned_disks = data_manager.get_auto_assigned_disks()
+            if auto_assigned_disks:
+                print(f"[INFO] 디스크 선택 화면 - 자동 할당된 디스크 정보 초기화: {len(auto_assigned_disks)}개")
+                
+                # 자동 할당된 디스크 정보 초기화
+                data_manager.save_auto_assigned_disks([], [])
+                print(f"[OK] 자동 할당된 디스크 정보 초기화 완료")
+            else:
+                print(f"[INFO] 자동 할당된 디스크 정보 없음 - 초기화 불필요")
+                
+        except Exception as e:
+            print(f"[WARN] 자동 할당된 디스크 정보 초기화 실패: {e}")
     
     def create_screen(self):
         """화면 생성"""
@@ -363,44 +398,60 @@ class DiskSelectionScreen:
             if not selected_disk_list:
                 print(f"  [WARN] 최소 1개 디스크를 선택해주세요")
                 return
-                
-            self.dose_info['selected_disks'] = selected_disk_list
-            self.dose_info['disk_count'] = len(selected_disk_list)
+            
+            # 기존 dose_info를 복사하여 디스크 정보 추가
+            updated_dose_info = self.dose_info.copy()
+            updated_dose_info['selected_disks'] = selected_disk_list
+            updated_dose_info['disk_count'] = len(selected_disk_list)
             
             print(f"  [INFO] 디스크 선택 완료: {selected_disk_list}")
+            print(f"  [INFO] 업데이트된 복용 정보: {updated_dose_info}")
             
-            # 전역 데이터에 저장
-            global_data.save_dose_times([self.dose_info])
+            # DataManager에 저장 (selected_disks 정보 포함)
+            from data_manager import DataManager
+            data_manager = DataManager()
             
-            # 알약 충전 화면으로 이동
-            self._go_to_pill_loading_screen()
+            print(f"  [DEBUG] 저장할 데이터: {updated_dose_info}")
+            print(f"  [DEBUG] selected_disks 포함 여부: {'selected_disks' in updated_dose_info}")
+            
+            result = data_manager.save_dose_times([updated_dose_info])
+            print(f"  [INFO] DataManager 저장 결과: {result}")
+            print(f"  [INFO] DataManager에 선택된 디스크 정보 저장: {selected_disk_list}")
+            
+            # 저장 후 즉시 확인
+            saved_data = data_manager.get_dose_times()
+            print(f"  [DEBUG] 저장 후 확인: {saved_data}")
+            
+            # 화면 전환 요청
+            self._request_screen_transition()
             
         except Exception as e:
             print(f"  [ERROR] D 버튼 처리 실패: {e}")
             import sys
             sys.print_exception(e)
     
-    def _go_to_pill_loading_screen(self):
-        """알약 충전 화면으로 이동"""
+    def _request_screen_transition(self):
+        """화면 전환 요청 - ScreenManager에 위임 (스타트업 화면과 동일한 방식)"""
+        print("[INFO] 화면 전환 요청")
+        
+        # ScreenManager에 화면 전환 요청 (올바른 책임 분리)
         try:
-            print(f"  [INFO] 알약 충전 화면으로 이동 시작...")
-            
-            # PillLoadingScreen 생성 및 등록
-            from screens.pill_loading_screen import PillLoadingScreen
-            pill_loading_screen = PillLoadingScreen(self.screen_manager)
-            
-            # 선택된 디스크 정보 전달
-            pill_loading_screen.update_dose_times([self.dose_info])
-            pill_loading_screen.set_selected_disks(self.dose_info['selected_disks'])
-            
-            # 화면 등록 및 이동
-            self.screen_manager.register_screen('pill_loading', pill_loading_screen)
-            self.screen_manager.show_screen('pill_loading')
-            
-            print(f"  [OK] 알약 충전 화면으로 이동 완료")
-            
+            self.screen_manager.transition_to('pill_loading')
+            print("[OK] 화면 전환 요청 완료")
         except Exception as e:
-            print(f"  [ERROR] 알약 충전 화면 이동 실패: {e}")
+            print(f"[ERROR] 화면 전환 요청 실패: {e}")
+            import sys
+            sys.print_exception(e)
+        
+        # 화면 전환 (올바른 책임 분리 - ScreenManager가 처리)
+        print("[INFO] 디스크 선택 완료 - ScreenManager에 완료 신호 전송")
+        
+        # ScreenManager에 디스크 선택 완료 신호 전송 (올바른 책임 분리)
+        try:
+            self.screen_manager.disk_selection_completed()
+            print("[OK] 디스크 선택 완료 신호 전송 완료")
+        except Exception as e:
+            print(f"[ERROR] 디스크 선택 완료 신호 전송 실패: {e}")
             import sys
             sys.print_exception(e)
     
@@ -426,7 +477,10 @@ class DiskSelectionScreen:
     def show(self):
         """화면 표시"""
         try:
+            from memory_monitor import log_memory
+            
             print(f"[INFO] {self.screen_name} 화면 표시 시작...")
+            log_memory("DiskSelectionScreen show() 시작")
             
             if hasattr(self, 'screen_obj') and self.screen_obj:
                 print(f"[INFO] 화면 객체 존재 확인됨")
@@ -449,6 +503,8 @@ class DiskSelectionScreen:
                 except Exception as flush_error:
                     print(f"[WARN] 디스플레이 플러시 오류 (무시): {flush_error}")
                 
+                # 화면 표시 완료 후 메모리 상태 모니터링
+                log_memory("DiskSelectionScreen show() 완료")
                 print(f"[OK] {self.screen_name} 화면 실행됨")
             else:
                 print(f"[ERROR] {self.screen_name} 화면 객체가 없음")
@@ -458,12 +514,51 @@ class DiskSelectionScreen:
             import sys
             sys.print_exception(e)
     
-    def hide(self):
-        """화면 숨기기"""
+    def _cleanup_lvgl(self):
+        """LVGL 정리 - 메모리 누수 방지 (실제 메모리 정리)"""
         try:
-            print(f"[INFO] {self.screen_name} 화면 숨김")
+            import lvgl as lv
+            import gc
+            import time
+            
+            print("[INFO] DiskSelectionScreen LVGL 실제 메모리 정리 시작")
+            
+            # 1단계: LVGL 타이머 처리
+            try:
+                lv.timer_handler()
+                print("[DEBUG] DiskSelectionScreen LVGL 타이머 처리 완료")
+            except Exception as e:
+                print(f"[WARN] DiskSelectionScreen LVGL 타이머 처리 실패: {e}")
+            
+            # 2단계: LVGL 안전한 메모리 정리 (크래시 방지)
+            try:
+                if hasattr(lv, 'mp_lv_deinit_gc'):
+                    lv.mp_lv_deinit_gc()
+                    print("[OK] DiskSelectionScreen LVGL MicroPython GC 종료 완료")
+                    
+                # mem_deinit은 사용하지 않음 (크래시 원인)
+                # mem_init도 사용하지 않음 (불필요한 재초기화)
+                    
+                if hasattr(lv, 'mp_lv_init_gc'):
+                    lv.mp_lv_init_gc()
+                    print("[OK] DiskSelectionScreen LVGL MicroPython GC 재초기화 완료")
+                    
+            except Exception as e:
+                print(f"[WARN] DiskSelectionScreen LVGL 안전한 메모리 정리 실패: {e}")
+            
+            # 3단계: 강제 가비지 컬렉션
+            try:
+                for i in range(3):
+                    gc.collect()
+                    time.sleep_ms(10)
+                print("[OK] DiskSelectionScreen 강제 가비지 컬렉션 완료")
+            except Exception as e:
+                print(f"[WARN] DiskSelectionScreen 가비지 컬렉션 실패: {e}")
+            
+            print("[OK] DiskSelectionScreen LVGL 실제 메모리 정리 완료")
+            
         except Exception as e:
-            print(f"  [ERROR] {self.screen_name} 화면 숨김 실패: {e}")
+            print(f"[ERROR] DiskSelectionScreen LVGL 실제 메모리 정리 실패: {e}")
     
     def update(self):
         """화면 업데이트"""

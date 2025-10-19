@@ -3,6 +3,7 @@
 체크박스를 활용한 중복 선택 가능한 UI
 """
 
+import time
 import lvgl as lv
 from ui_style import UIStyle
 from global_data import global_data
@@ -332,6 +333,12 @@ class MealTimeScreen:
                 lv.screen_load(self.screen_obj)
                 print(f"[OK] {self.screen_name} 화면 로드 완료")
                 
+                # 화면 강제 업데이트 (MainScreen과 동일)
+                for i in range(3):
+                    lv.timer_handler()
+                    time.sleep(0.01)
+                print(f"[OK] {self.screen_name} 화면 업데이트 완료")
+                
                 # 로드 후 활성 화면 확인
                 loaded_screen = lv.screen_active()
                 print(f"[INFO] 로드 후 활성 화면: {loaded_screen}")
@@ -343,11 +350,52 @@ class MealTimeScreen:
             import sys
             sys.print_exception(e)
     
-    def hide(self):
-        """화면 숨기기"""
-        print(f"[INFO] {self.screen_name} 화면 숨기기")
-        # 화면 숨기기 로직 (필요시 구현)
-        pass
+    
+    def _cleanup_lvgl(self):
+        """LVGL 정리 - 메모리 누수 방지 (실제 메모리 정리)"""
+        try:
+            import lvgl as lv
+            import gc
+            import time
+            
+            print("[INFO] MealTimeScreen LVGL 실제 메모리 정리 시작")
+            
+            # 1단계: LVGL 타이머 처리
+            try:
+                lv.timer_handler()
+                print("[DEBUG] MealTimeScreen LVGL 타이머 처리 완료")
+            except Exception as e:
+                print(f"[WARN] MealTimeScreen LVGL 타이머 처리 실패: {e}")
+            
+            # 2단계: LVGL 안전한 메모리 정리 (크래시 방지)
+            try:
+                if hasattr(lv, 'mp_lv_deinit_gc'):
+                    lv.mp_lv_deinit_gc()
+                    print("[OK] MealTimeScreen LVGL MicroPython GC 종료 완료")
+                    
+                # mem_deinit은 사용하지 않음 (크래시 원인)
+                # mem_init도 사용하지 않음 (불필요한 재초기화)
+                    
+                if hasattr(lv, 'mp_lv_init_gc'):
+                    lv.mp_lv_init_gc()
+                    print("[OK] MealTimeScreen LVGL MicroPython GC 재초기화 완료")
+                    
+            except Exception as e:
+                print(f"[WARN] MealTimeScreen LVGL 안전한 메모리 정리 실패: {e}")
+            
+            # 3단계: 강제 가비지 컬렉션
+            try:
+                for i in range(3):
+                    gc.collect()
+                    time.sleep_ms(10)
+                print("[OK] MealTimeScreen 강제 가비지 컬렉션 완료")
+            except Exception as e:
+                print(f"[WARN] MealTimeScreen 가비지 컬렉션 실패: {e}")
+            
+            print("[OK] MealTimeScreen LVGL 실제 메모리 정리 완료")
+            
+        except Exception as e:
+            print(f"[ERROR] MealTimeScreen LVGL 실제 메모리 정리 실패: {e}")
     
     def update(self):
         """화면 업데이트 (ScreenManager에서 호출)"""
@@ -401,16 +449,75 @@ class MealTimeScreen:
         if selected_count > 0:
             print("[INFO] 선택된 복용 시간이 있습니다. 다음 화면으로 이동합니다.")
             if self.screen_manager:
-                # 선택된 식사 시간 정보를 dose_time 화면으로 전달
+                # 이전 자동 할당 디스크 정보 초기화 (새로운 선택을 위해)
+                self._clear_previous_auto_assigned_data()
+                
+                # 선택된 식사 시간 정보를 JSON에 저장
                 selected_meals_info = self._get_selected_meals_info()
                 print(f"[INFO] 전달할 식사 시간 정보: {selected_meals_info}")
                 
-                # dose_time 화면으로 이동 (선택된 복용 시간 개수와 식사 시간 정보 전달)
-                self.screen_manager.show_screen('dose_time', 
-                                               dose_count=selected_count,
-                                               selected_meals=selected_meals_info)
+                # JSON에 저장
+                global_data.save_selected_meals(selected_meals_info)
+                global_data.save_dose_count(selected_count)
+                print(f"[INFO] 식사 시간 정보 JSON에 저장: {len(selected_meals_info)}개")
+                
+                # 화면 전환 요청
+                self._request_screen_transition()
         else:
             print("[WARN] 복용 시간을 선택해주세요")
+    
+    def _clear_previous_auto_assigned_data(self):
+        """이전 자동 할당 디스크 정보 초기화"""
+        try:
+            print("[INFO] 이전 자동 할당 디스크 정보 초기화 시작")
+            
+            # DataManager를 사용하여 자동 할당 디스크 정보 초기화
+            from data_manager import DataManager
+            data_manager = DataManager()
+            
+            # 자동 할당된 디스크 정보와 미사용 디스크 정보 초기화
+            data_manager.save_auto_assigned_disks([], [])
+            
+            # 복용 시간 정보도 초기화 (새로운 선택을 위해)
+            data_manager.save_dose_times([])
+            
+            # 선택된 식사 시간 정보도 초기화 (새로운 선택을 위해)
+            data_manager.save_selected_meals([])
+            
+            # global_data도 함께 초기화 (동기화를 위해)
+            global_data.save_auto_assigned_disks([], [])
+            global_data.save_dose_times([])
+            global_data.save_selected_meals([])
+            
+            print("[OK] 이전 자동 할당 디스크 정보 초기화 완료")
+            
+        except Exception as e:
+            print(f"[WARN] 이전 자동 할당 디스크 정보 초기화 실패: {e}")
+    
+    def _request_screen_transition(self):
+        """화면 전환 요청 - ScreenManager에 위임 (스타트업 화면과 동일한 방식)"""
+        print("[INFO] 화면 전환 요청")
+        
+        # ScreenManager에 화면 전환 요청 (올바른 책임 분리)
+        try:
+            self.screen_manager.transition_to('dose_time')
+            print("[OK] 화면 전환 요청 완료")
+        except Exception as e:
+            print(f"[ERROR] 화면 전환 요청 실패: {e}")
+            import sys
+            sys.print_exception(e)
+        
+        # 화면 전환 (올바른 책임 분리 - ScreenManager가 처리)
+        print("[INFO] 식사 시간 선택 완료 - ScreenManager에 완료 신호 전송")
+        
+        # ScreenManager에 식사 시간 선택 완료 신호 전송 (올바른 책임 분리)
+        try:
+            self.screen_manager.meal_time_completed()
+            print("[OK] 식사 시간 선택 완료 신호 전송 완료")
+        except Exception as e:
+            print(f"[ERROR] 식사 시간 선택 완료 신호 전송 실패: {e}")
+            import sys
+            sys.print_exception(e)
     
     def _update_selection_display(self):
         """선택 표시 업데이트"""
@@ -437,17 +544,12 @@ class MealTimeScreen:
             sys.print_exception(e)
     
     def _get_selected_meals_info(self):
-        """선택된 식사 시간 정보 반환 (아침, 점심, 저녁 순서)"""
+        """선택된 식사 시간 정보 반환 (아침, 점심, 저녁 순서) - 항상 현재 선택 상태에서 새로 생성"""
         try:
-            # 전역 데이터에서 선택된 식사 시간 정보 가져오기
-            global_selected_meals = global_data.get_selected_meals()
-            if global_selected_meals:
-                print(f"[INFO] 전역 데이터에서 선택된 식사 시간 정보 복원: {len(global_selected_meals)}개")
-                for meal_info in global_selected_meals:
-                    print(f"  - {meal_info['name']}: 기본 시간 {meal_info['default_hour']:02d}:{meal_info['default_minute']:02d}")
-                return global_selected_meals
+            # 항상 현재 선택 상태에서 새로 생성 (이전 데이터 복원 방지)
+            print(f"[INFO] 현재 선택 상태에서 식사 시간 정보 새로 생성")
             
-            # 전역 데이터가 없으면 현재 선택 상태에서 생성
+            # 현재 선택 상태에서 생성
             selected_meals_info = []
             meal_names = {'breakfast': '아침', 'lunch': '점심', 'dinner': '저녁'}
             
@@ -513,18 +615,3 @@ class MealTimeScreen:
             import sys
             sys.print_exception(e)
     
-    def get_title(self):
-        """화면 제목"""
-        return "복용 시간 선택"
-    
-    def get_button_hints(self):
-        """버튼 힌트"""
-        return f"A:O B:{lv.SYMBOL.UP} C:{lv.SYMBOL.DOWN} D:{lv.SYMBOL.NEXT}"
-    
-    def get_voice_file(self):
-        """안내 음성 파일"""
-        return "wav_meal_time_prompt.wav"
-    
-    def get_effect_file(self):
-        """효과음 파일"""
-        return "wav_select.wav"

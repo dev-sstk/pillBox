@@ -17,16 +17,12 @@ class StartupScreen:
         self.screen_name = 'startup'
         self.screen_obj = None
         self.start_time = time.ticks_ms()
-        self.auto_advance_time = 2000  # 2초 후 자동 진행 (원점 보정 시간 확보)
+        self.auto_advance_time = 1000  # 1.5초 → 1초로 최적화 (화면 깜빡임 완전 방지)
         
         # UI 스타일 시스템 초기화
         self.ui_style = UIStyle()
         
-        # WiFi 자동 연결 상태
-        self.wifi_auto_connect_started = False
-        self.wifi_auto_connect_done = False
-        self.wifi_connected = False
-        self.wifi_connected_time = 0  # WiFi 연결 성공 시각 기록
+        # WiFi 자동 연결 상태 제거됨
         
         # 디스크 원점 보정 상태
         self.calibration_started = False
@@ -60,9 +56,6 @@ class StartupScreen:
         
         # 로고 영역 생성
         self._create_logo_area()
-        
-        # 하단 정보 영역 생성
-        self._create_info_area()
     
     def _create_main_container(self):
         """메인 컨테이너 생성"""
@@ -115,101 +108,38 @@ class StartupScreen:
         # 아이콘 텍스트 스크롤바 비활성화
         self.icon_text.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
         self.icon_text.set_scroll_dir(lv.DIR.NONE)
-        
-        # 제목 제거됨
-        
-        # 부제목 제거됨
-    
-    
-    def _create_info_area(self):
-        """하단 정보 영역 생성 - 버전 텍스트 제거로 간소화"""
-        # 정보 컨테이너 제거 (버전 텍스트가 없으므로 불필요)
-        pass
-    
-    def get_title(self):
-        """화면 제목"""
-        return "필박스"
-    
-    def get_button_hints(self):
-        """버튼 힌트"""
-        return "C:건너뛰기  D:다음"
-    
-    def get_voice_file(self):
-        """안내 음성 파일"""
-        return "wav_startup_hello.wav"
-    
-    def get_effect_file(self):
-        """효과음 파일"""
-        return "wav_select.wav"
     
     def show(self):
         """화면 표시"""
         if self.screen_obj:
             lv.screen_load(self.screen_obj)
             
-            # 로딩 애니메이션 시작
-            self._start_loading_animation()
+            # 원점 보정 시퀀스 시작
+            self._start_calibration_sequence()
             
             # LVGL 타이머 핸들러 강제 호출
             for i in range(10):
                 lv.timer_handler()
                 time.sleep(0.1)
     
-    def hide(self):
-        """화면 숨기기"""
-        try:
-            # 로딩 애니메이션 정지
-            self._stop_loading_animation()
-        except Exception as e:
-            import sys
-            sys.print_exception(e)
-    
     def update(self):
         """화면 업데이트 - 로딩 진행 및 자동 전환"""
         current_time = time.ticks_ms()
         elapsed_time = time.ticks_diff(current_time, self.start_time)
         
-        # 원점 보정 완료 후 WiFi 연결 시도
-        if self.calibration_done and not self.wifi_auto_connect_started:
-            self._try_wifi_auto_connect()
-        
-        # WiFi 연결 완료되면 즉시 전환
-        if self.wifi_auto_connect_done:
-            # WiFi 연결 시도 완료 (성공/실패 관계없이 즉시 전환)
-            self._go_to_wifi_setup()
+        # 원점 보정 완료되면 즉시 전환
+        if self.calibration_done:
+            self._request_screen_transition()
         
         # 최대 대기 시간 초과 시 강제 전환 (2초)
         if elapsed_time > self.auto_advance_time:
-            self._go_to_wifi_setup()
+            self._request_screen_transition()
     
-    def _start_loading_animation(self):
-        """로딩 애니메이션 시작"""
+    def _start_calibration_sequence(self):
+        """원점 보정 시퀀스 시작"""
         # 원점 보정 시작
         self._start_calibration()
     
-    def _stop_loading_animation(self):
-        """로딩 애니메이션 정지"""
-        try:
-            pass# 추가적인 정리 작업이 필요하면 여기에 추가
-        except Exception as e:
-            pass
-    
-    def cleanup(self):
-        """리소스 정리"""
-        try:
-            
-            # 로딩 애니메이션 정지
-            self._stop_loading_animation()
-            
-            # 화면 객체 정리
-            if hasattr(self, 'screen_obj') and self.screen_obj:
-                try:
-                    # LVGL 객체는 ScreenManager에서 삭제하므로 여기서는 참조만 정리
-                    pass
-                except Exception as e:
-                    pass
-        except Exception as e:
-            pass
     def _start_calibration(self):
         """디스크 원점 보정 시작"""
         if self.calibration_started:
@@ -233,7 +163,6 @@ class StartupScreen:
     def _run_calibration_async(self, motor_system):
         """비동기 원점 보정 실행 (3개 모터 동시 보정)"""
         try:
-            
             # 3개 디스크 동시 보정
             if motor_system.calibrate_all_disks_simultaneous():
                 self.calibration_progress = 100
@@ -245,85 +174,97 @@ class StartupScreen:
             motor_system.motor_controller.stop_all_motors()
             self.calibration_done = True
     
-    def _try_wifi_auto_connect(self):
-        """WiFi 자동 연결 시도"""
-        if self.wifi_auto_connect_started:
-            return
+    
+    def _request_screen_transition(self):
+        """화면 전환 요청 - ScreenManager에 위임"""
+        print("[INFO] 화면 전환 요청")
         
-        self.wifi_auto_connect_started = True
+        # ScreenManager에 화면 전환 요청 (올바른 책임 분리)
+        try:
+            self.screen_manager.transition_to('wifi_scan')
+            print("[OK] 화면 전환 요청 완료")
+        except Exception as e:
+            print(f"[ERROR] 화면 전환 요청 실패: {e}")
+            import sys
+            sys.print_exception(e)
+        
+        # 화면 전환 (올바른 책임 분리 - ScreenManager가 처리)
+        print("[INFO] 스타트업 화면 완료 - ScreenManager에 완료 신호 전송")
+        
+        # ScreenManager에 스타트업 완료 신호 전송 (올바른 책임 분리)
+        try:
+            self.screen_manager.startup_completed()
+            print("[OK] 스타트업 완료 신호 전송 완료")
+        except Exception as e:
+            print(f"[ERROR] 스타트업 완료 신호 전송 실패: {e}")
+            import sys
+            sys.print_exception(e)
+    
+    def _monitor_memory(self, label):
+        """메모리 사용량 모니터링 (MicroPython만)"""
+        try:
+            import micropython
+            
+            # MicroPython 메모리 정보만 확인
+            mem_info = micropython.mem_info()
+            print(f"[{label}] MicroPython 메모리:")
+            print(f"  {mem_info}")
+                
+        except Exception as e:
+            print(f"[WARN] 메모리 모니터 실패: {e}")
+    
+    def _cleanup_lvgl(self):
+        """화면 전환 전 LVGL 객체 안전 정리 (ChatGPT 추천 방법)"""
+        import lvgl as lv
+        import gc
+        import time
+        
+        print("[INFO] StartupScreen LVGL 정리 시작")
+        
+        # 메모리 모니터링 (정리 전)
+        self._monitor_memory("BEFORE CLEANUP")
         
         try:
-            # wifi_manager 전역 인스턴스 가져오기
-            from wifi_manager import get_wifi_manager
+            # 1️⃣ 현재 화면 객체가 존재하면 자식부터 모두 삭제
+            if hasattr(self, 'screen_obj') and self.screen_obj:
+                try:
+                    # 모든 자식 객체 삭제
+                    while self.screen_obj.get_child_count() > 0:
+                        child = self.screen_obj.get_child(0)
+                        if child:
+                            child.delete()
+                    print("[OK] LVGL 자식 객체 삭제 완료")
+                except Exception as e:
+                    print(f"[WARN] 자식 삭제 중 오류: {e}")
+                
+                # 화면 자체 삭제
+                try:
+                    self.screen_obj.delete()
+                    print("[OK] 화면 객체 삭제 완료")
+                except Exception as e:
+                    print(f"[WARN] 화면 객체 삭제 실패: {e}")
+                
+                self.screen_obj = None  # Python 참조 제거
             
-            # 저장된 WiFi 설정으로 자동 연결 시도 (타임아웃 800ms로 단축)
-            wifi_mgr = get_wifi_manager()
-            success = wifi_mgr.try_auto_connect(timeout=800)
+            # 2️⃣ 스타일 / 폰트 등 Python 객체 참조 해제
+            if hasattr(self, 'ui_style'):
+                self.ui_style = None
             
-            if success:
-                self.wifi_connected = True
-                self.wifi_connected_time = time.ticks_ms()  # 연결 성공 시각 기록
-            else:
-                # 연결 실패해도 계속 진행
-                self.wifi_connected = False
+            # 3️⃣ LVGL 내부 타이머 및 큐 정리
+            try:
+                lv.timer_handler()
+            except:
+                pass
             
-            self.wifi_auto_connect_done = True
+            # 4️⃣ 가비지 컬렉션 (여러 번 수행)
+            for i in range(3):
+                gc.collect()
+                time.sleep_ms(10)
+            
+            # 메모리 모니터링 (정리 후)
+            self._monitor_memory("AFTER CLEANUP")
+            
+            print("[OK] StartupScreen LVGL 정리 완료")
             
         except Exception as e:
-            self.wifi_auto_connect_done = True
-    
-    def _update_loading_progress(self, elapsed_time):
-        """로딩 진행률 업데이트 - 제거됨 (원점 보정으로 대체)"""
-        pass
-    
-    def on_button_a(self):
-        """버튼 A 처리"""
-        pass
-    
-    def on_button_b(self):
-        """버튼 B 처리"""
-        pass
-    
-    def on_button_c(self):
-        """버튼 C (Skip) 처리"""
-        self._go_to_wifi_setup()
-    
-    def on_button_d(self):
-        """버튼 D (Next) 처리"""
-        self._go_to_wifi_setup()
-    
-    def _go_to_wifi_setup(self):
-        """Wi-Fi 설정 화면으로 이동"""
-        # 짧은 대기 후 화면 전환
-        time.sleep(0.2)
-        
-        # [FAST] 메모리 부족 해결: startup 화면 종료 시 메모리 정리
-        import gc
-        for i in range(5):  # 5회 가비지 컬렉션
-            gc.collect()
-            time.sleep(0.02)  # 0.02초 대기
-        
-        # wifi_scan 화면이 등록되어 있는지 확인
-        if 'wifi_scan' not in self.screen_manager.screens:
-            
-            # [FAST] 메모리 부족 해결: wifi_scan 화면 생성 전 메모리 정리
-            for i in range(5):  # 5회 가비지 컬렉션
-                gc.collect()
-                time.sleep(0.02)  # 0.02초 대기
-            
-            try:
-                from screens.wifi_scan_screen import WifiScanScreen
-                wifi_scan_screen = WifiScanScreen(self.screen_manager)
-                self.screen_manager.register_screen('wifi_scan', wifi_scan_screen)
-            except Exception as e:
-                # [FAST] 메모리 할당 실패 시 추가 메모리 정리
-                for i in range(3):
-                    gc.collect()
-                    time.sleep(0.01)
-                import sys
-                sys.print_exception(e)
-                return
-        
-        # 화면 전환 (ScreenManager가 자동으로 처리)
-        # startup 화면은 ScreenManager.show_screen에서 자동으로 삭제됨
-        self.screen_manager.show_screen('wifi_scan')
+            print(f"[ERROR] LVGL 정리 실패: {e}")

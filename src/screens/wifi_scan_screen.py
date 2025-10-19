@@ -409,78 +409,14 @@ class WifiScanScreen:
                     continue
             
             # 선택된 항목 하이라이트
-            self._update_selection()
+            self._update_selection_highlight()
             
         except Exception as e:
             # 빈 리스트로 초기화
             self.wifi_labels = []
     
     
-    def _update_selection(self):
-        """선택된 항목 하이라이트 업데이트 - 모던 스타일"""
-        try:
-            if not hasattr(self, 'wifi_labels') or not self.wifi_labels:
-                return
-                
-            
-            for i, wifi_item in enumerate(self.wifi_labels):
-                try:
-                    if i == self.selected_index:
-                        # 선택된 항목 스타일 (모던 하이라이트) - 그라데이션 효과
-                        wifi_item.set_style_bg_color(lv.color_hex(0x007AFF), 0)  # iOS 블루
-                        wifi_item.set_style_bg_opa(255, 0)
-                        wifi_item.set_style_radius(12, 0)
-                        wifi_item.set_style_border_width(2, 0)
-                        wifi_item.set_style_border_color(lv.color_hex(0x0056CC), 0)  # 더 진한 블루 테두리
-                        # 선택된 항목 그림자 강화
-                        try:
-                            wifi_item.set_style_shadow_width(4, 0)
-                            wifi_item.set_style_shadow_color(lv.color_hex(0x007AFF), 0)
-                            wifi_item.set_style_shadow_opa(30, 0)
-                        except AttributeError:
-                            pass
-                        try:
-                            wifi_item.set_style_shadow_ofs_x(0, 0)
-                            wifi_item.set_style_shadow_ofs_y(3, 0)
-                        except AttributeError:
-                            pass
-                    else:
-                        # 일반 항목 스타일 (모던 카드)
-                        wifi_item.set_style_bg_color(lv.color_hex(0xFFFFFF), 0)  # 흰색 배경
-                        wifi_item.set_style_bg_opa(255, 0)
-                        wifi_item.set_style_radius(10, 0)
-                        wifi_item.set_style_border_width(1, 0)
-                        wifi_item.set_style_border_color(lv.color_hex(0xD1D5DB), 0)  # 더 진한 테두리로 구분감 향상
-                        # 일반 항목 그림자
-                        wifi_item.set_style_shadow_width(3, 0)
-                        wifi_item.set_style_shadow_color(lv.color_hex(0x000000), 0)
-                        wifi_item.set_style_shadow_opa(20, 0)  # 그림자 강화
-                        wifi_item.set_style_shadow_ofs_x(0, 0)
-                        wifi_item.set_style_shadow_ofs_y(2, 0)
-                        
-                except Exception as e:
-                    continue
-                    
-            
-        except Exception as e:
-            import sys
-            sys.print_exception(e)
     
-    def get_title(self):
-        """화면 제목"""
-        return "Wi-Fi 네트워크"
-    
-    def get_button_hints(self):
-        """버튼 힌트"""
-        return ""
-    
-    def get_voice_file(self):
-        """안내 음성 파일"""
-        return "wav_wifi_scan_prompt.wav"
-    
-    def get_effect_file(self):
-        """효과음 파일"""
-        return "wav_select.wav"
     
     def show(self):
         """화면 표시"""
@@ -519,9 +455,75 @@ class WifiScanScreen:
         else:
             pass
     
-    def hide(self):
-        """화면 숨기기"""
-        pass
+    
+    def _monitor_memory(self, label):
+        """메모리 사용량 모니터링 (MicroPython만)"""
+        try:
+            import micropython
+            
+            # MicroPython 메모리 정보만 확인
+            mem_info = micropython.mem_info()
+            print(f"[{label}] MicroPython 메모리:")
+            print(f"  {mem_info}")
+                    
+        except Exception as e:
+            print(f"[WARN] 메모리 모니터 실패: {e}")
+    
+    def _cleanup_lvgl(self):
+        """화면 전환 전 LVGL 객체 안전 정리 (ChatGPT 추천 방법)"""
+        import lvgl as lv
+        import gc
+        import time
+        
+        print("[INFO] WifiScanScreen LVGL 정리 시작")
+        
+        # 메모리 모니터링 (정리 전)
+        self._monitor_memory("BEFORE CLEANUP")
+        
+        try:
+            # 1️⃣ 현재 화면 객체가 존재하면 자식부터 모두 삭제
+            if hasattr(self, 'screen_obj') and self.screen_obj:
+                try:
+                    # 모든 자식 객체 삭제
+                    while self.screen_obj.get_child_count() > 0:
+                        child = self.screen_obj.get_child(0)
+                        if child:
+                            child.delete()
+                    print("[OK] LVGL 자식 객체 삭제 완료")
+                except Exception as e:
+                    print(f"[WARN] 자식 삭제 중 오류: {e}")
+                
+                # 화면 자체 삭제
+                try:
+                    self.screen_obj.delete()
+                    print("[OK] 화면 객체 삭제 완료")
+                except Exception as e:
+                    print(f"[WARN] 화면 객체 삭제 실패: {e}")
+                
+                self.screen_obj = None  # Python 참조 제거
+            
+            # 2️⃣ 스타일 / 폰트 등 Python 객체 참조 해제
+            if hasattr(self, 'ui_style'):
+                self.ui_style = None
+            
+            # 3️⃣ LVGL 내부 타이머 및 큐 정리
+            try:
+                lv.timer_handler()
+            except:
+                pass
+            
+            # 4️⃣ 가비지 컬렉션 (여러 번 수행)
+            for i in range(3):
+                gc.collect()
+                time.sleep_ms(10)
+            
+            # 메모리 모니터링 (정리 후)
+            self._monitor_memory("AFTER CLEANUP")
+            
+            print("[OK] WifiScanScreen LVGL 정리 완료")
+            
+        except Exception as e:
+            print(f"[ERROR] LVGL 정리 실패: {e}")
     
     def update(self):
         """화면 업데이트"""
@@ -552,7 +554,7 @@ class WifiScanScreen:
                 
                 # 이미 연결된 네트워크라면 패스워드 입력 없이 바로 다음 화면으로
                 if is_currently_connected:
-                    self._go_to_next_screen()
+                    self._request_screen_transition()
                     return
 
                 # 보안이 있는 네트워크인지 확인
@@ -572,7 +574,7 @@ class WifiScanScreen:
                         if success:
                             time.sleep(1)
                             # 저장된 비밀번호로 연결 성공 시 바로 다음 화면으로 이동
-                            self._go_to_next_screen()
+                            self._request_screen_transition()
                         else:
                             # 저장된 비밀번호가 틀렸으면 비밀번호 입력 화면으로
                             self._show_password_screen(selected_network)
@@ -678,22 +680,35 @@ class WifiScanScreen:
                     except:
                         pass
     
-    def _go_to_next_screen(self):
-        """다음 화면으로 이동 (복용 시간 선택)"""
+    def _request_screen_transition(self):
+        """화면 전환 요청 - ScreenManager에 위임"""
+        print("[INFO] 화면 전환 요청 시작")
         
-        # meal_time 화면이 등록되어 있지 않으면 동적 생성
-        if 'meal_time' not in self.screen_manager.screens:
-            try:
-                from screens.meal_time_screen import MealTimeScreen
-                meal_time_screen = MealTimeScreen(self.screen_manager)
-                self.screen_manager.register_screen('meal_time', meal_time_screen)
-            except Exception as e:
-                import sys
-                sys.print_exception(e)
-                return
+        # ScreenManager 상태 확인
+        print(f"[DEBUG] 현재 등록된 화면: {list(self.screen_manager.screens.keys())}")
+        print(f"[DEBUG] 현재 화면: {self.screen_manager.current_screen_name}")
         
-        # 화면 전환
-        self.screen_manager.show_screen('meal_time')
+        # ScreenManager에 화면 전환 요청 (올바른 책임 분리)
+        try:
+            print("[DEBUG] meal_time 화면으로 전환 시도...")
+            self.screen_manager.transition_to('meal_time')
+            print("[OK] 화면 전환 요청 완료")
+        except Exception as e:
+            print(f"[ERROR] 화면 전환 요청 실패: {e}")
+            import sys
+            sys.print_exception(e)
+        
+        # 화면 전환 (올바른 책임 분리 - ScreenManager가 처리)
+        print("[INFO] WiFi 스캔 화면 완료 - ScreenManager에 완료 신호 전송")
+        
+        # ScreenManager에 WiFi 스캔 완료 신호 전송 (올바른 책임 분리)
+        try:
+            self.screen_manager.wifi_scan_completed()
+            print("[OK] WiFi 스캔 완료 신호 전송 완료")
+        except Exception as e:
+            print(f"[ERROR] WiFi 스캔 완료 신호 전송 실패: {e}")
+            import sys
+            sys.print_exception(e)
 
     def _connect_to_open_network(self, network):
         """오픈 네트워크에 직접 연결"""
@@ -705,7 +720,7 @@ class WifiScanScreen:
         if success:
             time.sleep(1)
             # 다음 화면으로 이동
-            self._go_to_next_screen()
+            self._request_screen_transition()
         else:
             # 연결 실패 시 현재 화면에 머물기
             pass

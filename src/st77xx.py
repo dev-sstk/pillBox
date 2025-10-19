@@ -218,7 +218,46 @@ class St77xx_hw(object):
         self.hard_reset()
 
 
-    def off(self): self.set_backlight(0)
+    def off(self): 
+        self.set_backlight(0)
+        # PWM 백라이트 정리
+        if hasattr(self, 'bl') and self.bl is not None:
+            try:
+                if hasattr(self.bl, 'deinit'):
+                    self.bl.deinit()
+                    print("[DEBUG] ST7735 백라이트 PWM deinit 완료")
+            except Exception as e:
+                print(f"[WARN] ST7735 백라이트 PWM deinit 실패: {e}")
+    
+    def cleanup(self):
+        """ST7735 리소스 정리"""
+        try:
+            # 백라이트 끄기
+            self.off()
+            
+            # PWM 백라이트 완전 정리
+            if hasattr(self, 'bl') and self.bl is not None:
+                try:
+                    if hasattr(self.bl, 'deinit'):
+                        self.bl.deinit()
+                    self.bl = None
+                    print("[DEBUG] ST7735 백라이트 PWM 완전 정리 완료")
+                except Exception as e:
+                    print(f"[WARN] ST7735 백라이트 PWM 정리 실패: {e}")
+            
+            # SPI 정리 (필요시)
+            if hasattr(self, 'spi') and self.spi is not None:
+                try:
+                    if hasattr(self.spi, 'deinit'):
+                        self.spi.deinit()
+                    print("[DEBUG] ST7735 SPI 정리 완료")
+                except Exception as e:
+                    print(f"[WARN] ST7735 SPI 정리 실패: {e}")
+                    
+            print("[OK] ST7735 리소스 정리 완료")
+            
+        except Exception as e:
+            print(f"[ERROR] ST7735 리소스 정리 실패: {e}")
 
     def hard_reset(self):
         if self.rst:

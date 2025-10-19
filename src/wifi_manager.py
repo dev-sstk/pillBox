@@ -165,7 +165,7 @@ class WiFiManager:
             self._save_config(ssid, password)
             
             # NTP 시간 동기화 시도
-            self._sync_ntp_time()
+            self._sync_ntp_time_internal()
             
             return True
             
@@ -369,8 +369,12 @@ class WiFiManager:
         if time.ticks_diff(current_time, self.last_scan_time) > self.scan_interval:
             self.scan_networks()
     
-    def _sync_ntp_time(self):
-        """NTP 서버에서 시간 동기화 (한국 시간)"""
+    def sync_ntp_time(self):
+        """NTP 서버에서 시간 동기화 (한국 시간) - 공개 메서드"""
+        return self._sync_ntp_time_internal()
+    
+    def _sync_ntp_time_internal(self):
+        """NTP 서버에서 시간 동기화 (한국 시간) - 내부 메서드"""
         if not self.is_connected:
             print("[WARN] WiFi 연결 필요")
             return False
