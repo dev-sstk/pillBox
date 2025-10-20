@@ -225,9 +225,10 @@ class St77xx_hw(object):
             try:
                 if hasattr(self.bl, 'deinit'):
                     self.bl.deinit()
-                    print("[DEBUG] ST7735 백라이트 PWM deinit 완료")
+                    # print("[DEBUG] ST7735 백라이트 PWM deinit 완료")
             except Exception as e:
-                print(f"[WARN] ST7735 백라이트 PWM deinit 실패: {e}")
+                # print(f"[WARN] ST7735 백라이트 PWM deinit 실패: {e}")
+                pass
     
     def cleanup(self):
         """ST7735 리소스 정리"""
@@ -241,23 +242,26 @@ class St77xx_hw(object):
                     if hasattr(self.bl, 'deinit'):
                         self.bl.deinit()
                     self.bl = None
-                    print("[DEBUG] ST7735 백라이트 PWM 완전 정리 완료")
+                    # print("[DEBUG] ST7735 백라이트 PWM 완전 정리 완료")
                 except Exception as e:
-                    print(f"[WARN] ST7735 백라이트 PWM 정리 실패: {e}")
-            
+                    # print(f"[WARN] ST7735 백라이트 PWM 정리 실패: {e}")
+                    pass
             # SPI 정리 (필요시)
             if hasattr(self, 'spi') and self.spi is not None:
                 try:
                     if hasattr(self.spi, 'deinit'):
                         self.spi.deinit()
-                    print("[DEBUG] ST7735 SPI 정리 완료")
+                    # print("[DEBUG] ST7735 SPI 정리 완료")
                 except Exception as e:
-                    print(f"[WARN] ST7735 SPI 정리 실패: {e}")
+                    # print(f"[WARN] ST7735 SPI 정리 실패: {e}")
+                    pass
+                pass
                     
-            print("[OK] ST7735 리소스 정리 완료")
+            # print("[OK] ST7735 리소스 정리 완료")
             
         except Exception as e:
-            print(f"[ERROR] ST7735 리소스 정리 실패: {e}")
+            # print(f"[ERROR] ST7735 리소스 정리 실패: {e}")
+            pass
 
     def hard_reset(self):
         if self.rst:
@@ -424,7 +428,7 @@ class St7735_hw(St77xx_hw):
         ]
         if self.model in ('redtab','blacktab'): self._run_seq(init7735r)
         else:
-            print('Warning: the greentab model was never properly tested')
+            # print('Warning: the greentab model was never properly tested')
             self._run_seq(init7735)
         # ST77XX_MADCTL applied in apply_rotation
 

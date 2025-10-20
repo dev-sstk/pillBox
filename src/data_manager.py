@@ -80,7 +80,7 @@ class DataManager:
         # 데이터 디렉토리 생성
         self._ensure_data_directory()
         
-        print("[OK] DataManager 초기화 완료 (지연 로딩 적용 - 메모리 절약)")
+        # print("[OK] DataManager 초기화 완료 (지연 로딩 적용 - 메모리 절약)")
     
     def _get_module(self, module_name):
         """모듈 지연 로딩"""
@@ -96,10 +96,10 @@ class DataManager:
                     import time
                     self._modules_cache[module_name] = time
                 else:
-                    print(f"[WARN] 알 수 없는 모듈: {module_name}")
+                    # print(f"[WARN] 알 수 없는 모듈: {module_name}")
                     return None
             except Exception as e:
-                print(f"[WARN] 모듈 로딩 실패: {module_name}, {e}")
+                # print(f"[WARN] 모듈 로딩 실패: {module_name}, {e}")
                 return None
         return self._modules_cache[module_name]
     
@@ -125,9 +125,10 @@ class DataManager:
             # 전역 date 모듈 캐시도 정리
             global date
             date = None
-            print("[INFO] DataManager 캐시 정리 완료 (지연 로딩 캐시 포함)")
+            # print("[INFO] DataManager 캐시 정리 완료 (지연 로딩 캐시 포함)")
         except Exception as e:
-            print(f"[WARN] 캐시 정리 실패: {e}")
+            # print(f"[WARN] 캐시 정리 실패: {e}")
+            pass
     
     def _get_wifi_manager(self):
         """WiFi 매니저 지연 로딩"""
@@ -136,7 +137,7 @@ class DataManager:
                 from wifi_manager import get_wifi_manager
                 self._wifi_manager = get_wifi_manager()
             except Exception as e:
-                print(f"[WARN] WiFi 매니저 로딩 실패: {e}")
+                # print(f"[WARN] WiFi 매니저 로딩 실패: {e}")
                 return None
         return self._wifi_manager
     
@@ -147,7 +148,8 @@ class DataManager:
             try:
                 return wifi_mgr.get_kst_time()
             except Exception as e:
-                print(f"[WARN] 시간 조회 실패: {e}")
+                # print(f"[WARN] 시간 조회 실패: {e}")
+                pass
         
         # WiFi 매니저가 없으면 시스템 시간 사용
         time = self._get_module("time")
@@ -194,7 +196,7 @@ class DataManager:
                 self._today_date_timestamp = 0
             return self._today_date_str
         except Exception as e:
-            print(f"[WARN] 날짜 계산 실패: {e}")
+            # print(f"[WARN] 날짜 계산 실패: {e}")
             # fallback: 직접 계산
             if time:
                 t = time.localtime()
@@ -242,20 +244,20 @@ class DataManager:
         try:
             os = self._get_module("os")
             if os is None:
-                print("[ERROR] os 모듈 로딩 실패")
+                # print("[ERROR] os 모듈 로딩 실패")
                 return
             
             # MicroPython에서는 os.path.exists가 없으므로 try-except로 확인
             try:
                 os.listdir(self.data_dir)
-                print(f"[OK] 데이터 디렉토리 존재: {self.data_dir}")
+                # print(f"[OK] 데이터 디렉토리 존재: {self.data_dir}")
             except OSError:
                 # 디렉토리가 없으면 생성
                 os.mkdir(self.data_dir)
-                print(f"[OK] 데이터 디렉토리 생성: {self.data_dir}")
+                # print(f"[OK] 데이터 디렉토리 생성: {self.data_dir}")
         except Exception as e:
-            print(f"[ERROR] 데이터 디렉토리 생성 실패: {e}")
-    
+            # print(f"[ERROR] 데이터 디렉토리 생성 실패: {e}")
+            pass
     # ===== 설정 관리 =====
     
     def save_settings(self, settings):
@@ -263,8 +265,9 @@ class DataManager:
         try:
             json = self._get_module("json")
             if json is None:
-                print("[ERROR] json 모듈 로딩 실패")
+                # print("[ERROR] json 모듈 로딩 실패")
                 return False
+                pass
             
             with open(self.settings_file, 'w') as f:
                 json.dump(settings, f)
@@ -272,10 +275,10 @@ class DataManager:
             # 캐시 업데이트
             self._settings_cache = settings
             
-            print(f"[OK] 설정 저장 완료: {self.settings_file}")
+            # print(f"[OK] 설정 저장 완료: {self.settings_file}")
             return True
         except Exception as e:
-            print(f"[ERROR] 설정 저장 실패: {e}")
+            # print(f"[ERROR] 설정 저장 실패: {e}")
             return False
     
     def load_settings(self):
@@ -287,7 +290,7 @@ class DataManager:
         try:
             json = self._get_module("json")
             if json is None:
-                print("[ERROR] json 모듈 로딩 실패")
+                # print("[ERROR] json 모듈 로딩 실패")
                 default_settings = self._get_default_settings()
                 self._settings_cache = default_settings
                 return default_settings
@@ -296,15 +299,15 @@ class DataManager:
                 with open(self.settings_file, 'r') as f:
                     settings = json.load(f)
                 self._settings_cache = settings
-                print(f"[OK] 설정 로드 완료: {self.settings_file}")
+                # print(f"[OK] 설정 로드 완료: {self.settings_file}")
                 return settings
             else:
-                print("[INFO] 설정 파일 없음, 기본값 반환")
+                # print("[INFO] 설정 파일 없음, 기본값 반환")
                 default_settings = self._get_default_settings()
                 self._settings_cache = default_settings
                 return default_settings
         except Exception as e:
-            print(f"[ERROR] 설정 로드 실패: {e}")
+            # print(f"[ERROR] 설정 로드 실패: {e}")
             default_settings = self._get_default_settings()
             self._settings_cache = default_settings
             return default_settings
@@ -341,22 +344,23 @@ class DataManager:
     def save_medication_data(self, medication_data):
         """약물 데이터 저장 (캐시 업데이트) - 지연 로딩"""
         try:
-            print(f"[DEBUG] save_medication_data 시작: {self.medication_file}")
-            print(f"[DEBUG] 저장할 데이터: {medication_data}")
+            # print(f"[DEBUG] save_medication_data 시작: {self.medication_file}")
+            # print(f"[DEBUG] 저장할 데이터: {medication_data}")
             
             json = self._get_module("json")
             time = self._get_module("time")
             
             if json is None:
-                print("[ERROR] json 모듈 로딩 실패")
+                # print("[ERROR] json 모듈 로딩 실패")
                 return False
+                pass
             
-            print(f"[DEBUG] JSON 모듈 로드 성공, 파일 쓰기 시작...")
+            # print(f"[DEBUG] JSON 모듈 로드 성공, 파일 쓰기 시작...")
             
             with open(self.medication_file, 'w') as f:
                 json.dump(medication_data, f)
             
-            print(f"[DEBUG] 파일 쓰기 완료, 캐시 업데이트 시작...")
+            # print(f"[DEBUG] 파일 쓰기 완료, 캐시 업데이트 시작...")
             
             # 캐시 업데이트 (무효화 대신 직접 업데이트)
             self._medication_cache = medication_data
@@ -368,10 +372,10 @@ class DataManager:
             except AttributeError:
                 self._cache_timestamp = 0
             
-            print(f"[OK] 약물 데이터 저장 완료: {self.medication_file}")
+            # print(f"[OK] 약물 데이터 저장 완료: {self.medication_file}")
             return True
         except Exception as e:
-            print(f"[ERROR] 약물 데이터 저장 실패: {e}")
+            # print(f"[ERROR] 약물 데이터 저장 실패: {e}")
             import sys
             sys.print_exception(e)
             return False
@@ -394,7 +398,7 @@ class DataManager:
             
             # 파일 존재 여부 먼저 확인 (지연 로딩)
             if not self._file_exists(self.medication_file):
-                print("[INFO] 약물 데이터 파일 없음, 기본값 반환")
+                # print("[INFO] 약물 데이터 파일 없음, 기본값 반환")
                 default_data = self._get_default_medication_data()
                 self._medication_cache = default_data
                 try:
@@ -409,7 +413,7 @@ class DataManager:
             # 파일에서 로드 (JSON 파싱 지연 로딩)
             json = self._get_module("json")
             if json is None:
-                print("[ERROR] json 모듈 로딩 실패")
+                # print("[ERROR] json 모듈 로딩 실패")
                 default_data = self._get_default_medication_data()
                 self._medication_cache = default_data
                 return default_data
@@ -418,7 +422,7 @@ class DataManager:
                 medication_data = json.load(f)
             
             # 디버그: 로드된 데이터 확인
-            print(f"[DEBUG] 로드된 약물 데이터: {medication_data}")
+            # print(f"[DEBUG] 로드된 약물 데이터: {medication_data}")
             
             # 데이터 구조 검증 및 수정
             medication_data = self._validate_and_fix_medication_data(medication_data)
@@ -437,10 +441,10 @@ class DataManager:
                 # 캐시 비활성화 시 즉시 정리
                 self._medication_cache = None
             
-            print(f"[OK] 약물 데이터 로드 완료: {self.medication_file}")
+            # print(f"[OK] 약물 데이터 로드 완료: {self.medication_file}")
             return medication_data
         except Exception as e:
-            print(f"[ERROR] 약물 데이터 로드 실패: {e}")
+            # print(f"[ERROR] 약물 데이터 로드 실패: {e}")
             default_data = self._get_default_medication_data()
             self._medication_cache = default_data
             try:
@@ -455,23 +459,23 @@ class DataManager:
     def _validate_and_fix_medication_data(self, medication_data):
         """약물 데이터 구조 검증 및 수정"""
         try:
-            print(f"[DEBUG] 데이터 구조 검증 시작: {medication_data}")
+            # print(f"[DEBUG] 데이터 구조 검증 시작: {medication_data}")
             
             # 잘못된 disk_counts 필드가 있으면 제거
             if "disk_counts" in medication_data:
-                print(f"[WARN] 잘못된 disk_counts 필드 발견, 제거: {medication_data['disk_counts']}")
+                # print(f"[WARN] 잘못된 disk_counts 필드 발견, 제거: {medication_data['disk_counts']}")
                 del medication_data["disk_counts"]
             
             # disks 필드가 없으면 기본 데이터로 교체
             if "disks" not in medication_data:
-                print("[WARN] disks 필드 없음, 기본 데이터로 교체")
+                # print("[WARN] disks 필드 없음, 기본 데이터로 교체")
                 default_data = self._get_default_medication_data()
                 medication_data["disks"] = default_data["disks"]
             
             # 각 디스크 데이터 검증 및 수정
             for disk_num in ["1", "2", "3"]:
                 if disk_num not in medication_data["disks"]:
-                    print(f"[WARN] 디스크 {disk_num} 데이터 없음, 기본 데이터로 교체")
+                    # print(f"[WARN] 디스크 {disk_num} 데이터 없음, 기본 데이터로 교체")
                     default_data = self._get_default_medication_data()
                     medication_data["disks"][disk_num] = default_data["disks"][disk_num].copy()
                 else:
@@ -480,7 +484,7 @@ class DataManager:
                     required_fields = ["name", "total_capacity", "current_count", "last_refill", "medication_type"]
                     for field in required_fields:
                         if field not in disk_data:
-                            print(f"[WARN] 디스크 {disk_num} {field} 필드 없음, 기본값 설정")
+                            # print(f"[WARN] 디스크 {disk_num} {field} 필드 없음, 기본값 설정")
                             if field == "name":
                                 disk_data[field] = f"{'아침' if disk_num == '1' else '점심' if disk_num == '2' else '저녁'}약"
                             elif field == "total_capacity":
@@ -500,11 +504,11 @@ class DataManager:
             if "low_stock_threshold" not in medication_data:
                 medication_data["low_stock_threshold"] = 3
             
-            print(f"[DEBUG] 데이터 구조 검증 완료: {medication_data}")
+            # print(f"[DEBUG] 데이터 구조 검증 완료: {medication_data}")
             return medication_data
             
         except Exception as e:
-            print(f"[ERROR] 데이터 구조 검증 실패: {e}")
+            # print(f"[ERROR] 데이터 구조 검증 실패: {e}")
             return self._get_default_medication_data()
     
     def _get_default_medication_data(self):
@@ -569,8 +573,9 @@ class DataManager:
             # 파일에 저장 (MicroPython에서는 encoding 매개변수 지원 안함)
             json = self._get_module("json")
             if json is None:
-                print("[ERROR] json 모듈 로딩 실패")
+                # print("[ERROR] json 모듈 로딩 실패")
                 return False
+                pass
             
             with open(self.dispense_log_file, 'w') as f:
                 json.dump(logs, f)
@@ -578,11 +583,11 @@ class DataManager:
             # 캐시 업데이트
             self._dispense_logs_cache = logs
             
-            print(f"[OK] 배출 기록 저장: 일정 {dose_index + 1}, 성공: {success}")
+            # print(f"[OK] 배출 기록 저장: 일정 {dose_index + 1}, 성공: {success}")
             return True
             
         except Exception as e:
-            print(f"[ERROR] 배출 기록 저장 실패: {e}")
+            # print(f"[ERROR] 배출 기록 저장 실패: {e}")
             return False
     
     def load_dispense_logs(self):
@@ -594,7 +599,7 @@ class DataManager:
         try:
             json = self._get_module("json")
             if json is None:
-                print("[ERROR] json 모듈 로딩 실패")
+                # print("[ERROR] json 모듈 로딩 실패")
                 self._dispense_logs_cache = []
                 return []
             
@@ -607,7 +612,7 @@ class DataManager:
                 self._dispense_logs_cache = []
                 return []
         except Exception as e:
-            print(f"[ERROR] 배출 기록 로드 실패: {e}")
+            # print(f"[ERROR] 배출 기록 로드 실패: {e}")
             self._dispense_logs_cache = []
             return []
     
@@ -619,7 +624,7 @@ class DataManager:
             today_logs = [log for log in logs if log.get("date") == today]
             return today_logs
         except Exception as e:
-            print(f"[ERROR] 오늘 배출 기록 로드 실패: {e}")
+            # print(f"[ERROR] 오늘 배출 기록 로드 실패: {e}")
             return []
     
     def was_dispensed_today(self, dose_index, dose_time=None):
@@ -643,7 +648,7 @@ class DataManager:
             return False
             
         except Exception as e:
-            print(f"[ERROR] 오늘 배출 확인 실패: {e}")
+            # print(f"[ERROR] 오늘 배출 확인 실패: {e}")
             return False
     
     # ===== 약물 수량 관리 =====
@@ -651,35 +656,35 @@ class DataManager:
     def update_disk_count(self, disk_num, new_count):
         """디스크 약물 수량 업데이트"""
         try:
-            print(f"[DEBUG] update_disk_count 시작: 디스크 {disk_num}, 수량 {new_count}")
+            # print(f"[DEBUG] update_disk_count 시작: 디스크 {disk_num}, 수량 {new_count}")
             
             # 캐시된 데이터가 있으면 사용, 없으면 로드
             if self._medication_cache is not None:
-                print(f"[DEBUG] 캐시된 데이터 사용")
+                # print(f"[DEBUG] 캐시된 데이터 사용")
                 medication_data = self._medication_cache.copy()
             else:
-                print(f"[DEBUG] 파일에서 데이터 로드")
+                # print(f"[DEBUG] 파일에서 데이터 로드")
                 medication_data = self.load_medication_data()
             
             disk_key = str(disk_num)
             
-            print(f"[DEBUG] 로드된 medication_data: {medication_data}")
+            # print(f"[DEBUG] 로드된 medication_data: {medication_data}")
             
             # 디스크 데이터가 없으면 기본 데이터 생성
             if disk_key not in medication_data["disks"]:
-                print(f"[INFO] 디스크 {disk_num} 데이터 없음, 기본 데이터 생성")
+                # print(f"[INFO] 디스크 {disk_num} 데이터 없음, 기본 데이터 생성")
                 default_data = self._get_default_medication_data()
                 medication_data["disks"][disk_key] = default_data["disks"][disk_key].copy()
             
             # 현재 시간 가져오기 (지연 로딩)
             current_time = self._get_current_time()
             
-            print(f"[DEBUG] 업데이트 전 디스크 {disk_num} 수량: {medication_data['disks'][disk_key]['current_count']}")
+            # print(f"[DEBUG] 업데이트 전 디스크 {disk_num} 수량: {medication_data['disks'][disk_key]['current_count']}")
             
             medication_data["disks"][disk_key]["current_count"] = new_count
             medication_data["disks"][disk_key]["last_refill"] = f"{current_time[0]:04d}-{current_time[1]:02d}-{current_time[2]:02d}T{current_time[3]:02d}:{current_time[4]:02d}:{current_time[5]:02d}"
             
-            print(f"[DEBUG] 업데이트 후 디스크 {disk_num} 수량: {medication_data['disks'][disk_key]['current_count']}")
+            # print(f"[DEBUG] 업데이트 후 디스크 {disk_num} 수량: {medication_data['disks'][disk_key]['current_count']}")
             
             # 리필 기록 추가
             refill_record = {
@@ -693,14 +698,14 @@ class DataManager:
             if len(medication_data["refill_history"]) > 50:
                 medication_data["refill_history"] = medication_data["refill_history"][-50:]
             
-            print(f"[DEBUG] save_medication_data 호출 전: {medication_data}")
+            # print(f"[DEBUG] save_medication_data 호출 전: {medication_data}")
             save_result = self.save_medication_data(medication_data)
-            print(f"[DEBUG] save_medication_data 결과: {save_result}")
+            # print(f"[DEBUG] save_medication_data 결과: {save_result}")
             
             return save_result
                 
         except Exception as e:
-            print(f"[ERROR] 디스크 수량 업데이트 실패: {e}")
+            # print(f"[ERROR] 디스크 수량 업데이트 실패: {e}")
             import sys
             sys.print_exception(e)
             return False
@@ -708,24 +713,24 @@ class DataManager:
     def get_disk_count(self, disk_num):
         """디스크 약물 수량 조회 (최적화)"""
         try:
-            print(f"[DEBUG] get_disk_count 시작: 디스크 {disk_num}")
+            # print(f"[DEBUG] get_disk_count 시작: 디스크 {disk_num}")
             
             medication_data = self.load_medication_data()
             disk_key = str(disk_num)
             
-            print(f"[DEBUG] 로드된 medication_data: {medication_data}")
-            print(f"[DEBUG] disk_key: {disk_key}")
-            print(f"[DEBUG] medication_data['disks']: {medication_data.get('disks', {})}")
+            # print(f"[DEBUG] 로드된 medication_data: {medication_data}")
+            # print(f"[DEBUG] disk_key: {disk_key}")
+            # print(f"[DEBUG] medication_data['disks']: {medication_data.get('disks', {})}")
             
             if disk_key in medication_data["disks"]:
                 current_count = medication_data["disks"][disk_key]["current_count"]
-                print(f"[DEBUG] 디스크 {disk_num} 수량: {current_count}")
+                # print(f"[DEBUG] 디스크 {disk_num} 수량: {current_count}")
                 return current_count
             else:
-                print(f"[DEBUG] 디스크 {disk_num} 데이터 없음")
+                # print(f"[DEBUG] 디스크 {disk_num} 데이터 없음")
                 return 0
         except Exception as e:
-            print(f"[ERROR] get_disk_count({disk_num}) 실패: {e}")
+            # print(f"[ERROR] get_disk_count({disk_num}) 실패: {e}")
             import sys
             sys.print_exception(e)
             return 0
@@ -743,7 +748,7 @@ class DataManager:
             else:
                 return True
         except Exception as e:
-            print(f"[ERROR] 디스크 부족 확인 실패: {e}")
+            # print(f"[ERROR] 디스크 부족 확인 실패: {e}")
             return True
     
     # ===== 유틸리티 함수 =====
@@ -759,21 +764,21 @@ class DataManager:
             
             os = self._get_module("os")
             if os is None:
-                print("[ERROR] os 모듈 로딩 실패")
+                # print("[ERROR] os 모듈 로딩 실패")
                 return False
             
             for file_path in files_to_clear:
                 try:
                     os.remove(file_path)
-                    print(f"[OK] 파일 삭제: {file_path}")
+                    # print(f"[OK] 파일 삭제: {file_path}")
                 except OSError:
                     # 파일이 없으면 무시
                     pass
             
-            print("[OK] 모든 데이터 삭제 완료")
+            # print("[OK] 모든 데이터 삭제 완료")
             return True
         except Exception as e:
-            print(f"[ERROR] 데이터 삭제 실패: {e}")
+            # print(f"[ERROR] 데이터 삭제 실패: {e}")
             return False
     
     def get_data_summary(self):
@@ -803,9 +808,9 @@ class DataManager:
             
             return summary
         except Exception as e:
-            print(f"[ERROR] 데이터 요약 생성 실패: {e}")
+            # print(f"[ERROR] 데이터 요약 생성 실패: {e}")
             return None
-    
+        
     def get_dose_times(self):
         """복용 시간 정보 조회"""
         try:
@@ -815,7 +820,7 @@ class DataManager:
             else:
                 return []
         except Exception:
-            print("[ERROR] 복용 시간 조회 실패")
+            # print("[ERROR] 복용 시간 조회 실패")
             return []
     
     def save_dose_times(self, dose_times):
@@ -828,9 +833,8 @@ class DataManager:
             settings["dose_times"] = dose_times
             return self.save_settings(settings)
         except Exception as e:
-            print(f"[ERROR] 복용 시간 저장 실패: {e}")
+            # print(f"[ERROR] 복용 시간 저장 실패: {e}")
             return False
-    
     
     def get_all_disk_counts(self):
         """모든 디스크의 알약 개수 조회"""
@@ -840,7 +844,7 @@ class DataManager:
                 return medication_data["disk_counts"]
             return {}
         except Exception as e:
-            print(f"[ERROR] 모든 디스크 알약 개수 조회 실패: {e}")
+            # print(f"[ERROR] 모든 디스크 알약 개수 조회 실패: {e}")
             return {}
     
     # 전역 데이터 관리 메서드들 (global_data.py 기능 통합 - JSON 파일 기반)
@@ -871,11 +875,11 @@ class DataManager:
                 'main': {}
             })
             
-            print("[DEBUG] 전역 데이터 JSON 파일 로드 완료")
+            # print("[DEBUG] 전역 데이터 JSON 파일 로드 완료")
             return True
             
         except Exception as e:
-            print(f"[WARN] 전역 데이터 JSON 파일 로드 실패: {e}")
+            # print(f"[WARN] 전역 데이터 JSON 파일 로드 실패: {e}")
             # 기본값 설정
             self._dose_times = []
             self._selected_meals = []
@@ -911,45 +915,13 @@ class DataManager:
             with open(self.global_data_file, 'w') as f:
                 json.dump(data, f)
             
-            print("[DEBUG] 전역 데이터 JSON 파일 저장 완료")
+            # print("[DEBUG] 전역 데이터 JSON 파일 저장 완료")
             return True
             
         except Exception as e:
-            print(f"[ERROR] 전역 데이터 JSON 파일 저장 실패: {e}")
+            # print(f"[ERROR] 전역 데이터 JSON 파일 저장 실패: {e}")
             return False
     
-    def save_dose_times(self, dose_times):
-        """복용 시간 정보 저장 (JSON 파일 기반)"""
-        try:
-            # 지연 로딩으로 데이터 로드
-            if self._dose_times is None:
-                self._load_global_data_from_file()
-            
-            self._dose_times = dose_times.copy() if dose_times else []
-            print(f"[INFO] 전역 데이터에 복용 시간 저장: {len(self._dose_times)}개")
-            
-            # 저장할 데이터 상세 로그
-            for i, dose_time in enumerate(self._dose_times):
-                print(f"[DEBUG] 저장할 dose_times[{i}]: {dose_time}")
-                if isinstance(dose_time, dict):
-                    print(f"[DEBUG] dose_times[{i}] 키들: {list(dose_time.keys())}")
-                    if 'selected_disks' in dose_time:
-                        print(f"[DEBUG] dose_times[{i}] selected_disks: {dose_time['selected_disks']}")
-            
-            # JSON 파일에 저장
-            self._save_global_data_to_file()
-            
-            # 저장 후 즉시 확인
-            saved_data = self.get_dose_times()
-            print(f"[DEBUG] 저장 후 get_dose_times() 결과: {saved_data}")
-            
-            # 참조 정리
-            import gc
-            gc.collect()
-            
-        except Exception as e:
-            print(f"[ERROR] 복용 시간 저장 실패: {e}")
-            return False
     
     def add_selected_disks_to_current_data(self, selected_disks):
         """현재 저장된 데이터에 selected_disks 정보 추가 (테스트용)"""
@@ -963,19 +935,19 @@ class DataManager:
                 if isinstance(self._dose_times[0], dict):
                     self._dose_times[0]['selected_disks'] = selected_disks
                     self._dose_times[0]['disk_count'] = len(selected_disks)
-                    print(f"[DEBUG] 테스트용 selected_disks 추가: {selected_disks}")
+                    # print(f"[DEBUG] 테스트용 selected_disks 추가: {selected_disks}")
                     
                     # JSON 파일에 저장
                     self._save_global_data_to_file()
                     
-                    print(f"[DEBUG] 수정된 데이터: {self._dose_times[0]}")
+                    # print(f"[DEBUG] 수정된 데이터: {self._dose_times[0]}")
                     return True
             
-            print("[WARN] 수정할 데이터가 없음")
+            # print("[WARN] 수정할 데이터가 없음")
             return False
             
         except Exception as e:
-            print(f"[ERROR] selected_disks 추가 실패: {e}")
+            # print(f"[ERROR] selected_disks 추가 실패: {e}")
             return False
 
     def save_auto_assigned_disks(self, assigned_disks, unused_disks):
@@ -989,14 +961,15 @@ class DataManager:
             self._auto_assigned_disks = assigned_disks.copy() if assigned_disks else []
             self._unused_disks = unused_disks.copy() if unused_disks else []
             
-            print(f"[INFO] 자동 할당된 디스크 정보 저장:")
-            print(f"  - 사용할 디스크: {len(self._auto_assigned_disks)}개")
+            # print(f"[INFO] 자동 할당된 디스크 정보 저장:")
+            # print(f"  - 사용할 디스크: {len(self._auto_assigned_disks)}개")
             for disk_info in self._auto_assigned_disks:
-                print(f"    * 디스크 {disk_info['disk_number']}: {disk_info['meal_name']} ({disk_info['time']})")
-            print(f"  - 사용하지 않는 디스크: {len(self._unused_disks)}개")
+                # print(f"    * 디스크 {disk_info['disk_number']}: {disk_info['meal_name']} ({disk_info['time']})")
+            # print(f"  - 사용하지 않는 디스크: {len(self._unused_disks)}개")
+                pass
             for disk_num in self._unused_disks:
-                print(f"    * 디스크 {disk_num}: 사용 안함")
-            
+                # print(f"    * 디스크 {disk_num}: 사용 안함")
+                pass
             # JSON 파일에 저장
             self._save_global_data_to_file()
             
@@ -1005,8 +978,9 @@ class DataManager:
             gc.collect()
             
         except Exception as e:
-            print(f"[ERROR] 자동 할당된 디스크 정보 저장 실패: {e}")
-
+            # print(f"[ERROR] 자동 할당된 디스크 정보 저장 실패: {e}")
+            pass
+        
     def get_auto_assigned_disks(self):
         """자동 할당된 디스크 정보 반환"""
         try:
@@ -1017,7 +991,7 @@ class DataManager:
             return self._auto_assigned_disks.copy() if self._auto_assigned_disks else []
             
         except Exception as e:
-            print(f"[ERROR] 자동 할당된 디스크 정보 로드 실패: {e}")
+            # print(f"[ERROR] 자동 할당된 디스크 정보 로드 실패: {e}")
             return []
 
     def get_unused_disks(self):
@@ -1030,33 +1004,9 @@ class DataManager:
             return self._unused_disks.copy() if self._unused_disks else []
             
         except Exception as e:
-            print(f"[ERROR] 사용하지 않는 디스크 정보 로드 실패: {e}")
+            # print(f"[ERROR] 사용하지 않는 디스크 정보 로드 실패: {e}")
             return []
     
-    def get_dose_times(self):
-        """복용 시간 정보 반환 (지연 로딩)"""
-        try:
-            # 지연 로딩으로 데이터 로드
-            if self._dose_times is None:
-                load_result = self._load_global_data_from_file()
-                
-                # 파일이 없으면 global_data에서 직접 가져오기 시도
-                if not load_result:
-                    print(f"[DEBUG] global_data에서 직접 dose_times 가져오기 시도")
-                    try:
-                        from global_data import global_data
-                        global_dose_times = global_data.get_dose_times()
-                        if global_dose_times:
-                            self._dose_times = global_dose_times
-                            print(f"[DEBUG] global_data에서 dose_times 가져옴: {len(self._dose_times)}개")
-                    except Exception as e:
-                        print(f"[WARN] global_data에서 dose_times 가져오기 실패: {e}")
-            
-            return self._dose_times.copy() if self._dose_times else []
-            
-        except Exception as e:
-            print(f"[ERROR] 복용 시간 조회 실패: {e}")
-            return []
     
     
     def save_selected_meals(self, selected_meals):
@@ -1067,7 +1017,7 @@ class DataManager:
                 self._load_global_data_from_file()
             
             self._selected_meals = selected_meals.copy() if selected_meals else []
-            print(f"[INFO] 전역 데이터에 선택된 식사 시간 저장: {len(self._selected_meals)}개")
+            # print(f"[INFO] 전역 데이터에 선택된 식사 시간 저장: {len(self._selected_meals)}개")
             
             # JSON 파일에 저장
             self._save_global_data_to_file()
@@ -1077,8 +1027,9 @@ class DataManager:
             gc.collect()
             
         except Exception as e:
-            print(f"[ERROR] 선택된 식사 시간 저장 실패: {e}")
-    
+            # print(f"[ERROR] 선택된 식사 시간 저장 실패: {e}")
+            pass
+        
     def get_selected_meals(self):
         """선택된 식사 시간 정보 반환 (지연 로딩)"""
         try:
@@ -1089,7 +1040,7 @@ class DataManager:
             return self._selected_meals.copy() if self._selected_meals else []
             
         except Exception as e:
-            print(f"[ERROR] 선택된 식사 시간 조회 실패: {e}")
+            # print(f"[ERROR] 선택된 식사 시간 조회 실패: {e}")
             return []
     
     def save_dose_count(self, dose_count):
@@ -1100,7 +1051,7 @@ class DataManager:
                 self._load_global_data_from_file()
             
             self._dose_count = dose_count
-            print(f"[INFO] 전역 데이터에 복용 횟수 저장: {dose_count}")
+            # print(f"[INFO] 전역 데이터에 복용 횟수 저장: {dose_count}")
             
             # JSON 파일에 저장
             self._save_global_data_to_file()
@@ -1110,7 +1061,8 @@ class DataManager:
             gc.collect()
             
         except Exception as e:
-            print(f"[ERROR] 복용 횟수 저장 실패: {e}")
+            # print(f"[ERROR] 복용 횟수 저장 실패: {e}")
+            pass
     
     def get_dose_count(self):
         """복용 횟수 반환 (지연 로딩)"""
@@ -1122,7 +1074,7 @@ class DataManager:
             return self._dose_count or 1
             
         except Exception as e:
-            print(f"[ERROR] 복용 횟수 조회 실패: {e}")
+            # print(f"[ERROR] 복용 횟수 조회 실패: {e}")
             return 1
     
     def clear_all_global_data(self):
@@ -1147,10 +1099,11 @@ class DataManager:
             import gc
             gc.collect()
             
-            print("[INFO] 전역 데이터 초기화 완료")
+            # print("[INFO] 전역 데이터 초기화 완료")
             
         except Exception as e:
-            print(f"[ERROR] 전역 데이터 초기화 실패: {e}")
+            # print(f"[ERROR] 전역 데이터 초기화 실패: {e}")
+            pass
     
     # 화면별 데이터 백업 메서드들 (global_data.py 기능 통합 - JSON 파일 기반)
     
@@ -1163,7 +1116,7 @@ class DataManager:
             
             if screen_name in self._screen_data_backup:
                 self._screen_data_backup[screen_name] = data.copy() if isinstance(data, dict) else data
-                print(f"[INFO] {screen_name} 화면 데이터 백업 완료")
+                # print(f"[INFO] {screen_name} 화면 데이터 백업 완료")
                 
                 # JSON 파일에 저장
                 self._save_global_data_to_file()
@@ -1172,10 +1125,12 @@ class DataManager:
                 import gc
                 gc.collect()
             else:
-                print(f"[WARN] 지원하지 않는 화면: {screen_name}")
+                # print(f"[WARN] 지원하지 않는 화면: {screen_name}")
+                pass
                 
         except Exception as e:
-            print(f"[ERROR] {screen_name} 화면 데이터 백업 실패: {e}")
+            # print(f"[ERROR] {screen_name} 화면 데이터 백업 실패: {e}")
+            pass
     
     def restore_screen_data(self, screen_name):
         """화면 데이터 복원 (지연 로딩)"""
@@ -1186,14 +1141,14 @@ class DataManager:
             
             if screen_name in self._screen_data_backup:
                 data = self._screen_data_backup[screen_name]
-                print(f"[INFO] {screen_name} 화면 데이터 복원 완료")
+                # print(f"[INFO] {screen_name} 화면 데이터 복원 완료")
                 return data.copy() if isinstance(data, dict) else data
             else:
-                print(f"[WARN] 지원하지 않는 화면: {screen_name}")
+                # print(f"[WARN] 지원하지 않는 화면: {screen_name}")
                 return {}
                 
         except Exception as e:
-            print(f"[ERROR] {screen_name} 화면 데이터 복원 실패: {e}")
+            # print(f"[ERROR] {screen_name} 화면 데이터 복원 실패: {e}")
             return {}
     
     def clear_screen_data(self, screen_name):
@@ -1205,7 +1160,7 @@ class DataManager:
             
             if screen_name in self._screen_data_backup:
                 self._screen_data_backup[screen_name] = {}
-                print(f"[INFO] {screen_name} 화면 데이터 삭제 완료")
+                # print(f"[INFO] {screen_name} 화면 데이터 삭제 완료")
                 
                 # JSON 파일에 저장
                 self._save_global_data_to_file()
@@ -1214,10 +1169,12 @@ class DataManager:
                 import gc
                 gc.collect()
             else:
-                print(f"[WARN] 지원하지 않는 화면: {screen_name}")
+                # print(f"[WARN] 지원하지 않는 화면: {screen_name}")
+                pass
                 
         except Exception as e:
-            print(f"[ERROR] {screen_name} 화면 데이터 삭제 실패: {e}")
+            # print(f"[ERROR] {screen_name} 화면 데이터 삭제 실패: {e}")
+            pass
     
     def clear_all_screen_data(self):
         """모든 화면 데이터 삭제 (JSON 파일 기반)"""
@@ -1229,7 +1186,7 @@ class DataManager:
             for screen_name in self._screen_data_backup:
                 self._screen_data_backup[screen_name] = {}
             
-            print("[INFO] 모든 화면 데이터 삭제 완료")
+            # print("[INFO] 모든 화면 데이터 삭제 완료")
             
             # JSON 파일에 저장
             self._save_global_data_to_file()
@@ -1239,4 +1196,5 @@ class DataManager:
             gc.collect()
             
         except Exception as e:
-            print(f"[ERROR] 모든 화면 데이터 삭제 실패: {e}")
+            # print(f"[ERROR] 모든 화면 데이터 삭제 실패: {e}")
+            pass

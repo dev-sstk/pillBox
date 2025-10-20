@@ -32,7 +32,7 @@ class AudioFilesInfo:
             "system": "/wav/"
         }
         
-        print("[OK] AudioFilesInfo 초기화 완료")
+        # print("[OK] AudioFilesInfo 초기화 완료")
     
     def get_file_info(self, filename):
         """특정 오디오 파일 정보 반환"""
@@ -135,36 +135,38 @@ class AudioFilesInfo:
         """파일 정보 출력"""
         info = self.get_file_info(filename)
         if info:
-            print(f"파일: {filename}")
-            print(f"설명: {info['description']}")
-            print(f"재생시간: {info['duration']}ms")
-            print(f"카테고리: {info['category']}")
-            print(f"우선순위: {info['priority']}")
-            print(f"전체경로: {self.get_full_path(filename)}")
+            # print(f"파일: {filename}")
+            # print(f"설명: {info['description']}")
+            # print(f"재생시간: {info['duration']}ms")
+            # print(f"카테고리: {info['category']}")
+            # print(f"우선순위: {info['priority']}")
+            # print(f"전체경로: {self.get_full_path(filename)}")
+            pass
         else:
-            print(f"파일을 찾을 수 없습니다: {filename}")
+            # print(f"파일을 찾을 수 없습니다: {filename}")
+            pass
     
     def print_all_files(self):
         """모든 파일 정보 출력"""
-        print("=== 모든 오디오 파일 정보 ===")
+        # print("=== 모든 오디오 파일 정보 ===")
         for filename in self.list_all_files():
             self.print_file_info(filename)
-            print("-" * 40)
+            # print("-" * 40)
     
     def print_summary(self):
         """요약 정보 출력"""
-        print("=== 오디오 파일 요약 ===")
-        print(f"총 파일 수: {self.get_file_count()}")
-        print(f"음성 파일: {self.get_voice_file_count()}")
-        print(f"효과음 파일: {self.get_effect_file_count()}")
-        print(f"높은 우선순위: {len(self.get_high_priority_files())}")
-        print(f"중간 우선순위: {len(self.get_medium_priority_files())}")
-        print(f"낮은 우선순위: {len(self.get_low_priority_files())}")
+        # print("=== 오디오 파일 요약 ===")
+        # print(f"총 파일 수: {self.get_file_count()}")
+        # print(f"음성 파일: {self.get_voice_file_count()}")
+        # print(f"효과음 파일: {self.get_effect_file_count()}")
+        # print(f"높은 우선순위: {len(self.get_high_priority_files())}")
+        # print(f"중간 우선순위: {len(self.get_medium_priority_files())}")
+        # print(f"낮은 우선순위: {len(self.get_low_priority_files())}")
         
-        print("\n=== 디렉토리 구조 ===")
+        # print("\n=== 디렉토리 구조 ===")
         for category, path in self.audio_directories.items():
-            print(f"{category}: {path}")
-
+            # print(f"{category}: {path}")
+            pass
 # 전역 인스턴스 (지연 초기화)
 audio_files_info = None
 

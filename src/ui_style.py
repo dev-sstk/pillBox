@@ -46,7 +46,7 @@ class UIStyle:
         # 스타일 객체들 생성
         self._create_styles()
         
-        print("[OK] UIStyle 초기화 완료")
+        # print("[OK] UIStyle 초기화 완료")
     
     def _load_korean_font(self):
         """한글 폰트 로드"""
@@ -61,7 +61,7 @@ class UIStyle:
                 self.fonts['body'] = korean_font
                 self.fonts['caption'] = korean_font
                 self.fonts['korean'] = korean_font
-                print("[OK] font_notosans_kr_regular 폰트 로드 성공")
+                # print("[OK] font_notosans_kr_regular 폰트 로드 성공")
             else:
                 # 한글 폰트가 없으면 기본 폰트 사용
                 self.fonts['title'] = lv.font_default
@@ -69,10 +69,10 @@ class UIStyle:
                 self.fonts['body'] = lv.font_default
                 self.fonts['caption'] = lv.font_default
                 self.fonts['korean'] = lv.font_default
-                print("[WARN] font_notosans_kr_regular 폰트 없음, 기본 폰트 사용")
+                # print("[WARN] font_notosans_kr_regular 폰트 없음, 기본 폰트 사용")
                 
         except Exception as e:
-            print(f"[ERROR] 폰트 로드 실패: {e}")
+            # print(f"[ERROR] 폰트 로드 실패: {e}")
             # 오류 시 기본 폰트 사용
             self.fonts['title'] = lv.font_default
             self.fonts['subtitle'] = lv.font_default
@@ -105,7 +105,8 @@ class UIStyle:
             self.styles['card'].set_shadow_ofs_y(2)
         except AttributeError:
             # 그림자 메서드가 없으면 건너뛰기
-            print("[WARN] 그림자 스타일 메서드 지원 안됨, 건너뛰기")
+            # print("[WARN] 그림자 스타일 메서드 지원 안됨, 건너뛰기")
+            pass
         
         # 선택된 카드 스타일
         self.styles['card_selected'] = lv.style_t()
@@ -191,7 +192,7 @@ class UIStyle:
         except AttributeError:
             pass
         
-        print("[OK] UI 스타일 객체들 생성 완료")
+        # print("[OK] UI 스타일 객체들 생성 완료")
     
     def get_color(self, color_name):
         """색상 값 반환"""

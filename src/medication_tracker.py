@@ -21,7 +21,7 @@ class MedicationTracker:
             "empty": []          # 소진 알림
         }
         
-        print("[OK] MedicationTracker 초기화 완료")
+        # print("[OK] MedicationTracker 초기화 완료")
     
     def check_all_disks(self):
         """모든 디스크 상태 확인"""
@@ -56,7 +56,7 @@ class MedicationTracker:
             return status
             
         except Exception as e:
-            print(f"[ERROR] 디스크 상태 확인 실패: {e}")
+            # print(f"[ERROR] 디스크 상태 확인 실패: {e}")
             return None
     
     def check_disk_status(self, disk_num):
@@ -69,7 +69,7 @@ class MedicationTracker:
             disk_info = medication_data.get("disks", {}).get(str(disk_num), {})
             disk_name = disk_info.get("name", f"디스크 {disk_num}")
             
-            print(f"[DEBUG] 디스크 {disk_num} 상태 확인: {current_count}개, 임계값={self.low_stock_threshold}, 위험값={self.critical_threshold}")
+            # print(f"[DEBUG] 디스크 {disk_num} 상태 확인: {current_count}개, 임계값={self.low_stock_threshold}, 위험값={self.critical_threshold}")
             
             # 상태 결정
             if current_count <= 0:
@@ -80,7 +80,7 @@ class MedicationTracker:
                     "message": f"{disk_name} 소진됨 - 즉시 충전 필요",
                     "priority": "critical"
                 }
-                print(f"[DEBUG] 디스크 {disk_num}: 소진 상태 (0개)")
+                # print(f"[DEBUG] 디스크 {disk_num}: 소진 상태 (0개)")
             elif current_count <= self.critical_threshold:
                 status = "critical"
                 alert = {
@@ -89,7 +89,7 @@ class MedicationTracker:
                     "message": f"{disk_name} 위험 수준 ({current_count}개 남음)",
                     "priority": "high"
                 }
-                print(f"[DEBUG] 디스크 {disk_num}: 위험 상태 ({current_count}개)")
+                # print(f"[DEBUG] 디스크 {disk_num}: 위험 상태 ({current_count}개)")
             elif current_count <= self.low_stock_threshold:
                 status = "low_stock"
                 alert = {
@@ -98,11 +98,11 @@ class MedicationTracker:
                     "message": f"{disk_name} 부족 ({current_count}개 남음)",
                     "priority": "medium"
                 }
-                print(f"[DEBUG] 디스크 {disk_num}: 부족 상태 ({current_count}개)")
+                # print(f"[DEBUG] 디스크 {disk_num}: 부족 상태 ({current_count}개)")
             else:
                 status = "normal"
                 alert = None
-                print(f"[DEBUG] 디스크 {disk_num}: 정상 상태 ({current_count}개)")
+                # print(f"[DEBUG] 디스크 {disk_num}: 정상 상태 ({current_count}개)")
             
             return {
                 "disk_num": disk_num,
@@ -115,7 +115,7 @@ class MedicationTracker:
             }
             
         except Exception as e:
-            print(f"[ERROR] 디스크 {disk_num} 상태 확인 실패: {e}")
+            # print(f"[ERROR] 디스크 {disk_num} 상태 확인 실패: {e}")
             return {
                 "disk_num": disk_num,
                 "disk_name": f"디스크 {disk_num}",
@@ -147,7 +147,7 @@ class MedicationTracker:
             }
             
         except Exception as e:
-            print(f"[ERROR] 디스크 {disk_num} 약물 정보 조회 실패: {e}")
+            # print(f"[ERROR] 디스크 {disk_num} 약물 정보 조회 실패: {e}")
             return None
     
     def update_disk_medication(self, disk_num, new_count, medication_name=None):
@@ -164,12 +164,12 @@ class MedicationTracker:
                 if disk_key in medication_data["disks"]:
                     medication_data["disks"][disk_key]["name"] = medication_name
                     self.data_manager.save_medication_data(medication_data)
-                    print(f"[OK] 디스크 {disk_num} 약물 이름 업데이트: {medication_name}")
+                    # print(f"[OK] 디스크 {disk_num} 약물 이름 업데이트: {medication_name}")
             
             return success
             
         except Exception as e:
-            print(f"[ERROR] 디스크 {disk_num} 약물 정보 업데이트 실패: {e}")
+            # print(f"[ERROR] 디스크 {disk_num} 약물 정보 업데이트 실패: {e}")
             return False
     
     def get_refill_history(self, disk_num=None, limit=10):
@@ -187,7 +187,7 @@ class MedicationTracker:
             return refill_history[:limit]
             
         except Exception as e:
-            print(f"[ERROR] 리필 기록 조회 실패: {e}")
+            # print(f"[ERROR] 리필 기록 조회 실패: {e}")
             return []
     
     def get_dispense_history(self, disk_num=None, days=7):
@@ -210,7 +210,7 @@ class MedicationTracker:
             return recent_logs
             
         except Exception as e:
-            print(f"[ERROR] 배출 기록 조회 실패: {e}")
+            # print(f"[ERROR] 배출 기록 조회 실패: {e}")
             return []
     
     def get_medication_summary(self):
@@ -251,7 +251,7 @@ class MedicationTracker:
             return summary
             
         except Exception as e:
-            print(f"[ERROR] 약물 상태 요약 생성 실패: {e}")
+            # print(f"[ERROR] 약물 상태 요약 생성 실패: {e}")
             return None
     
     def check_low_stock_alerts(self):
@@ -268,7 +268,7 @@ class MedicationTracker:
             return alerts
             
         except Exception as e:
-            print(f"[ERROR] 부족 알림 확인 실패: {e}")
+            # print(f"[ERROR] 부족 알림 확인 실패: {e}")
             return []
     
     def get_next_refill_reminder(self):
@@ -295,7 +295,7 @@ class MedicationTracker:
             }
             
         except Exception as e:
-            print(f"[ERROR] 다음 리필 알림 계산 실패: {e}")
+            # print(f"[ERROR] 다음 리필 알림 계산 실패: {e}")
             return None
     
     def generate_medication_report(self):
@@ -328,5 +328,5 @@ class MedicationTracker:
             return report
             
         except Exception as e:
-            print(f"[ERROR] 약물 보고서 생성 실패: {e}")
+            # print(f"[ERROR] 약물 보고서 생성 실패: {e}")
             return None

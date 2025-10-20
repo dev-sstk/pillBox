@@ -54,8 +54,8 @@ class ButtonInterface:
         self.debounce_time = 50  # ms
         self.last_press_time = {key: 0 for key in self.callbacks.keys()}
         
-        print("[OK] ButtonInterface (74HC165) 초기화 완료")
-        print(f"핀 설정: PL={self.pload_pin}, DATA={self.data_pin}, CLK={self.clock_pin}")
+        # print("[OK] ButtonInterface (74HC165) 초기화 완료")
+        # print(f"핀 설정: PL={self.pload_pin}, DATA={self.data_pin}, CLK={self.clock_pin}")
     
     def read_shift_regs(self):
         """SN74HC165에서 직렬 데이터 읽기"""
@@ -118,22 +118,24 @@ class ButtonInterface:
             # 디바운싱 체크
             if time.ticks_diff(current_time, self.last_press_time[button_id]) > self.debounce_time:
                 self.last_press_time[button_id] = current_time
-                print(f"[BTN] 버튼 {button_id} ({button_name}) 눌림")
+                # print(f"[BTN] 버튼 {button_id} ({button_name}) 눌림")
                 
                 # 콜백 함수 호출
                 if self.callbacks[button_id]:
                     try:
                         self.callbacks[button_id]()
                     except Exception as e:
-                        print(f"[ERROR] 버튼 {button_id} 콜백 실행 오류: {e}")
+                        # print(f"[ERROR] 버튼 {button_id} 콜백 실행 오류: {e}")
+                        pass
     
     def set_callback(self, button_id, callback):
         """버튼 콜백 함수 설정"""
         if button_id in self.callbacks:
             self.callbacks[button_id] = callback
-            print(f"[OK] 버튼 {button_id} 콜백 설정 완료")
+            # print(f"[OK] 버튼 {button_id} 콜백 설정 완료")
         else:
-            print(f"[ERROR] 잘못된 버튼 ID: {button_id}")
+            # print(f"[ERROR] 잘못된 버튼 ID: {button_id}")
+            pass
     
     def get_button_state(self, button_id):
         """버튼 상태 반환"""
@@ -184,9 +186,9 @@ class ButtonInterface:
     
     def test_buttons(self):
         """버튼 테스트 함수"""
-        print("=== 74HC165 버튼 테스트 시작 ===")
-        print("버튼을 눌러보세요. Ctrl+C로 중단하세요.")
-        print("=" * 50)
+        # print("=== 74HC165 버튼 테스트 시작 ===")
+        # print("버튼을 눌러보세요. Ctrl+C로 중단하세요.")
+        # print("=" * 50)
         
         try:
             count = 0
@@ -195,18 +197,20 @@ class ButtonInterface:
                     count += 1
                     # 변경된 버튼 상태 출력
                     info = self.get_shift_register_info()
-                    print(f"[{count}] Raw: {info['binary']} ({info['hex']})")
+                    # print(f"[{count}] Raw: {info['binary']} ({info['hex']})")
                     
                     # 각 버튼 상태 출력
                     states = self.get_all_button_states()
                     for btn_id, state in states.items():
                         if state:
-                            print(f"  {btn_id} 버튼 눌림")
+                            # print(f"  {btn_id} 버튼 눌림")
+                            pass
                 
                 time.sleep_ms(10)
                 
         except KeyboardInterrupt:
-            print(f"\n버튼 테스트 중단됨 (총 {count}회 변경 감지)")
+            # print(f"\n버튼 테스트 중단됨 (총 {count}회 변경 감지)")
+            pass
     
     def display_pin_values(self, pin_values):
         """읽은 비트 값을 핀별로 출력"""
@@ -221,8 +225,8 @@ class ButtonInterface:
             "LIMIT SW4"       # Pin 7
         ]
         
-        print("Pin States:")
+        # print("Pin States:")
         for i in range(self.DATA_WIDTH):
             state = "HIGH" if ((pin_values >> i) & 1) else "LOW"
-            print(f"  {input_names[i]}: {state}")
-        print("")
+            # print(f"  {input_names[i]}: {state}")
+        # print("")

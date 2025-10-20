@@ -19,7 +19,7 @@ class LEDController:
         # LED 핀 초기화
         self._init_led_pins()
         
-        print("[OK] LEDController 초기화 완료")
+        # print("[OK] LEDController 초기화 완료")
     
     def _init_led_pins(self):
         """LED 핀 초기화"""
@@ -32,10 +32,11 @@ class LEDController:
             # self.status_led_pin = Pin(3, Pin.OUT)
             # self.status_led_pin.value(0)
             
-            print("[OK] LED 핀 초기화 완료")
+            # print("[OK] LED 핀 초기화 완료")
             
         except Exception as e:
-            print(f"[WARN] LED 핀 초기화 실패: {e}")
+            # print(f"[WARN] LED 핀 초기화 실패: {e}")
+            pass
             self.led_enabled = False
     
     def show_alarm_led(self):
@@ -43,19 +44,21 @@ class LEDController:
         try:
             # LED 핀이 없으면 다시 초기화 시도
             if not self.alarm_led_pin:
-                print("[WARN] LED 핀 없음 - 재초기화 시도")
+                # print("[WARN] LED 핀 없음 - 재초기화 시도")
                 self._init_led_pins()
             
             if self.alarm_led_pin:
                 self.alarm_led_pin.value(1)
                 self.alarm_led_state = True
-                print("💡 알람 LED 켜짐")
+                # print("💡 알람 LED 켜짐")
             else:
-                print("💡 알람 LED 켜짐 (시뮬레이션 - 핀 초기화 실패)")
+                # print("💡 알람 LED 켜짐 (시뮬레이션 - 핀 초기화 실패)")
+                pass
             
         except Exception as e:
-            print(f"[ERROR] 알람 LED 켜기 실패: {e}")
-            print("💡 알람 LED 켜짐 (시뮬레이션)")
+            # print(f"[ERROR] 알람 LED 켜기 실패: {e}")
+            # print("💡 알람 LED 켜짐 (시뮬레이션)")
+            pass
     
     def hide_alarm_led(self):
         """알람 LED 끄기"""
@@ -63,12 +66,13 @@ class LEDController:
             if self.alarm_led_pin:
                 self.alarm_led_pin.value(0)
                 self.alarm_led_state = False
-                print("💡 알람 LED 꺼짐")
+                # print("💡 알람 LED 꺼짐")
             else:
-                print("💡 알람 LED 꺼짐 (시뮬레이션 - 핀 없음)")
+                # print("💡 알람 LED 꺼짐 (시뮬레이션 - 핀 없음)")
+                pass
             
         except Exception as e:
-            print(f"[ERROR] 알람 LED 끄기 실패: {e}")
-            print("💡 알람 LED 꺼짐 (시뮬레이션)")
-    
+            # print(f"[ERROR] 알람 LED 끄기 실패: {e}")
+            # print("💡 알람 LED 꺼짐 (시뮬레이션)")
+            pass
     

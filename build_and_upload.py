@@ -7,7 +7,9 @@ mpy 빌드 후 mpremote로 ESP32에 업로드하는 스크립트
 3. mpremote를 사용하여 ESP32에 업로드
 4. ESP32 파일 목록 확인
 5. ESP32 파일 전체 삭제
-6. 기존 upload_to_esp32.py의 모든 기능 포함
+6. 디스크 상태 초기화 (disk_states.json 업로드)
+7. 오디오 파일 업로드 (dispense_medicine.wav, take_medicine.wav)
+8. 기존 upload_to_esp32.py의 모든 기능 포함
 """
 
 import os
@@ -697,6 +699,71 @@ def delete_all_esp32_files(port):
     
     return deleted_count > 0
 
+def upload_audio_files(port):
+    """오디오 파일들 업로드 (dispense_medicine.wav, take_medicine.wav)"""
+    print("\n" + "=" * 60)
+    print("오디오 파일 업로드")
+    print("=" * 60)
+    
+    try:
+        # 업로드할 오디오 파일들
+        audio_files = [
+            ("src/wav/dispense_medicine.wav", "/wav/dispense_medicine.wav"),
+            ("src/wav/take_medicine.wav", "/wav/take_medicine.wav")
+        ]
+        
+        # wav 디렉토리 생성
+        print("📁 /wav 디렉토리 생성 중...")
+        if not create_directory(port, "/wav"):
+            print("⚠️  /wav 디렉토리 생성 실패 (이미 존재할 수 있음)")
+        
+        time.sleep(0.5)
+        
+        # 파일 업로드
+        success_count = 0
+        for local_path, remote_path in audio_files:
+            local_file = Path(local_path)
+            
+            if not local_file.exists():
+                print(f"❌ 파일을 찾을 수 없습니다: {local_path}")
+                continue
+            
+            print(f"\n📤 업로드: {local_file.name} -> {remote_path}")
+            
+            # 파일 크기 표시
+            file_size = local_file.stat().st_size
+            size_kb = file_size / 1024
+            print(f"  📊 파일 크기: {size_kb:.1f} KB")
+            
+            # mpremote로 파일 업로드
+            if upload_file(port, str(local_file), remote_path):
+                print(f"  ✅ {local_file.name} 업로드 완료")
+                success_count += 1
+            else:
+                print(f"  ❌ {local_file.name} 업로드 실패")
+            
+            time.sleep(0.2)
+        
+        # 결과 요약
+        print(f"\n" + "=" * 60)
+        print("오디오 파일 업로드 완료")
+        print("=" * 60)
+        print(f"✅ 성공: {success_count}/{len(audio_files)}개 파일")
+        
+        if success_count == len(audio_files):
+            print("🎵 모든 오디오 파일이 성공적으로 업로드되었습니다!")
+            print("📋 업로드된 파일:")
+            for _, remote_path in audio_files:
+                print(f"  - {remote_path}")
+            return True
+        else:
+            print("⚠️  일부 파일 업로드에 실패했습니다.")
+            return False
+            
+    except Exception as e:
+        print(f"❌ 오디오 파일 업로드 중 오류 발생: {e}")
+        return False
+
 def reset_disk_states(port):
     """디스크 상태 초기화 (disk_states.json 업로드)"""
     print("\n" + "=" * 60)
@@ -705,7 +772,7 @@ def reset_disk_states(port):
     
     try:
         # disk_states.json 파일 경로 확인
-        disk_states_file = Path("src/disk_states.json")
+        disk_states_file = Path("src/data/disk_states.json")
         
         if not disk_states_file.exists():
             print(f"❌ disk_states.json 파일을 찾을 수 없습니다: {disk_states_file}")
@@ -718,14 +785,14 @@ def reset_disk_states(port):
         print(f"\n📤 disk_states.json 업로드 중...")
         import subprocess
         
-        cmd = ["mpremote", "connect", port, "cp", ".\\src\\disk_states.json", "/disk_states.json"]
+        cmd = ["mpremote", "connect", port, "cp", ".\\src\\disk_states.json", "/data/disk_states.json"]
         print(f"실행 명령: {' '.join(cmd)}")
         
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         
         if result.returncode == 0:
             print(f"✅ 디스크 상태 초기화 완료!")
-            print(f"📋 업로드된 파일: /disk_states.json")
+            print(f"📋 업로드된 파일: /data/disk_states.json")
             print(f"🔄 모든 디스크의 충전 상태가 0으로 초기화되었습니다.")
             return True
         else:
@@ -864,8 +931,9 @@ def main():
     print("  5. ESP32 파일 목록 확인")
     print("  6. ESP32 파일 전체 삭제")
     print("  7. 디스크 상태 초기화 (disk_states.json 업로드)")
+    print("  8. 오디오 파일 업로드 (dispense_medicine.wav, take_medicine.wav)")
     
-    choice = input("\n선택 (1-7, Enter=1): ").strip()
+    choice = input("\n선택 (1-8, Enter=1): ").strip()
     if choice == "":
         choice = "1"
     
@@ -955,6 +1023,15 @@ def main():
         
         print(f"\n선택된 포트: {port}")
         reset_disk_states(port)
+    
+    elif choice == "8":
+        # 오디오 파일 업로드
+        port = find_serial_port()
+        if not port:
+            return
+        
+        print(f"\n선택된 포트: {port}")
+        upload_audio_files(port)
 
 if __name__ == "__main__":
     try:

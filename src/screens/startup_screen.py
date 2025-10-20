@@ -169,6 +169,7 @@ class StartupScreen:
                 self.calibration_done = True
             else:
                 self.calibration_done = True
+                pass
                 
         except Exception as e:
             motor_system.motor_controller.stop_all_motors()
@@ -177,26 +178,26 @@ class StartupScreen:
     
     def _request_screen_transition(self):
         """화면 전환 요청 - ScreenManager에 위임"""
-        print("[INFO] 화면 전환 요청")
+        # print("[INFO] 화면 전환 요청")
         
         # ScreenManager에 화면 전환 요청 (올바른 책임 분리)
         try:
             self.screen_manager.transition_to('wifi_scan')
-            print("[OK] 화면 전환 요청 완료")
+            # print("[OK] 화면 전환 요청 완료")
         except Exception as e:
-            print(f"[ERROR] 화면 전환 요청 실패: {e}")
+            # print(f"[ERROR] 화면 전환 요청 실패: {e}")
             import sys
             sys.print_exception(e)
         
         # 화면 전환 (올바른 책임 분리 - ScreenManager가 처리)
-        print("[INFO] 스타트업 화면 완료 - ScreenManager에 완료 신호 전송")
+        # print("[INFO] 스타트업 화면 완료 - ScreenManager에 완료 신호 전송")
         
         # ScreenManager에 스타트업 완료 신호 전송 (올바른 책임 분리)
         try:
             self.screen_manager.startup_completed()
-            print("[OK] 스타트업 완료 신호 전송 완료")
+            # print("[OK] 스타트업 완료 신호 전송 완료")
         except Exception as e:
-            print(f"[ERROR] 스타트업 완료 신호 전송 실패: {e}")
+            # print(f"[ERROR] 스타트업 완료 신호 전송 실패: {e}")
             import sys
             sys.print_exception(e)
     
@@ -207,11 +208,12 @@ class StartupScreen:
             
             # MicroPython 메모리 정보만 확인
             mem_info = micropython.mem_info()
-            print(f"[{label}] MicroPython 메모리:")
-            print(f"  {mem_info}")
+            # print(f"[{label}] MicroPython 메모리:")
+            # print(f"  {mem_info}")
                 
         except Exception as e:
-            print(f"[WARN] 메모리 모니터 실패: {e}")
+            # print(f"[WARN] 메모리 모니터 실패: {e}")
+            pass
     
     def _cleanup_lvgl(self):
         """화면 전환 전 LVGL 객체 안전 정리 (ChatGPT 추천 방법)"""
@@ -219,7 +221,7 @@ class StartupScreen:
         import gc
         import time
         
-        print("[INFO] StartupScreen LVGL 정리 시작")
+        # print("[INFO] StartupScreen LVGL 정리 시작")
         
         # 메모리 모니터링 (정리 전)
         self._monitor_memory("BEFORE CLEANUP")
@@ -233,16 +235,18 @@ class StartupScreen:
                         child = self.screen_obj.get_child(0)
                         if child:
                             child.delete()
-                    print("[OK] LVGL 자식 객체 삭제 완료")
+                    # print("[OK] LVGL 자식 객체 삭제 완료")
                 except Exception as e:
-                    print(f"[WARN] 자식 삭제 중 오류: {e}")
-                
+                    # print(f"[WARN] 자식 삭제 중 오류: {e}")
+                    pass
                 # 화면 자체 삭제
                 try:
                     self.screen_obj.delete()
-                    print("[OK] 화면 객체 삭제 완료")
+                    # print("[OK] 화면 객체 삭제 완료")
                 except Exception as e:
-                    print(f"[WARN] 화면 객체 삭제 실패: {e}")
+                    # print(f"[WARN] 화면 객체 삭제 실패: {e}")
+                    pass
+                pass
                 
                 self.screen_obj = None  # Python 참조 제거
             
@@ -264,7 +268,8 @@ class StartupScreen:
             # 메모리 모니터링 (정리 후)
             self._monitor_memory("AFTER CLEANUP")
             
-            print("[OK] StartupScreen LVGL 정리 완료")
+            # print("[OK] StartupScreen LVGL 정리 완료")
             
         except Exception as e:
-            print(f"[ERROR] LVGL 정리 실패: {e}")
+            # print(f"[ERROR] LVGL 정리 실패: {e}")
+            pass

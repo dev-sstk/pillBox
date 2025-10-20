@@ -28,13 +28,13 @@ class WifiPasswordScreen:
         self._initialized = False
         
         log_memory("WifiPasswordScreen 초기화 완료")
-        print("[OK] WifiPasswordScreen 초기화 완료 (메모리 최적화 적용)")
+        # print("[OK] WifiPasswordScreen 초기화 완료 (메모리 최적화 적용)")
     
     def _get_ui_style(self):
         """UI 스타일 지연 로딩"""
         if self.ui_style is None:
             self.ui_style = UIStyle()
-            print("[DEBUG] UI 스타일 지연 로딩 완료")
+            # print("[DEBUG] UI 스타일 지연 로딩 완료")
         return self.ui_style
     
     def _create_modern_screen(self):
@@ -109,7 +109,8 @@ class WifiPasswordScreen:
             self.hints_label.set_style_text_color(lv.color_hex(0x8E8E93), 0)
             self.hints_label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
         except Exception as e:
-            print(f"  [WARN] 기본 버튼 힌트 생성 실패: {e}")
+            # print(f"  [WARN] 기본 버튼 힌트 생성 실패: {e}")
+            pass
         
     
     def _create_network_title_area(self):
@@ -147,7 +148,8 @@ class WifiPasswordScreen:
                 self.network_title_text.set_text(f"Wi-Fi 비밀번호\n{self.selected_network}")
                 self.network_title_text.align(lv.ALIGN.TOP_MID, 0, 5)
             except Exception as e2:
-                print(f"  [ERROR] 기본 네트워크 제목 생성도 실패: {e2}")
+                # print(f"  [ERROR] 기본 네트워크 제목 생성도 실패: {e2}")
+                pass
     
     def _create_password_area(self):
         """비밀번호 입력 영역 생성"""
@@ -213,7 +215,7 @@ class WifiPasswordScreen:
             
             
         except Exception as e:
-            print(f"  [ERROR] 비밀번호 입력 영역 생성 실패: {e}")
+            # print(f"  [ERROR] 비밀번호 입력 영역 생성 실패: {e}")
             import sys
             sys.print_exception(e)
             # 기본 텍스트 영역 생성
@@ -224,13 +226,14 @@ class WifiPasswordScreen:
                 self.textarea.set_placeholder_text("Password")
                 self.textarea.set_password_mode(True)
             except Exception as e2:
-                print(f"  [ERROR] 기본 텍스트 영역 생성도 실패: {e2}")
+                # print(f"  [ERROR] 기본 텍스트 영역 생성도 실패: {e2}")
+                pass
     
     def _create_keyboard_area(self):
         """텍스트 기반 키보드 영역 생성"""
         
         try:
-            print("  [INFO] 키보드 컨테이너 생성 중...")
+            # print("  [INFO] 키보드 컨테이너 생성 중...")
             # 키보드 컨테이너 생성
             self.keyboard_container = lv.obj(self.main_container)
             self.keyboard_container.set_size(160, 60)  # 높이 증가로 키보드 잘림 방지
@@ -275,8 +278,8 @@ class WifiPasswordScreen:
             
             
         except Exception as e:
-            print(f"  [ERROR] 텍스트 기반 키보드 생성 실패: {e}")
-            print(f"  [INFO] 에러 타입: {type(e).__name__}")
+            # print(f"  [ERROR] 텍스트 기반 키보드 생성 실패: {e}")
+            # print(f"  [INFO] 에러 타입: {type(e).__name__}")
             import sys
             sys.print_exception(e)
     
@@ -315,7 +318,7 @@ class WifiPasswordScreen:
             
             
         except Exception as e:
-            print(f"  [ERROR] 키보드 표시 실패: {e}")
+            # print(f"  [ERROR] 키보드 표시 실패: {e}")
             import sys
             sys.print_exception(e)
     
@@ -325,7 +328,7 @@ class WifiPasswordScreen:
         self.selected_network = network_name
         if hasattr(self, 'network_title_text'):
             self.network_title_text.set_text(network_name)
-        print(f"네트워크 표시 업데이트: {network_name}")
+        # print(f"네트워크 표시 업데이트: {network_name}")
     
     def show(self):
         """화면 표시"""
@@ -343,13 +346,13 @@ class WifiPasswordScreen:
                 self._create_modern_screen()
                 self._initialized = True
             except Exception as e:
-                print(f"[ERROR] {self.screen_name} 지연 초기화 실패: {e}")
+                # print(f"[ERROR] {self.screen_name} 지연 초기화 실패: {e}")
                 # [FAST] 메모리 할당 실패 시 추가 메모리 정리
-                print(f"🧹 지연 초기화 실패 후 추가 메모리 정리...")
+                # print(f"🧹 지연 초기화 실패 후 추가 메모리 정리...")
                 for i in range(5):
                     gc.collect()
                     time.sleep(0.01)
-                print(f"[OK] 추가 메모리 정리 완료")
+                # print(f"[OK] 추가 메모리 정리 완료")
                 
                 # 기본 화면으로 대체
                 try:
@@ -378,10 +381,11 @@ class WifiPasswordScreen:
                 try:
                     lv.disp_t.flush_ready(None)
                 except AttributeError:
-                    print("[WARN] 디스플레이 플러시 오류 (무시): 'module' object has no attribute 'disp_t'")
-            
+                    # print("[WARN] 디스플레이 플러시 오류 (무시): 'module' object has no attribute 'disp_t'")
+                    pass
         else:
-            print(f"[ERROR] {self.screen_name} 화면 객체가 없음")
+            # print(f"[ERROR] {self.screen_name} 화면 객체가 없음")
+            pass
     
     def update(self):
         # 현재는 특별한 업데이트 로직이 없음
@@ -403,99 +407,100 @@ class WifiPasswordScreen:
                 time.sleep(1)
                 
                 # WiFi 연결 성공 시 다음 화면으로 전환
-                print("[INFO] WiFi 연결 성공 - 다음 화면으로 전환")
+                # print("[INFO] WiFi 연결 성공 - 다음 화면으로 전환")
                 self._request_screen_transition('meal_time')
             else:
-                print("[ERROR] WiFi 연결 실패!")
+                # print("[ERROR] WiFi 연결 실패!")
                 # 연결 실패 시 현재 화면에 머물기 (팝업 제거)
+                pass
                 
         except Exception as e:
-            print(f"[ERROR] WiFi 연결 오류: {e}")
+            # print(f"[ERROR] WiFi 연결 오류: {e}")
             # 연결 오류 시 현재 화면에 머물기 (팝업 제거)
-    
+            pass
     
     
     def on_button_a(self):
         """버튼 A - 키보드 왼쪽으로 이동"""
         try:
-            print("[DEBUG] WifiPasswordScreen on_button_a 호출됨")
+            # print("[DEBUG] WifiPasswordScreen on_button_a 호출됨")
             
             # 화면이 초기화되었는지 확인
             if not hasattr(self, 'keyboard_layouts') or not hasattr(self, 'keyboard_mode'):
-                print("[WARN] WifiPasswordScreen이 아직 초기화되지 않음, 버튼 A 무시")
+                # print("[WARN] WifiPasswordScreen이 아직 초기화되지 않음, 버튼 A 무시")
                 return
             
             # 추가 안전성 검사
             if not hasattr(self, 'selected_row') or not hasattr(self, 'selected_col'):
-                print("[WARN] WifiPasswordScreen 키보드 상태가 초기화되지 않음, 버튼 A 무시")
+                # print("[WARN] WifiPasswordScreen 키보드 상태가 초기화되지 않음, 버튼 A 무시")
                 return
             
-            print("[DEBUG] WifiPasswordScreen 키보드 커서 왼쪽으로 이동")
+            # print("[DEBUG] WifiPasswordScreen 키보드 커서 왼쪽으로 이동")
             self._move_keyboard_cursor('left')
         except Exception as e:
-            print(f"[ERROR] 버튼 A 처리 실패: {e}")
+            # print(f"[ERROR] 버튼 A 처리 실패: {e}")
             import sys
             sys.print_exception(e)
     
     def on_button_b(self):
         """버튼 B - 키보드 오른쪽으로 이동"""
         try:
-            print("[DEBUG] WifiPasswordScreen on_button_b 호출됨")
+            # print("[DEBUG] WifiPasswordScreen on_button_b 호출됨")
             
             # 화면이 초기화되었는지 확인
             if not hasattr(self, 'keyboard_layouts') or not hasattr(self, 'keyboard_mode'):
-                print("[WARN] WifiPasswordScreen이 아직 초기화되지 않음, 버튼 B 무시")
+                # print("[WARN] WifiPasswordScreen이 아직 초기화되지 않음, 버튼 B 무시")
                 return
             
             # 추가 안전성 검사
             if not hasattr(self, 'selected_row') or not hasattr(self, 'selected_col'):
-                print("[WARN] WifiPasswordScreen 키보드 상태가 초기화되지 않음, 버튼 B 무시")
+                # print("[WARN] WifiPasswordScreen 키보드 상태가 초기화되지 않음, 버튼 B 무시")
                 return
             
-            print("[DEBUG] WifiPasswordScreen 키보드 커서 오른쪽으로 이동")
+            # print("[DEBUG] WifiPasswordScreen 키보드 커서 오른쪽으로 이동")
             self._move_keyboard_cursor('right')
         except Exception as e:
-            print(f"[ERROR] 버튼 B 처리 실패: {e}")
+            # print(f"[ERROR] 버튼 B 처리 실패: {e}")
             import sys
             sys.print_exception(e)
     
     def on_button_c(self):
         """버튼 C - 완료/뒤로가기"""
         try:
-            print("[DEBUG] WifiPasswordScreen on_button_c 호출됨")
-            print("완료/뒤로가기")
+            # print("[DEBUG] WifiPasswordScreen on_button_c 호출됨")
+            # print("완료/뒤로가기")
             
             # 비밀번호가 입력되어 있으면 연결 시도
             if hasattr(self, '_password') and self._password:
-                print("[DEBUG] 비밀번호가 입력됨, 연결 시도")
+                # print("[DEBUG] 비밀번호가 입력됨, 연결 시도")
                 self._attempt_connection()
             else:
-                print("[DEBUG] 비밀번호가 입력되지 않음, wifi_scan으로 돌아가기")
+                # print("[DEBUG] 비밀번호가 입력되지 않음, wifi_scan으로 돌아가기")
                 self._request_screen_transition('wifi_scan')
         except Exception as e:
-            print(f"[ERROR] 버튼 C 처리 실패: {e}")
+            # print(f"[ERROR] 버튼 C 처리 실패: {e}")
             import sys
             sys.print_exception(e)
     
     def on_button_d(self):
         """버튼 D - 키보드 키 선택/입력"""
         try:
-            print("[DEBUG] WifiPasswordScreen on_button_d 호출됨")
+            # print("[DEBUG] WifiPasswordScreen on_button_d 호출됨")
             
             # 화면이 초기화되었는지 확인
             if not hasattr(self, 'keyboard_layouts') or not hasattr(self, 'keyboard_mode'):
-                print("[WARN] WifiPasswordScreen이 아직 초기화되지 않음, 버튼 D 무시")
+                # print("[WARN] WifiPasswordScreen이 아직 초기화되지 않음, 버튼 D 무시")
                 return
             
             # 추가 안전성 검사
             if not hasattr(self, 'selected_row') or not hasattr(self, 'selected_col'):
-                print("[WARN] WifiPasswordScreen 키보드 상태가 초기화되지 않음, 버튼 D 무시")
+                # print("[WARN] WifiPasswordScreen 키보드 상태가 초기화되지 않음, 버튼 D 무시")
                 return
             
-            print("[DEBUG] WifiPasswordScreen 키보드 키 선택/입력")
+            # print("[DEBUG] WifiPasswordScreen 키보드 키 선택/입력")
             self._press_current_keyboard_key()
         except Exception as e:
-            print(f"[ERROR] 버튼 D 처리 실패: {e}")
+            # print(f"[ERROR] 버튼 D 처리 실패: {e}")
             import sys
             sys.print_exception(e)
     
@@ -546,7 +551,7 @@ class WifiPasswordScreen:
             current_key = layout[self.selected_row][self.selected_col]
             
         except Exception as e:
-            print(f"  [ERROR] 키보드 커서 이동 실패: {e}")
+            # print(f"  [ERROR] 키보드 커서 이동 실패: {e}")
             import sys
             sys.print_exception(e)
     
@@ -603,7 +608,7 @@ class WifiPasswordScreen:
             
             
         except Exception as e:
-            print(f"  [ERROR] 키 입력 처리 실패: {e}")
+            # print(f"  [ERROR] 키 입력 처리 실패: {e}")
             import sys
             sys.print_exception(e)
     
@@ -640,7 +645,7 @@ class WifiPasswordScreen:
             
             
         except Exception as e:
-            print(f"  [ERROR] 키보드 다시 그리기 실패: {e}")
+            # print(f"  [ERROR] 키보드 다시 그리기 실패: {e}")
             import sys
             sys.print_exception(e)
     
@@ -655,16 +660,16 @@ class WifiPasswordScreen:
                 # 미리보기 라벨에 현재 선택된 문자 표시
                 self.preview_label.set_text(current_char)
         except Exception as e:
-            print(f"  [ERROR] 미리보기 업데이트 실패: {e}")
-    
+            # print(f"  [ERROR] 미리보기 업데이트 실패: {e}")
+            pass
     def _update_selection_display(self):
         """선택 표시 업데이트 (미리보기 라벨만 업데이트)"""
         try:
             # 미리보기 라벨만 업데이트 (키보드는 다시 그리지 않음)
             self._update_preview_label()
         except Exception as e:
-            print(f"  [ERROR] 선택 업데이트 실패: {e}")
-    
+            # print(f"  [ERROR] 선택 업데이트 실패: {e}")
+            pass
     def _handle_backspace(self):
         """백스페이스 처리"""
         
@@ -678,12 +683,14 @@ class WifiPasswordScreen:
                     try:
                         self.textarea.set_text(self._internal_text)
                     except Exception as e:
-                        print(f"  [WARN] textarea 업데이트 실패: {e}")
+                        # print(f"  [WARN] textarea 업데이트 실패: {e}")
+                        pass
             else:
-                print("  [INFO] 백스페이스: 텍스트가 비어있음")
+                # print("  [INFO] 백스페이스: 텍스트가 비어있음")
+                pass
                 
         except Exception as e:
-            print(f"  [ERROR] 백스페이스 처리 실패: {e}")
+            # print(f"  [ERROR] 백스페이스 처리 실패: {e}")
             import sys
             sys.print_exception(e)
     
@@ -698,8 +705,8 @@ class WifiPasswordScreen:
                 try:
                     current_text = self.textarea.get_text()
                 except Exception as text_e:
-                    print(f"  [WARN] textarea 텍스트 가져오기 실패: {text_e}")
-            
+                    # print(f"  [WARN] textarea 텍스트 가져오기 실패: {text_e}")
+                    pass
             # 내부 텍스트도 확인 (더 길면 우선 사용)
             if hasattr(self, '_internal_text'):
                 if len(self._internal_text) > len(current_text):
@@ -719,7 +726,7 @@ class WifiPasswordScreen:
                 self._attempt_connection()
                 
         except Exception as e:
-            print(f"  [ERROR] OK 버튼 처리 실패: {e}")
+            # print(f"  [ERROR] OK 버튼 처리 실패: {e}")
             import sys
             sys.print_exception(e)
     
@@ -739,10 +746,10 @@ class WifiPasswordScreen:
                 try:
                     self.textarea.set_text(self._internal_text)
                 except Exception as e:
-                    print(f"  [WARN] textarea 업데이트 실패: {e}")
-                
+                    # print(f"  [WARN] textarea 업데이트 실패: {e}")
+                    pass
         except Exception as e:
-            print(f"  [ERROR] 문자 추가 실패: {e}")
+            # print(f"  [ERROR] 문자 추가 실패: {e}")
             import sys
             sys.print_exception(e)
     
@@ -758,7 +765,7 @@ class WifiPasswordScreen:
             self.hints_label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
             
         except Exception as e:
-            print(f"  [ERROR] 간단한 버튼 힌트 생성 중 오류: {e}")
+            # print(f"  [ERROR] 간단한 버튼 힌트 생성 중 오류: {e}")
             import sys
             sys.print_exception(e)
     
@@ -787,52 +794,52 @@ class WifiPasswordScreen:
             
             
         except Exception as e:
-            print(f"  [ERROR] 버튼 힌트 영역 생성 중 오류: {e}")
+            # print(f"  [ERROR] 버튼 힌트 영역 생성 중 오류: {e}")
             import sys
             sys.print_exception(e)
     
     def _cleanup_references(self):
         """참조 정리 - 메모리 최적화"""
         try:
-            print("[INFO] WifiPasswordScreen 참조 정리 시작...")
+            # print("[INFO] WifiPasswordScreen 참조 정리 시작...")
             
             # UI 스타일 참조 정리
             if self.ui_style:
                 self.ui_style = None
-                print("[DEBUG] UI 스타일 참조 정리")
+                # print("[DEBUG] UI 스타일 참조 정리")
             
             # 화면 객체 참조 정리
             if self.screen_obj:
                 self.screen_obj = None
-                print("[DEBUG] 화면 객체 참조 정리")
+                # print("[DEBUG] 화면 객체 참조 정리")
             
-            print("[OK] WifiPasswordScreen 참조 정리 완료")
+            # print("[OK] WifiPasswordScreen 참조 정리 완료")
             
         except Exception as e:
-            print(f"[WARN] 참조 정리 실패: {e}")
-    
+            # print(f"[WARN] 참조 정리 실패: {e}")
+            pass
     def _request_screen_transition(self, screen_name):
         """화면 전환 요청 - ScreenManager에 위임 (StartupScreen과 동일한 방식)"""
-        print(f"[INFO] 화면 전환 요청: {screen_name}")
+        # print(f"[INFO] 화면 전환 요청: {screen_name}")
         
         # ScreenManager에 화면 전환 요청 (올바른 책임 분리)
         try:
             self.screen_manager.transition_to(screen_name)
-            print(f"[OK] 화면 전환 요청 완료: {screen_name}")
+            # print(f"[OK] 화면 전환 요청 완료: {screen_name}")
         except Exception as e:
-            print(f"[ERROR] 화면 전환 요청 실패: {e}")
+            # print(f"[ERROR] 화면 전환 요청 실패: {e}")
             import sys
             sys.print_exception(e)
         
         # 화면 전환 (올바른 책임 분리 - ScreenManager가 처리)
-        print("[INFO] WiFi 비밀번호 입력 완료 - ScreenManager에 완료 신호 전송")
+        # print("[INFO] WiFi 비밀번호 입력 완료 - ScreenManager에 완료 신호 전송")
         
         # ScreenManager에 WiFi 비밀번호 입력 완료 신호 전송 (올바른 책임 분리)
         try:
             self.screen_manager.wifi_password_completed(screen_name)
-            print("[OK] WiFi 비밀번호 입력 완료 신호 전송 완료")
+            # print("[OK] WiFi 비밀번호 입력 완료 신호 전송 완료")
         except Exception as e:
-            print(f"[ERROR] WiFi 비밀번호 입력 완료 신호 전송 실패: {e}")
+            # print(f"[ERROR] WiFi 비밀번호 입력 완료 신호 전송 실패: {e}")
             import sys
             sys.print_exception(e)
 
@@ -841,15 +848,15 @@ class WifiPasswordScreen:
         try:
             from memory_utils import quick_garbage_collection
             
-            print("[INFO] WifiPasswordScreen 강제 가비지 컬렉션 시작")
+            # print("[INFO] WifiPasswordScreen 강제 가비지 컬렉션 시작")
             
             # 표준화된 빠른 가비지 컬렉션 사용
             result = quick_garbage_collection("WifiPasswordScreen")
             
-            print("[OK] WifiPasswordScreen 강제 가비지 컬렉션 완료")
+            # print("[OK] WifiPasswordScreen 강제 가비지 컬렉션 완료")
             return result
             
         except Exception as e:
-            print(f"[ERROR] 가비지 컬렉션 실패: {e}")
+            # print(f"[ERROR] 가비지 컬렉션 실패: {e}")
             return None
     

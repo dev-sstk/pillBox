@@ -31,34 +31,34 @@ class MealTimeScreen:
         self.meal_labels = {}
         self.current_selection = 0  # 현재 선택된 항목 인덱스 (0: 아침, 1: 점심, 2: 저녁)
         
-        print(f"[INFO] {self.screen_name} 화면 초기화 완료")
+        # print(f"[INFO] {self.screen_name} 화면 초기화 완료")
     
     def create_screen(self):
         """화면 생성"""
-        print(f"[INFO] {self.screen_name} 화면 생성 시작...")
+        # print(f"[INFO] {self.screen_name} 화면 생성 시작...")
         
         try:
             # UI 스타일 초기화
             self.ui_style = UIStyle()
-            print(f"[OK] UI 스타일 초기화 완료")
+            # print(f"[OK] UI 스타일 초기화 완료")
             
             # Modern 화면 생성 시도
             try:
                 self._create_modern_screen()
             except Exception as e:
-                print(f"[WARN] Modern 화면 생성 실패, 기본 화면으로 대체: {e}")
+                # print(f"[WARN] Modern 화면 생성 실패, 기본 화면으로 대체: {e}")
                 self._create_basic_screen()
             
-            print(f"[OK] {self.screen_name} 화면 생성 완료")
+            # print(f"[OK] {self.screen_name} 화면 생성 완료")
             
         except Exception as e:
-            print(f"[ERROR] {self.screen_name} 화면 생성 실패: {e}")
+            # print(f"[ERROR] {self.screen_name} 화면 생성 실패: {e}")
             import sys
             sys.print_exception(e)
     
     def _create_basic_screen(self):
         """기본 화면 생성 (폴백)"""
-        print(f"[INFO] {self.screen_name} 기본 화면 생성 시작...")
+        # print(f"[INFO] {self.screen_name} 기본 화면 생성 시작...")
         
         # 기본 화면 객체 생성
         self.screen_obj = lv.obj()
@@ -76,55 +76,56 @@ class MealTimeScreen:
             self.hints_label.align(lv.ALIGN.BOTTOM_MID, 0, -2)
             self.hints_label.set_style_text_color(lv.color_hex(0x8E8E93), 0)
             self.hints_label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
-            print(f"  [OK] 기본 버튼 힌트 생성 완료 (LVGL 심볼 사용)")
+            # print(f"  [OK] 기본 버튼 힌트 생성 완료 (LVGL 심볼 사용)")
         except Exception as e:
-            print(f"  [WARN] 기본 버튼 힌트 생성 실패: {e}")
+            # print(f"  [WARN] 기본 버튼 힌트 생성 실패: {e}")
+            pass
         
-        print(f"  [OK] 기본 화면 생성 완료")
+        # print(f"  [OK] 기본 화면 생성 완료")
     
     def _create_modern_screen(self):
         """Modern 화면 생성"""
-        print(f"[INFO] {self.screen_name} Modern 화면 생성 시작...")
+        # print(f"[INFO] {self.screen_name} Modern 화면 생성 시작...")
         
         try:
             # 화면 객체 생성
-            print(f"  [INFO] 화면 객체 생성...")
+            # print(f"  [INFO] 화면 객체 생성...")
             self.screen_obj = lv.obj()
-            print(f"  [INFO] 화면 객체 생성됨: {self.screen_obj}")
+            # print(f"  [INFO] 화면 객체 생성됨: {self.screen_obj}")
             
             # 화면 배경 설정
             self.screen_obj.set_style_bg_color(lv.color_hex(0xFFFFFF), 0)  # 흰색 배경
             self.screen_obj.set_style_bg_opa(255, 0)
-            print(f"  [OK] 화면 배경 설정 완료")
+            # print(f"  [OK] 화면 배경 설정 완료")
             
             # 화면 크기 설정
             self.screen_obj.set_size(160, 128)
-            print(f"  [INFO] 화면 크기: 160x128")
+            # print(f"  [INFO] 화면 크기: 160x128")
             
             # 메인 컨테이너 생성
-            print(f"  [INFO] 메인 컨테이너 생성 시도...")
+            # print(f"  [INFO] 메인 컨테이너 생성 시도...")
             self._create_main_container()
-            print(f"  [INFO] 메인 컨테이너 생성 완료")
+            # print(f"  [INFO] 메인 컨테이너 생성 완료")
             
             # 제목 영역 생성
-            print(f"  [INFO] 제목 영역 생성 시도...")
+            # print(f"  [INFO] 제목 영역 생성 시도...")
             self._create_title_area()
-            print(f"  [INFO] 제목 영역 생성 완료")
+            # print(f"  [INFO] 제목 영역 생성 완료")
             
             # 복용 시간 선택 영역 생성
-            print(f"  [INFO] 복용 시간 선택 영역 생성 시도...")
+            # print(f"  [INFO] 복용 시간 선택 영역 생성 시도...")
             self._create_meal_selection_area()
-            print(f"  [INFO] 복용 시간 선택 영역 생성 완료")
+            # print(f"  [INFO] 복용 시간 선택 영역 생성 완료")
             
             # 버튼 힌트 영역 생성
-            print(f"  [INFO] 버튼 힌트 영역 생성 시도...")
+            # print(f"  [INFO] 버튼 힌트 영역 생성 시도...")
             self._create_simple_button_hints()
-            print(f"  [INFO] 버튼 힌트 영역 생성 완료")
+            # print(f"  [INFO] 버튼 힌트 영역 생성 완료")
             
-            print(f"  [OK] Modern 화면 생성 완료")
+            # print(f"  [OK] Modern 화면 생성 완료")
             
         except Exception as e:
-            print(f"  [ERROR] Modern 화면 생성 중 오류 발생: {e}")
+            # print(f"  [ERROR] Modern 화면 생성 중 오류 발생: {e}")
             import sys
             sys.print_exception(e)
     
@@ -132,36 +133,37 @@ class MealTimeScreen:
         """메인 컨테이너 생성 - Modern 스타일"""
         # 메인 컨테이너 (전체 화면)
         self.main_container = lv.obj(self.screen_obj)
-        print(f"    [INFO] 메인 컨테이너 객체 생성됨: {self.main_container}")
+        # print(f"    [INFO] 메인 컨테이너 객체 생성됨: {self.main_container}")
         
         # 크기 설정
         self.main_container.set_size(160, 128)
-        print(f"    [INFO] 메인 컨테이너 크기 설정: 160x128")
+        # print(f"    [INFO] 메인 컨테이너 크기 설정: 160x128")
         
         # 위치 설정
         self.main_container.align(lv.ALIGN.CENTER, 0, 0)
-        print(f"    [INFO] 메인 컨테이너 위치 설정: CENTER")
+        # print(f"    [INFO] 메인 컨테이너 위치 설정: CENTER")
         
         # 스타일 설정
         self.main_container.set_style_bg_opa(0, 0)
         self.main_container.set_style_border_width(0, 0)
         self.main_container.set_style_pad_all(0, 0)
-        print(f"    [INFO] 메인 컨테이너 스타일 설정 완료")
+        # print(f"    [INFO] 메인 컨테이너 스타일 설정 완료")
         
         # 메인 컨테이너 크기 확인 (MicroPython LVGL 호환성)
         try:
             w, h = self.main_container.get_size()
-            print(f"    [INFO] 메인 컨테이너 크기: {w}x{h}")
+            # print(f"    [INFO] 메인 컨테이너 크기: {w}x{h}")
             
             # 크기가 0인 경우 재설정
             if w == 0 or h == 0:
-                print(f"    [WARN] 메인 컨테이너 크기가 0입니다. 강제로 다시 설정합니다.")
+                # print(f"    [WARN] 메인 컨테이너 크기가 0입니다. 강제로 다시 설정합니다.")
                 self.main_container.set_size(160, 128)
-                print(f"    [INFO] 재설정 완료")
+                # print(f"    [INFO] 재설정 완료")
         except AttributeError:
-            print(f"    [WARN] get_size() 메서드 지원 안됨, 크기 확인 건너뛰기")
+            # print(f"    [WARN] get_size() 메서드 지원 안됨, 크기 확인 건너뛰기")
+            pass
         
-        print(f"  [INFO] 메인 컨테이너 생성 완료")
+        # print(f"  [INFO] 메인 컨테이너 생성 완료")
     
     def _create_title_area(self):
         """제목 영역 생성"""
@@ -188,37 +190,37 @@ class MealTimeScreen:
             self.title_label.align(lv.ALIGN.CENTER, 0, 0)
             self.title_label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
             
-            print(f"  [OK] 제목 영역 생성 완료")
+            # print(f"  [OK] 제목 영역 생성 완료")
             
         except Exception as e:
-            print(f"  [ERROR] 제목 영역 생성 중 오류: {e}")
+            # print(f"  [ERROR] 제목 영역 생성 중 오류: {e}")
             import sys
             sys.print_exception(e)
     
     def _create_meal_selection_area(self):
         """복용 시간 선택 영역 생성"""
         try:
-            print(f"  [INFO] 복용 시간 선택 컨테이너 생성 시작...")
+            # print(f"  [INFO] 복용 시간 선택 컨테이너 생성 시작...")
             
             # 복용 시간 선택 컨테이너
             self.meal_container = lv.obj(self.main_container)
-            print(f"  [INFO] 복용 시간 선택 컨테이너 객체 생성됨")
+            # print(f"  [INFO] 복용 시간 선택 컨테이너 객체 생성됨")
             
             self.meal_container.set_size(140, 80)
-            print(f"  [INFO] 복용 시간 선택 컨테이너 크기 설정: 140x80")
+            # print(f"  [INFO] 복용 시간 선택 컨테이너 크기 설정: 140x80")
             
             self.meal_container.align(lv.ALIGN.CENTER, 0, 5)
-            print(f"  [INFO] 복용 시간 선택 컨테이너 위치 설정: CENTER")
+            # print(f"  [INFO] 복용 시간 선택 컨테이너 위치 설정: CENTER")
             
             self.meal_container.set_style_bg_opa(0, 0)
             self.meal_container.set_style_border_width(0, 0)
             self.meal_container.set_style_pad_all(0, 0)
-            print(f"  [INFO] 복용 시간 선택 컨테이너 스타일 설정 완료")
+            # print(f"  [INFO] 복용 시간 선택 컨테이너 스타일 설정 완료")
             
             # 스크롤바 비활성화
             self.meal_container.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
             self.meal_container.set_scroll_dir(lv.DIR.NONE)
-            print(f"  [INFO] 복용 시간 선택 컨테이너 스크롤 설정 완료")
+            # print(f"  [INFO] 복용 시간 선택 컨테이너 스크롤 설정 완료")
             
             # 복용 시간 옵션들
             meals = [
@@ -228,15 +230,15 @@ class MealTimeScreen:
             ]
             
             # 각 복용 시간에 대한 체크박스와 라벨 생성
-            print(f"  [INFO] {len(meals)}개 복용 시간 옵션 생성 시작...")
+            # print(f"  [INFO] {len(meals)}개 복용 시간 옵션 생성 시작...")
             
             for i, (meal_key, meal_name) in enumerate(meals):
                 y_offset = i * 25  # 각 항목마다 25픽셀 간격
-                print(f"  [INFO] {meal_name} 옵션 생성 중... (y_offset: {y_offset})")
+                # print(f"  [INFO] {meal_name} 옵션 생성 중... (y_offset: {y_offset})")
                 
                 # 체크박스 생성
                 checkbox = lv.checkbox(self.meal_container)
-                print(f"  [INFO] {meal_name} 체크박스 객체 생성됨")
+                # print(f"  [INFO] {meal_name} 체크박스 객체 생성됨")
                 
                 checkbox.set_text("")
                 checkbox.align(lv.ALIGN.TOP_MID, -18, y_offset)
@@ -257,18 +259,20 @@ class MealTimeScreen:
                     # 선택됐을 때 내부 색상을 로고 색상으로 변경
                     checkbox.set_style_bg_color(lv.color_hex(0xd2b13f), lv.PART.INDICATOR | lv.STATE.CHECKED)
                     checkbox.set_style_bg_opa(255, lv.PART.INDICATOR | lv.STATE.CHECKED)
-                    print(f"  [INFO] {meal_name} 체크박스 색상 설정 완료 (흰색 배경, 로고 색상 선택시, 검정 체크)")
+                    # print(f"  [INFO] {meal_name} 체크박스 색상 설정 완료 (흰색 배경, 로고 색상 선택시, 검정 체크)")
                 except AttributeError:
-                    print(f"  [WARN] {meal_name} 체크박스 색상 설정 실패 (LVGL 버전 호환성)")
-                print(f"  [INFO] {meal_name} 체크박스 설정 완료")
+                    # print(f"  [WARN] {meal_name} 체크박스 색상 설정 실패 (LVGL 버전 호환성)")
+                    pass
+                # print(f"  [INFO] {meal_name} 체크박스 설정 완료")
                 
                 # 체크박스 상태 설정
                 if self.selected_meals[meal_key]:
                     checkbox.add_state(lv.STATE.CHECKED)
-                    print(f"  [INFO] {meal_name} 체크박스 체크 상태 설정")
+                    # print(f"  [INFO] {meal_name} 체크박스 체크 상태 설정")
+                    pass
                 
                 # 라벨 생성
-                print(f"  [INFO] {meal_name} 라벨 생성 중...")
+                # print(f"  [INFO] {meal_name} 라벨 생성 중...")
                 label = self.ui_style.create_label(
                     self.meal_container,
                     meal_name,
@@ -276,23 +280,23 @@ class MealTimeScreen:
                     0x333333
                 )
                 label.align(lv.ALIGN.TOP_MID, 13, y_offset + 2)
-                print(f"  [INFO] {meal_name} 라벨 생성 완료")
+                # print(f"  [INFO] {meal_name} 라벨 생성 완료")
                 
                 # 화살표 제거 - 문제 해결을 위해 완전 제거
-                print(f"  [INFO] {meal_name} 화살표 제거됨")
+                # print(f"  [INFO] {meal_name} 화살표 제거됨")
                 
                 # 컴포넌트 저장
                 self.meal_checkboxes[meal_key] = checkbox
                 self.meal_labels[meal_key] = label
-                print(f"  [OK] {meal_name} 옵션 생성 완료")
+                # print(f"  [OK] {meal_name} 옵션 생성 완료")
             
-            print(f"  [OK] 복용 시간 선택 영역 생성 완료")
+            # print(f"  [OK] 복용 시간 선택 영역 생성 완료")
             
             # 초기 선택 표시 설정
             self._update_selection_display()
             
         except Exception as e:
-            print(f"  [ERROR] 복용 시간 선택 영역 생성 중 오류: {e}")
+            # print(f"  [ERROR] 복용 시간 선택 영역 생성 중 오류: {e}")
             import sys
             sys.print_exception(e)
     
@@ -306,47 +310,48 @@ class MealTimeScreen:
             self.hints_label.align(lv.ALIGN.BOTTOM_MID, 0, -2)  # Wi-Fi 스캔 화면과 동일한 위치
             self.hints_label.set_style_text_color(lv.color_hex(0x8E8E93), 0)
             self.hints_label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
-            print(f"  [OK] 간단한 버튼 힌트 생성 완료 (LVGL 심볼 사용)")
+            # print(f"  [OK] 간단한 버튼 힌트 생성 완료 (LVGL 심볼 사용)")
             
         except Exception as e:
-            print(f"  [ERROR] 간단한 버튼 힌트 생성 중 오류: {e}")
+            # print(f"  [ERROR] 간단한 버튼 힌트 생성 중 오류: {e}")
             import sys
             sys.print_exception(e)
     
     def show(self):
         """화면 표시"""
-        print(f"[INFO] {self.screen_name} 화면 표시 시작...")
+        # print(f"[INFO] {self.screen_name} 화면 표시 시작...")
         
         try:
             if self.screen_obj is None:
-                print(f"[WARN] 화면 객체가 없습니다. 화면을 생성합니다.")
+                # print(f"[WARN] 화면 객체가 없습니다. 화면을 생성합니다.")
                 self.create_screen()
             
             if self.screen_obj:
-                print(f"[INFO] 화면 객체 존재 확인됨")
+                # print(f"[INFO] 화면 객체 존재 확인됨")
                 
                 # 화면 로드 전에 현재 화면 정보 출력
                 current_screen = lv.screen_active()
-                print(f"[INFO] 현재 활성 화면: {current_screen}")
+                # print(f"[INFO] 현재 활성 화면: {current_screen}")
                 
                 # 화면 로드
                 lv.screen_load(self.screen_obj)
-                print(f"[OK] {self.screen_name} 화면 로드 완료")
+                # print(f"[OK] {self.screen_name} 화면 로드 완료")
                 
                 # 화면 강제 업데이트 (MainScreen과 동일)
                 for i in range(3):
                     lv.timer_handler()
                     time.sleep(0.01)
-                print(f"[OK] {self.screen_name} 화면 업데이트 완료")
+                # print(f"[OK] {self.screen_name} 화면 업데이트 완료")
                 
                 # 로드 후 활성 화면 확인
                 loaded_screen = lv.screen_active()
-                print(f"[INFO] 로드 후 활성 화면: {loaded_screen}")
+                # print(f"[INFO] 로드 후 활성 화면: {loaded_screen}")
             else:
-                print(f"[ERROR] {self.screen_name} 화면 로드 실패")
+                # print(f"[ERROR] {self.screen_name} 화면 로드 실패")
+                pass
                 
         except Exception as e:
-            print(f"[ERROR] {self.screen_name} 화면 표시 중 오류: {e}")
+            # print(f"[ERROR] {self.screen_name} 화면 표시 중 오류: {e}")
             import sys
             sys.print_exception(e)
     
@@ -358,44 +363,48 @@ class MealTimeScreen:
             import gc
             import time
             
-            print("[INFO] MealTimeScreen LVGL 실제 메모리 정리 시작")
+            # print("[INFO] MealTimeScreen LVGL 실제 메모리 정리 시작")
             
             # 1단계: LVGL 타이머 처리
             try:
                 lv.timer_handler()
-                print("[DEBUG] MealTimeScreen LVGL 타이머 처리 완료")
+                # print("[DEBUG] MealTimeScreen LVGL 타이머 처리 완료")
             except Exception as e:
-                print(f"[WARN] MealTimeScreen LVGL 타이머 처리 실패: {e}")
+                # print(f"[WARN] MealTimeScreen LVGL 타이머 처리 실패: {e}")
+                pass
             
             # 2단계: LVGL 안전한 메모리 정리 (크래시 방지)
             try:
                 if hasattr(lv, 'mp_lv_deinit_gc'):
                     lv.mp_lv_deinit_gc()
-                    print("[OK] MealTimeScreen LVGL MicroPython GC 종료 완료")
+                    # print("[OK] MealTimeScreen LVGL MicroPython GC 종료 완료")
                     
                 # mem_deinit은 사용하지 않음 (크래시 원인)
                 # mem_init도 사용하지 않음 (불필요한 재초기화)
                     
                 if hasattr(lv, 'mp_lv_init_gc'):
                     lv.mp_lv_init_gc()
-                    print("[OK] MealTimeScreen LVGL MicroPython GC 재초기화 완료")
+                    # print("[OK] MealTimeScreen LVGL MicroPython GC 재초기화 완료")
                     
             except Exception as e:
-                print(f"[WARN] MealTimeScreen LVGL 안전한 메모리 정리 실패: {e}")
+                # print(f"[WARN] MealTimeScreen LVGL 안전한 메모리 정리 실패: {e}")
+                pass
             
             # 3단계: 강제 가비지 컬렉션
             try:
                 for i in range(3):
                     gc.collect()
                     time.sleep_ms(10)
-                print("[OK] MealTimeScreen 강제 가비지 컬렉션 완료")
+                # print("[OK] MealTimeScreen 강제 가비지 컬렉션 완료")
             except Exception as e:
-                print(f"[WARN] MealTimeScreen 가비지 컬렉션 실패: {e}")
+                # print(f"[WARN] MealTimeScreen 가비지 컬렉션 실패: {e}")
+                pass
             
-            print("[OK] MealTimeScreen LVGL 실제 메모리 정리 완료")
+            # print("[OK] MealTimeScreen LVGL 실제 메모리 정리 완료")
             
         except Exception as e:
-            print(f"[ERROR] MealTimeScreen LVGL 실제 메모리 정리 실패: {e}")
+            # print(f"[ERROR] MealTimeScreen LVGL 실제 메모리 정리 실패: {e}")
+            pass
     
     def update(self):
         """화면 업데이트 (ScreenManager에서 호출)"""
@@ -404,7 +413,7 @@ class MealTimeScreen:
     
     def on_button_a(self):
         """버튼 A 처리 (선택/체크박스 토글)"""
-        print(f"[BTN] 버튼 A (SW1) 눌림 - 선택/체크박스 토글")
+        # print(f"[BTN] 버튼 A (SW1) 눌림 - 선택/체크박스 토글")
         
         # 현재 선택된 항목의 체크박스 토글
         meal_keys = ['breakfast', 'lunch', 'dinner']
@@ -416,61 +425,62 @@ class MealTimeScreen:
                 # 체크 상태 제거
                 checkbox.remove_state(lv.STATE.CHECKED)
                 self.selected_meals[current_meal] = False
-                print(f"[INFO] {current_meal} 선택 해제")
+                # print(f"[INFO] {current_meal} 선택 해제")
             else:
                 # 체크 상태 추가
                 checkbox.add_state(lv.STATE.CHECKED)
                 self.selected_meals[current_meal] = True
-                print(f"[INFO] {current_meal} 선택")
+                # print(f"[INFO] {current_meal} 선택")
     
     def on_button_b(self):
         """버튼 B 처리 (위로 이동)"""
-        print(f"[BTN] 버튼 B (SW2) 눌림 - 위로 이동")
+        # print(f"[BTN] 버튼 B (SW2) 눌림 - 위로 이동")
         # 현재 선택된 항목을 위로 이동 (순환)
         self.current_selection = (self.current_selection - 1) % 3
         self._update_selection_display()
     
     def on_button_c(self):
         """버튼 C 처리 (아래로 이동)"""
-        print(f"[BTN] 버튼 C (SW3) 눌림 - 아래로 이동")
+        # print(f"[BTN] 버튼 C (SW3) 눌림 - 아래로 이동")
         # 현재 선택된 항목을 아래로 이동 (순환)
         self.current_selection = (self.current_selection + 1) % 3
         self._update_selection_display()
     
     def on_button_d(self):
         """버튼 D 처리 (다음 화면으로 이동)"""
-        print(f"[BTN] 버튼 D (SW4) 눌림 - 다음 화면으로 이동")
+        # print(f"[BTN] 버튼 D (SW4) 눌림 - 다음 화면으로 이동")
         
         # 선택된 복용 시간 개수 계산
         selected_count = sum(1 for selected in self.selected_meals.values() if selected)
-        print(f"[INFO] 선택된 복용 시간 개수: {selected_count}")
+        # print(f"[INFO] 선택된 복용 시간 개수: {selected_count}")
         
         # 선택된 항목이 있으면 다음 화면으로 이동
         if selected_count > 0:
-            print("[INFO] 선택된 복용 시간이 있습니다. 다음 화면으로 이동합니다.")
+            # print("[INFO] 선택된 복용 시간이 있습니다. 다음 화면으로 이동합니다.")
             if self.screen_manager:
                 # 이전 자동 할당 디스크 정보 초기화 (새로운 선택을 위해)
                 self._clear_previous_auto_assigned_data()
                 
                 # 선택된 식사 시간 정보를 JSON에 저장
                 selected_meals_info = self._get_selected_meals_info()
-                print(f"[INFO] 전달할 식사 시간 정보: {selected_meals_info}")
+                # print(f"[INFO] 전달할 식사 시간 정보: {selected_meals_info}")
                 
                 # JSON에 저장
                 data_manager = DataManager()
                 data_manager.save_selected_meals(selected_meals_info)
                 data_manager.save_dose_count(selected_count)
-                print(f"[INFO] 식사 시간 정보 JSON에 저장: {len(selected_meals_info)}개")
+                # print(f"[INFO] 식사 시간 정보 JSON에 저장: {len(selected_meals_info)}개")
                 
                 # 화면 전환 요청
                 self._request_screen_transition()
         else:
-            print("[WARN] 복용 시간을 선택해주세요")
-    
+            # print("[WARN] 복용 시간을 선택해주세요")
+            pass
+        
     def _clear_previous_auto_assigned_data(self):
         """이전 자동 할당 디스크 정보 초기화"""
         try:
-            print("[INFO] 이전 자동 할당 디스크 정보 초기화 시작")
+            # print("[INFO] 이전 자동 할당 디스크 정보 초기화 시작")
             
             # DataManager를 사용하여 자동 할당 디스크 정보 초기화
             from data_manager import DataManager
@@ -491,33 +501,34 @@ class MealTimeScreen:
             data_manager.save_dose_times([])
             data_manager.save_selected_meals([])
             
-            print("[OK] 이전 자동 할당 디스크 정보 초기화 완료")
+            # print("[OK] 이전 자동 할당 디스크 정보 초기화 완료")
             
         except Exception as e:
-            print(f"[WARN] 이전 자동 할당 디스크 정보 초기화 실패: {e}")
+            # print(f"[WARN] 이전 자동 할당 디스크 정보 초기화 실패: {e}")
+            pass
     
     def _request_screen_transition(self):
         """화면 전환 요청 - ScreenManager에 위임 (스타트업 화면과 동일한 방식)"""
-        print("[INFO] 화면 전환 요청")
+        # print("[INFO] 화면 전환 요청")
         
         # ScreenManager에 화면 전환 요청 (올바른 책임 분리)
         try:
             self.screen_manager.transition_to('dose_time')
-            print("[OK] 화면 전환 요청 완료")
+            # print("[OK] 화면 전환 요청 완료")
         except Exception as e:
-            print(f"[ERROR] 화면 전환 요청 실패: {e}")
+            # print(f"[ERROR] 화면 전환 요청 실패: {e}")
             import sys
             sys.print_exception(e)
         
         # 화면 전환 (올바른 책임 분리 - ScreenManager가 처리)
-        print("[INFO] 식사 시간 선택 완료 - ScreenManager에 완료 신호 전송")
+        # print("[INFO] 식사 시간 선택 완료 - ScreenManager에 완료 신호 전송")
         
         # ScreenManager에 식사 시간 선택 완료 신호 전송 (올바른 책임 분리)
         try:
             self.screen_manager.meal_time_completed()
-            print("[OK] 식사 시간 선택 완료 신호 전송 완료")
+            # print("[OK] 식사 시간 선택 완료 신호 전송 완료")
         except Exception as e:
-            print(f"[ERROR] 식사 시간 선택 완료 신호 전송 실패: {e}")
+            # print(f"[ERROR] 식사 시간 선택 완료 신호 전송 실패: {e}")
             import sys
             sys.print_exception(e)
     
@@ -538,10 +549,10 @@ class MealTimeScreen:
                         # 선택되지 않은 항목은 기본 색상
                         label.set_style_text_color(lv.color_hex(0x333333), 0)
             
-            print(f"[INFO] 현재 선택: {meal_names[self.current_selection]}")
+            # print(f"[INFO] 현재 선택: {meal_names[self.current_selection]}")
                     
         except Exception as e:
-            print(f"[ERROR] 선택 표시 업데이트 중 오류: {e}")
+            # print(f"[ERROR] 선택 표시 업데이트 중 오류: {e}")
             import sys
             sys.print_exception(e)
     
@@ -549,7 +560,7 @@ class MealTimeScreen:
         """선택된 식사 시간 정보 반환 (아침, 점심, 저녁 순서) - 항상 현재 선택 상태에서 새로 생성"""
         try:
             # 항상 현재 선택 상태에서 새로 생성 (이전 데이터 복원 방지)
-            print(f"[INFO] 현재 선택 상태에서 식사 시간 정보 새로 생성")
+            # print(f"[INFO] 현재 선택 상태에서 식사 시간 정보 새로 생성")
             
             # 현재 선택 상태에서 생성
             selected_meals_info = []
@@ -567,14 +578,14 @@ class MealTimeScreen:
                         'default_minute': 0
                     })
             
-            print(f"[INFO] 선택된 식사 시간 정보 생성: {len(selected_meals_info)}개 (아침, 점심, 저녁 순서)")
+            # print(f"[INFO] 선택된 식사 시간 정보 생성: {len(selected_meals_info)}개 (아침, 점심, 저녁 순서)")
             for meal_info in selected_meals_info:
-                print(f"  - {meal_info['name']}: 기본 시간 {meal_info['default_hour']:02d}:{meal_info['default_minute']:02d}")
-            
+                # print(f"  - {meal_info['name']}: 기본 시간 {meal_info['default_hour']:02d}:{meal_info['default_minute']:02d}")
+                pass
             return selected_meals_info
             
         except Exception as e:
-            print(f"[ERROR] 선택된 식사 시간 정보 생성 중 오류: {e}")
+            # print(f"[ERROR] 선택된 식사 시간 정보 생성 중 오류: {e}")
             import sys
             sys.print_exception(e)
             return []
@@ -595,12 +606,12 @@ class MealTimeScreen:
             for meal_key, checkbox in self.meal_checkboxes.items():
                 self.selected_meals[meal_key] = checkbox.has_state(lv.STATE.CHECKED)
             
-            print(f"[INFO] 선택된 복용 시간들:")
+            # print(f"[INFO] 선택된 복용 시간들:")
             selected_meals_info = []
             for meal_key, is_selected in self.selected_meals.items():
                 if is_selected:
                     meal_name = {'breakfast': '아침', 'lunch': '점심', 'dinner': '저녁'}[meal_key]
-                    print(f"  - {meal_name}")
+                    # print(f"  - {meal_name}")
                     selected_meals_info.append({
                         'key': meal_key,
                         'name': meal_name,
@@ -614,7 +625,7 @@ class MealTimeScreen:
             data_manager.save_dose_count(len(selected_meals_info))
             
         except Exception as e:
-            print(f"[ERROR] 복용 시간 저장 중 오류: {e}")
+            # print(f"[ERROR] 복용 시간 저장 중 오류: {e}")
             import sys
             sys.print_exception(e)
     

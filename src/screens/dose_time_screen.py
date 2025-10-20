@@ -24,14 +24,14 @@ class DoseTimeScreen:
         
         # 전역 데이터에서 기존 정보 복원 (새로운 선택인지 확인)
         self.dose_times = data_manager.get_dose_times()
-        print(f"[DEBUG] dose_time_screen 초기화 - 기존 dose_times: {len(self.dose_times) if self.dose_times else 0}개")
-        print(f"[DEBUG] dose_time_screen 초기화 - selected_meals: {len(self.selected_meals) if self.selected_meals else 0}개")
+        # print(f"[DEBUG] dose_time_screen 초기화 - 기존 dose_times: {len(self.dose_times) if self.dose_times else 0}개")
+        # print(f"[DEBUG] dose_time_screen 초기화 - selected_meals: {len(self.selected_meals) if self.selected_meals else 0}개")
         
         if not self.dose_times:
             self.dose_times = []  # 설정된 복용 시간들
-            print(f"[DEBUG] dose_times가 비어있음 - 빈 리스트로 초기화")
+            # print(f"[DEBUG] dose_times가 비어있음 - 빈 리스트로 초기화")
         else:
-            print(f"[DEBUG] 기존 dose_times 발견: {len(self.dose_times)}개")
+            # print(f"[DEBUG] 기존 dose_times 발견: {len(self.dose_times)}개")
             # 기존 데이터가 있는 경우, 선택된 식사 시간과 일치하는지 확인
             if self.selected_meals and len(self.selected_meals) > 0:
                 # 새로운 선택인지 확인: 기존 dose_times의 meal_key와 현재 선택된 meal_key 비교
@@ -42,19 +42,21 @@ class DoseTimeScreen:
                 
                 current_meal_keys = set(meal['key'] for meal in self.selected_meals)
                 
-                print(f"[DEBUG] 기존 meal_keys: {existing_meal_keys}")
-                print(f"[DEBUG] 현재 meal_keys: {current_meal_keys}")
+                # print(f"[DEBUG] 기존 meal_keys: {existing_meal_keys}")
+                # print(f"[DEBUG] 현재 meal_keys: {current_meal_keys}")
                 
                 # 선택이 다르면 기존 데이터 초기화
                 if existing_meal_keys != current_meal_keys:
-                    print(f"[INFO] 새로운 선택 감지 - 기존 데이터 초기화")
-                    print(f"[DEBUG] 기존 meal_keys: {existing_meal_keys}")
-                    print(f"[DEBUG] 현재 meal_keys: {current_meal_keys}")
+                    # print(f"[INFO] 새로운 선택 감지 - 기존 데이터 초기화")
+                    # print(f"[DEBUG] 기존 meal_keys: {existing_meal_keys}")
+                    # print(f"[DEBUG] 현재 meal_keys: {current_meal_keys}")
                     self.dose_times = []
                 else:
-                    print(f"[DEBUG] 선택이 동일함 - 기존 데이터 유지")
+                    # print(f"[DEBUG] 선택이 동일함 - 기존 데이터 유지")
+                    pass
             else:
-                print(f"[DEBUG] selected_meals가 비어있음 - 기존 데이터 유지")
+                # print(f"[DEBUG] selected_meals가 비어있음 - 기존 데이터 유지")
+                pass
         
         self.current_dose_index = 0  # 현재 설정 중인 복용 시간 인덱스
         self.current_hour = 8  # 기본값: 오전 8시
@@ -74,13 +76,15 @@ class DoseTimeScreen:
         # 간단한 화면 생성
         self._create_simple_screen()
         
-        print(f"[OK] {self.screen_name} 화면 초기화 완료 (복용 횟수: {self.dose_count})")
+        # print(f"[OK] {self.screen_name} 화면 초기화 완료 (복용 횟수: {self.dose_count})")
         if self.selected_meals:
-            print(f"[INFO] 선택된 식사 시간: {[meal['name'] for meal in self.selected_meals]}")
-        print(f"[INFO] 복원된 복용 시간: {len(self.dose_times)}개")
+            # print(f"[INFO] 선택된 식사 시간: {[meal['name'] for meal in self.selected_meals]}")
+            pass
+        # print(f"[INFO] 복원된 복용 시간: {len(self.dose_times)}개")
         for dose_info in self.dose_times:
             if isinstance(dose_info, dict):
-                print(f"  - {dose_info.get('meal_name', 'Unknown')}: {dose_info.get('time', 'Unknown')}")
+                # print(f"  - {dose_info.get('meal_name', 'Unknown')}: {dose_info.get('time', 'Unknown')}")
+                pass
     
     def _ensure_ui_style(self):
         """UI 스타일이 필요할 때만 초기화"""
@@ -89,9 +93,9 @@ class DoseTimeScreen:
                 import gc
                 gc.collect()
                 self.ui_style = UIStyle()
-                print("[OK] UI 스타일 지연 초기화 완료")
+                # print("[OK] UI 스타일 지연 초기화 완료")
             except Exception as e:
-                print(f"[WARN] UI 스타일 지연 초기화 실패: {e}")
+                # print(f"[WARN] UI 스타일 지연 초기화 실패: {e}")
                 self.ui_style = None
     
     def _set_default_time_from_meals(self):
@@ -102,12 +106,14 @@ class DoseTimeScreen:
                 first_meal = self.selected_meals[0]
                 self.current_hour = first_meal.get('default_hour', 8)
                 self.current_minute = first_meal.get('default_minute', 0)
-                print(f"[INFO] 첫 번째 식사 시간 기본값 설정: {self.current_hour:02d}:{self.current_minute:02d} ({first_meal['name']})")
+                # print(f"[INFO] 첫 번째 식사 시간 기본값 설정: {self.current_hour:02d}:{self.current_minute:02d} ({first_meal['name']})")
             else:
                 # 기본값 유지
-                print(f"[INFO] 선택된 식사 시간이 없어 기본값 사용: {self.current_hour:02d}:{self.current_minute:02d}")
+                # print(f"[INFO] 선택된 식사 시간이 없어 기본값 사용: {self.current_hour:02d}:{self.current_minute:02d}")
+                pass
         except Exception as e:
-            print(f"[ERROR] 기본 시간 설정 실패: {e}")
+            # print(f"[ERROR] 기본 시간 설정 실패: {e}")
+            pass
     
     def _update_title_text(self):
         """제목 텍스트 업데이트"""
@@ -122,13 +128,14 @@ class DoseTimeScreen:
             
             if hasattr(self, 'title_label') and self.title_label:
                 self.title_label.set_text(title_text)
-                print(f"[INFO] 제목 업데이트: {title_text}")
+                # print(f"[INFO] 제목 업데이트: {title_text}")
         except Exception as e:
-            print(f"[ERROR] 제목 텍스트 업데이트 실패: {e}")
+            # print(f"[ERROR] 제목 텍스트 업데이트 실패: {e}")
+            pass
     
     def _create_simple_screen(self):
         """간단한 화면 생성"""
-        print(f"  [INFO] {self.screen_name} 간단한 화면 생성 시작...")
+        # print(f"  [INFO] {self.screen_name} 간단한 화면 생성 시작...")
         
         try:
             # 메모리 정리
@@ -152,7 +159,7 @@ class DoseTimeScreen:
                 self.title_label.set_style_text_font(korean_font, 0)
             
             # 시간 롤러 생성
-            print("  [INFO] 시간 롤러 생성 중...")
+            # print("  [INFO] 시간 롤러 생성 중...")
             self.hour_roller = lv.roller(self.screen_obj)
             self.hour_roller.set_size(50, 60)
             self.hour_roller.align(lv.ALIGN.CENTER, -30, 0)
@@ -179,7 +186,7 @@ class DoseTimeScreen:
             except AttributeError:
                 pass
 
-            print("  [OK] 시간 롤러 생성 완료")
+            # print("  [OK] 시간 롤러 생성 완료")
 
             # 메모리 정리
             import gc
@@ -195,7 +202,7 @@ class DoseTimeScreen:
                 self.colon_label.set_style_text_font(korean_font, 0)
 
             # 분 롤러 생성
-            print("  [INFO] 분 롤러 생성 중...")
+            # print("  [INFO] 분 롤러 생성 중...")
             self.minute_roller = lv.roller(self.screen_obj)
             self.minute_roller.set_size(50, 60)
             self.minute_roller.align(lv.ALIGN.CENTER, 30, 0)
@@ -222,7 +229,7 @@ class DoseTimeScreen:
             except AttributeError:
                 pass
 
-            print("  [OK] 분 롤러 생성 완료")
+            # print("  [OK] 분 롤러 생성 완료")
 
             # 메모리 정리
             import gc
@@ -235,14 +242,14 @@ class DoseTimeScreen:
             self.hints_label.set_style_text_color(lv.color_hex(0x8E8E93), 0)  # 0x007AFF → 0x8E8E93 (모던 라이트 그레이)
             self.hints_label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
 
-            print(f"  [OK] 간단한 화면 생성 완료")
+            # print(f"  [OK] 간단한 화면 생성 완료")
 
             # 초기 롤러 가시성과 제목 설정
             self._update_roller_visibility()
             self._update_title()
   
         except Exception as e:
-            print(f"  [ERROR] 화면 생성 중 오류 발생: {e}")
+            # print(f"  [ERROR] 화면 생성 중 오류 발생: {e}")
             import sys
             sys.print_exception(e)
 
@@ -255,13 +262,14 @@ class DoseTimeScreen:
                 self._update_roller_visibility()
                 self._update_title()
                 self._update_roller_options()
-                print(f"  [INFO] 시간 {self.current_hour:02d}시 설정 완료, 분 설정으로 이동")
+                # print(f"  [INFO] 시간 {self.current_hour:02d}시 설정 완료, 분 설정으로 이동")
             else:
                 # 분 설정 완료, 시간 저장하고 다음 단계
                 self._save_current_time()
                 self._next_time_setup()
         except Exception as e:
-            print(f"  [ERROR] A 버튼 처리 실패: {e}")
+            # print(f"  [ERROR] A 버튼 처리 실패: {e}")
+            pass
 
     def on_button_b(self):
         """B 버튼: 시간/분 증가"""
@@ -270,14 +278,15 @@ class DoseTimeScreen:
                 current_selected = self.hour_roller.get_selected()
                 self.hour_roller.set_selected(current_selected + 1, True)
                 self._update_time_from_rollers()
-                print(f"  [INFO] 시간 증가: {self.current_hour:02d}:{self.current_minute:02d}")
+                # print(f"  [INFO] 시간 증가: {self.current_hour:02d}:{self.current_minute:02d}")
             elif not self.editing_hour and hasattr(self, 'minute_roller') and self.minute_roller:
                 current_selected = self.minute_roller.get_selected()
                 self.minute_roller.set_selected(current_selected + 1, True)
                 self._update_time_from_rollers()
-                print(f"  [INFO] 분 증가: {self.current_hour:02d}:{self.current_minute:02d}")
+                # print(f"  [INFO] 분 증가: {self.current_hour:02d}:{self.current_minute:02d}")
         except Exception as e:
-            print(f"  [ERROR] B 버튼 처리 실패: {e}")
+            # print(f"  [ERROR] B 버튼 처리 실패: {e}")
+            pass
 
     def on_button_c(self):
         """C 버튼: 시간/분 감소"""
@@ -286,16 +295,18 @@ class DoseTimeScreen:
                 current_selected = self.hour_roller.get_selected()
                 self.hour_roller.set_selected(current_selected - 1, True)
                 self._update_time_from_rollers()
-                print(f"  [INFO] 시간 감소: {self.current_hour:02d}:{self.current_minute:02d}")
+                # print(f"  [INFO] 시간 감소: {self.current_hour:02d}:{self.current_minute:02d}")
             elif not self.editing_hour and hasattr(self, 'minute_roller') and self.minute_roller:
                 current_selected = self.minute_roller.get_selected()
                 self.minute_roller.set_selected(current_selected - 1, True)
                 self._update_time_from_rollers()
-                print(f"  [INFO] 분 감소: {self.current_hour:02d}:{self.current_minute:02d}")
+                # print(f"  [INFO] 분 감소: {self.current_hour:02d}:{self.current_minute:02d}")
             else:
-                print(f"  [WARN] 롤러 객체가 없습니다. editing_hour: {self.editing_hour}")
+                # print(f"  [WARN] 롤러 객체가 없습니다. editing_hour: {self.editing_hour}")
+                pass
         except Exception as e:
-            print(f"  [ERROR] C 버튼 처리 실패: {e}")
+            # print(f"  [ERROR] C 버튼 처리 실패: {e}")
+            pass
 
     def _update_roller_visibility(self):
         """시간/분 편집 모드에 따라 롤러 스타일 업데이트"""
@@ -307,7 +318,7 @@ class DoseTimeScreen:
                     self.hour_roller.set_style_border_color(lv.color_hex(0xd2b13f), 0)
                 if self.minute_roller:
                     self.minute_roller.set_style_border_width(0, 0)
-                print(f"  [INFO] 시간 편집 모드로 전환")
+                # print(f"  [INFO] 시간 편집 모드로 전환")
             else:
                 # 분 편집 모드: 분 롤러 강조
                 if self.hour_roller:
@@ -315,16 +326,17 @@ class DoseTimeScreen:
                 if self.minute_roller:
                     self.minute_roller.set_style_border_width(2, 0)
                     self.minute_roller.set_style_border_color(lv.color_hex(0xd2b13f), 0)
-                print(f"  [INFO] 분 편집 모드로 전환")
+                # print(f"  [INFO] 분 편집 모드로 전환")
         except Exception as e:
-            print(f"  [ERROR] 롤러 스타일 업데이트 실패: {e}")
+            # print(f"  [ERROR] 롤러 스타일 업데이트 실패: {e}")
+            pass
 
     def _update_title(self):
         """현재 편집 모드에 따라 제목 업데이트"""
         try:
             if hasattr(self, 'title_label'):
-                print(f"  [INFO] 제목 업데이트 시작 - current_dose_index: {self.current_dose_index}, editing_hour: {self.editing_hour}")
-                print(f"  [INFO] selected_meals 길이: {len(self.selected_meals) if self.selected_meals else 0}")
+                # print(f"  [INFO] 제목 업데이트 시작 - current_dose_index: {self.current_dose_index}, editing_hour: {self.editing_hour}")
+                # print(f"  [INFO] selected_meals 길이: {len(self.selected_meals) if self.selected_meals else 0}")
                 
                 if self.selected_meals and self.current_dose_index < len(self.selected_meals):
                     meal_name = self.selected_meals[self.current_dose_index]['name']
@@ -334,11 +346,12 @@ class DoseTimeScreen:
                         new_title = f"{meal_name} - 분 설정"
 
                     self.title_label.set_text(new_title)
-                    print(f"  [INFO] 제목 업데이트 완료: {new_title}")
+                    # print(f"  [INFO] 제목 업데이트 완료: {new_title}")
                 else:
-                    print(f"  [ERROR] 제목 업데이트 실패: 인덱스 범위 초과")
+                    # print(f"  [ERROR] 제목 업데이트 실패: 인덱스 범위 초과")
+                    pass
         except Exception as e:
-            print(f"  [ERROR] 제목 업데이트 실패: {e}")
+            # print(f"  [ERROR] 제목 업데이트 실패: {e}")
             import sys
             sys.print_exception(e)
 
@@ -350,7 +363,7 @@ class DoseTimeScreen:
             latest_dose_times = data_manager.get_dose_times()
             if latest_dose_times:
                 self.dose_times = latest_dose_times
-                print(f"  [INFO] 전역 데이터에서 최신 dose_times 불러옴: {len(self.dose_times)}개")
+                # print(f"  [INFO] 전역 데이터에서 최신 dose_times 불러옴: {len(self.dose_times)}개")
             
             # 이미 저장된 시간 정보가 있는지 확인
             saved_time = None
@@ -358,32 +371,33 @@ class DoseTimeScreen:
                 current_meal = self.selected_meals[self.current_dose_index]
                 meal_key = current_meal['key']
 
-                print(f"  [SEARCH] 저장된 시간 검색 중... (현재 인덱스: {self.current_dose_index}, 식사: {current_meal['name']}, 키: {meal_key})")
-                print(f"  [SEARCH] 저장된 dose_times 개수: {len(self.dose_times)}")
+                # print(f"  [SEARCH] 저장된 시간 검색 중... (현재 인덱스: {self.current_dose_index}, 식사: {current_meal['name']}, 키: {meal_key})")
+                # print(f"  [SEARCH] 저장된 dose_times 개수: {len(self.dose_times)}")
 
                 # dose_times에서 해당 식사 시간의 저장된 정보 찾기
                 for i, dose_time in enumerate(self.dose_times):
-                    print(f"  [SEARCH] dose_times[{i}]: {dose_time}")
+                    # print(f"  [SEARCH] dose_times[{i}]: {dose_time}")
                     if isinstance(dose_time, dict) and dose_time.get('meal_key') == meal_key:
                         saved_time = dose_time
-                        print(f"  [OK] 저장된 시간 찾음: {saved_time}")
+                        # print(f"  [OK] 저장된 시간 찾음: {saved_time}")
                         break
 
                 if not saved_time:
-                    print(f"  [WARN] 저장된 시간을 찾지 못함 (meal_key: {meal_key})")
+                    # print(f"  [WARN] 저장된 시간을 찾지 못함 (meal_key: {meal_key})")
+                    pass
 
             if saved_time:
                 # 저장된 시간 정보 사용
                 self.current_hour = saved_time['hour']
                 self.current_minute = saved_time['minute']
-                print(f"  [INFO] 저장된 시간 정보 사용: {self.current_hour:02d}:{self.current_minute:02d} ({saved_time['meal_name']})")
+                # print(f"  [INFO] 저장된 시간 정보 사용: {self.current_hour:02d}:{self.current_minute:02d} ({saved_time['meal_name']})")
             else:
                 # 저장된 정보가 없으면 기본값 사용
                 if self.selected_meals and self.current_dose_index < len(self.selected_meals):
                     current_meal = self.selected_meals[self.current_dose_index]
                     self.current_hour = current_meal.get('default_hour', 8)
                     self.current_minute = current_meal.get('default_minute', 0)
-                    print(f"  [INFO] 기본값 사용: {self.current_hour:02d}:{self.current_minute:02d} ({current_meal['name']})")
+                    # print(f"  [INFO] 기본값 사용: {self.current_hour:02d}:{self.current_minute:02d} ({current_meal['name']})")
                 else:
                     # 기본값으로 리셋
                     self.current_hour = 8
@@ -396,16 +410,16 @@ class DoseTimeScreen:
             if hasattr(self, 'hour_roller') and hasattr(self, 'minute_roller'):
                 self.hour_roller.set_selected(self.current_hour, True)
                 self.minute_roller.set_selected(self.current_minute // 5, True)  # 5분 간격으로 나누기
-                print(f"  [INFO] 롤러 값 업데이트: 시간={self.current_hour}, 분={self.current_minute}")
+                # print(f"  [INFO] 롤러 값 업데이트: 시간={self.current_hour}, 분={self.current_minute}")
 
             # 제목과 롤러 포커스 업데이트
             self._update_title()
             self._update_roller_visibility()
 
-            print(f"  [OK] 현재 복용 시간 설정 완료")
+            # print(f"  [OK] 현재 복용 시간 설정 완료")
 
         except Exception as e:
-            print(f"  [ERROR] 현재 복용 시간 설정 실패: {e}")
+            # print(f"  [ERROR] 현재 복용 시간 설정 실패: {e}")
             import sys
             sys.print_exception(e)
 
@@ -418,22 +432,22 @@ class DoseTimeScreen:
                     # 이전 복용 시간으로 되돌아가기
                     self.current_dose_index -= 1
                     self._setup_current_dose_time()
-                    print(f"  [INFO] 이전 복용 시간으로 되돌아가기: {self.current_dose_index + 1}번째")
+                    # print(f"  [INFO] 이전 복용 시간으로 되돌아가기: {self.current_dose_index + 1}번째")
                 else:
                     # 첫 번째 복용 시간이면 복용 시간 선택 화면으로
-                    print(f"  [INFO] 취소 - 복용 시간 선택 화면으로 이동")
+                    # print(f"  [INFO] 취소 - 복용 시간 선택 화면으로 이동")
                     # ScreenManager의 동적 화면 생성 기능 활용
                     self._request_screen_transition_to_meal_time()
-                    print(f"  [OK] 복용 시간 선택 화면으로 이동 완료")
+                    # print(f"  [OK] 복용 시간 선택 화면으로 이동 완료")
             else:
                 # 분 설정 중이면 시간 설정으로 되돌아가기
                 self.editing_hour = True
                 self._update_roller_visibility()
                 self._update_title()
                 self._update_roller_options()
-                print(f"  [INFO] 분 설정에서 시간 설정으로 되돌아가기")
+                # print(f"  [INFO] 분 설정에서 시간 설정으로 되돌아가기")
         except Exception as e:
-            print(f"  [ERROR] D 버튼 처리 실패: {e}")
+            # print(f"  [ERROR] D 버튼 처리 실패: {e}")
             import sys
             sys.print_exception(e)
 
@@ -444,7 +458,8 @@ class DoseTimeScreen:
                 self.current_hour = self.hour_roller.get_selected()
                 self.current_minute = self.minute_roller.get_selected() * 5  # 5분 간격
         except Exception as e:
-            print(f"  [ERROR] 시간 업데이트 실패: {e}")
+            # print(f"  [ERROR] 시간 업데이트 실패: {e}")
+            pass
 
     def _update_roller_options(self):
         """롤러 옵션 업데이트"""
@@ -464,7 +479,8 @@ class DoseTimeScreen:
                         self.title_label.set_text(f"복용 시간 {self.current_dose_index + 1} - 분 설정")
 
         except Exception as e:
-            print(f"  [ERROR] 롤러 옵션 업데이트 실패: {e}")
+            # print(f"  [ERROR] 롤러 옵션 업데이트 실패: {e}")
+            pass
 
     def _save_current_time(self):
         """현재 설정된 시간 저장"""
@@ -493,26 +509,28 @@ class DoseTimeScreen:
                 if existing_index is not None:
                     # 기존 항목 업데이트
                     self.dose_times[existing_index] = dose_info
-                    print(f"  [INFO] {current_meal['name']} 시간 업데이트: {time_str} (인덱스: {existing_index})")
+                    # print(f"  [INFO] {current_meal['name']} 시간 업데이트: {time_str} (인덱스: {existing_index})")
                 else:
                     # 새 항목 추가
                     self.dose_times.append(dose_info)
-                    print(f"  [INFO] {current_meal['name']} 시간 저장: {time_str} (새 항목)")
+                    # print(f"  [INFO] {current_meal['name']} 시간 저장: {time_str} (새 항목)")
 
-                print(f"  [INFO] 현재 dose_times 상태: {self.dose_times}")
+                # print(f"  [INFO] 현재 dose_times 상태: {self.dose_times}")
                 
                 # 전역 데이터에도 저장
                 data_manager = DataManager()
                 data_manager.save_dose_times(self.dose_times)
-                print(f"  [INFO] 전역 데이터에 복용 시간 저장: {len(self.dose_times)}개")
+                # print(f"  [INFO] 전역 데이터에 복용 시간 저장: {len(self.dose_times)}개")
                 for dose_info in self.dose_times:
                     if isinstance(dose_info, dict):
-                        print(f"    - {dose_info['meal_name']}: {dose_info['time']}")
+                        # print(f"    - {dose_info['meal_name']}: {dose_info['time']}")
+                        pass
             else:
                 # selected_meals가 없는 경우는 정상적인 상황이 아님
-                print(f"  [WARN] selected_meals가 없음, 시간 저장 건너뛰기: {time_str}")
+                # print(f"  [WARN] selected_meals가 없음, 시간 저장 건너뛰기: {time_str}")
+                pass
         except Exception as e:
-            print(f"  [ERROR] 시간 저장 실패: {e}")
+            # print(f"  [ERROR] 시간 저장 실패: {e}")
             import sys
             sys.print_exception(e)
 
@@ -541,14 +559,14 @@ class DoseTimeScreen:
                     # 저장된 시간 정보 사용
                     self.current_hour = saved_time['hour']
                     self.current_minute = saved_time['minute']
-                    print(f"  [INFO] 다음 식사 시간 저장된 값 사용: {self.current_hour:02d}:{self.current_minute:02d} ({saved_time['meal_name']})")
+                    # print(f"  [INFO] 다음 식사 시간 저장된 값 사용: {self.current_hour:02d}:{self.current_minute:02d} ({saved_time['meal_name']})")
                 else:
                     # 저장된 정보가 없으면 기본값 사용
                     if self.selected_meals and self.current_dose_index < len(self.selected_meals):
                         next_meal = self.selected_meals[self.current_dose_index]
                         self.current_hour = next_meal.get('default_hour', 8)
                         self.current_minute = next_meal.get('default_minute', 0)
-                        print(f"  [INFO] 다음 식사 시간 기본값 설정: {self.current_hour:02d}:{self.current_minute:02d} ({next_meal['name']})")
+                        # print(f"  [INFO] 다음 식사 시간 기본값 설정: {self.current_hour:02d}:{self.current_minute:02d} ({next_meal['name']})")
                     else:
                         # 기본값으로 리셋
                         self.current_hour = 8
@@ -558,30 +576,30 @@ class DoseTimeScreen:
                 if hasattr(self, 'hour_roller') and hasattr(self, 'minute_roller'):
                     self.hour_roller.set_selected(self.current_hour, True)
                     self.minute_roller.set_selected(self.current_minute // 5, True)
-                    print(f"  [INFO] 롤러 값 업데이트: 시간={self.current_hour}, 분={self.current_minute}")
+                    # print(f"  [INFO] 롤러 값 업데이트: 시간={self.current_hour}, 분={self.current_minute}")
 
                 # 제목과 롤러 가시성 업데이트 (시간 설정 모드로)
                 self._update_title()
                 self._update_roller_visibility()
 
-                print(f"  [INFO] 복용 시간 {self.current_dose_index + 1} 설정 시작")
+                # print(f"  [INFO] 복용 시간 {self.current_dose_index + 1} 설정 시작")
             else:
                 # 모든 복용 시간 설정 완료
-                print(f"  [INFO] 모든 복용 시간 설정 완료!")
-                print(f"  [INFO] 설정된 시간들: {self.dose_times}")
+                # print(f"  [INFO] 모든 복용 시간 설정 완료!")
+                # print(f"  [INFO] 설정된 시간들: {self.dose_times}")
 
                 # 모든 복용 시간 설정 완료 - 화면 전환 요청
-                print(f"  [INFO] 복용 횟수와 관계없이 디스크 선택 화면으로 이동")
+                # print(f"  [INFO] 복용 횟수와 관계없이 디스크 선택 화면으로 이동")
                 self._request_screen_transition()
 
         except Exception as e:
-            print(f"  [ERROR] 다음 단계 처리 실패: {e}")
+            # print(f"  [ERROR] 다음 단계 처리 실패: {e}")
             import sys
             sys.print_exception(e)
 
     def _request_screen_transition(self):
         """화면 전환 요청 - 복용 횟수에 따라 자동 디스크 할당 또는 디스크 선택"""
-        print("[INFO] 화면 전환 요청")
+        # print("[INFO] 화면 전환 요청")
 
         try:
             # 현재 설정된 복용 시간 정보를 JSON에 저장
@@ -589,45 +607,45 @@ class DoseTimeScreen:
                 from data_manager import DataManager
                 data_manager = DataManager()
                 data_manager.save_dose_times(self.dose_times)
-                print(f"[INFO] 복용 시간 정보 JSON에 저장: {len(self.dose_times)}개")
+                # print(f"[INFO] 복용 시간 정보 JSON에 저장: {len(self.dose_times)}개")
 
             # 복용 횟수에 따른 자동 디스크 할당 로직
             self._assign_disks_automatically()
 
-            print("[OK] 화면 전환 요청 완료")
+            # print("[OK] 화면 전환 요청 완료")
         except Exception as e:
-            print(f"[ERROR] 화면 전환 요청 실패: {e}")
+            # print(f"[ERROR] 화면 전환 요청 실패: {e}")
             import sys
             sys.print_exception(e)
 
         # 화면 전환 (올바른 책임 분리 - ScreenManager가 처리)
-        print("[INFO] 복용 시간 설정 완료 - ScreenManager에 완료 신호 전송")
+        # print("[INFO] 복용 시간 설정 완료 - ScreenManager에 완료 신호 전송")
         # ScreenManager에 복용 시간 설정 완료 신호 전송 (올바른 책임 분리)
         try:
             self.screen_manager.dose_time_completed()
-            print("[OK] 복용 시간 설정 완료 신호 전송 완료")
+            # print("[OK] 복용 시간 설정 완료 신호 전송 완료")
         except Exception as e:
-            print(f"[ERROR] 복용 시간 설정 완료 신호 전송 실패: {e}")
+            # print(f"[ERROR] 복용 시간 설정 완료 신호 전송 실패: {e}")
             import sys
             sys.print_exception(e)
 
     def _assign_disks_automatically(self):
         """복용 횟수에 따른 자동 디스크 할당"""
         try:
-            print("[INFO] 복용 횟수에 따른 자동 디스크 할당 시작")
+            # print("[INFO] 복용 횟수에 따른 자동 디스크 할당 시작")
             
             # 복용 횟수 확인
             dose_count = len(self.dose_times)
-            print(f"[INFO] 복용 횟수: {dose_count}회")
+            # print(f"[INFO] 복용 횟수: {dose_count}회")
             
             if dose_count == 1:
                 # 1회 복용: 디스크 선택 필요
-                print("[INFO] 1회 복용 - 디스크 선택 화면으로 이동")
+                # print("[INFO] 1회 복용 - 디스크 선택 화면으로 이동")
                 self.screen_manager.transition_to('disk_selection')
                 
             elif dose_count >= 2:
                 # 2회 이상 복용: 자동 디스크 할당
-                print("[INFO] 2회 이상 복용 - 자동 디스크 할당")
+                # print("[INFO] 2회 이상 복용 - 자동 디스크 할당")
                 
                 # 사용할 디스크 자동 할당 (고정 매핑)
                 assigned_disks = []
@@ -647,7 +665,7 @@ class DoseTimeScreen:
                             'meal_name': dose_time['meal_name'],
                             'meal_key': dose_time['meal_key']
                         })
-                        print(f"[INFO] {dose_time['meal_name']} ({dose_time['time']}) → 디스크 {disk_number} 할당")
+                        # print(f"[INFO] {dose_time['meal_name']} ({dose_time['time']}) → 디스크 {disk_number} 할당")
                 
                 # 사용하지 않는 디스크 정보 저장
                 used_disks = [disk_info['disk_number'] for disk_info in assigned_disks]
@@ -655,24 +673,24 @@ class DoseTimeScreen:
                 for disk_number in [1, 2, 3]:
                     if disk_number not in used_disks:
                         unused_disks.append(disk_number)
-                        print(f"[INFO] 디스크 {disk_number} 사용 안함")
+                        # print(f"[INFO] 디스크 {disk_number} 사용 안함")
                 
                 # 자동 할당된 디스크 정보를 DataManager에 저장
                 from data_manager import DataManager
                 data_manager = DataManager()
                 data_manager.save_auto_assigned_disks(assigned_disks, unused_disks)
-                print(f"[INFO] 자동 할당된 디스크 정보 저장: {len(assigned_disks)}개 사용, {len(unused_disks)}개 미사용")
+                # print(f"[INFO] 자동 할당된 디스크 정보 저장: {len(assigned_disks)}개 사용, {len(unused_disks)}개 미사용")
                 
                 # 충전 화면으로 바로 이동
-                print("[INFO] 자동 디스크 할당 완료 - 충전 화면으로 이동")
+                # print("[INFO] 자동 디스크 할당 완료 - 충전 화면으로 이동")
                 self.screen_manager.transition_to('pill_loading')
                 
             else:
-                print("[WARN] 복용 횟수가 0개 - 오류 상황")
+                # print("[WARN] 복용 횟수가 0개 - 오류 상황")
                 self.screen_manager.transition_to('disk_selection')
                 
         except Exception as e:
-            print(f"[ERROR] 자동 디스크 할당 실패: {e}")
+            # print(f"[ERROR] 자동 디스크 할당 실패: {e}")
             import sys
             sys.print_exception(e)
             # 오류 시 기본적으로 디스크 선택 화면으로 이동
@@ -687,15 +705,17 @@ class DoseTimeScreen:
             if latest_dose_times:
                 self.dose_times = latest_dose_times
 
-            print(f"[INFO] 저장된 복용 시간 정보 반환: {len(self.dose_times)}개")
+            # print(f"[INFO] 저장된 복용 시간 정보 반환: {len(self.dose_times)}개")
             for i, dose_info in enumerate(self.dose_times):
                 if isinstance(dose_info, dict):
-                    print(f"  {i+1}. {dose_info['meal_name']}: {dose_info['time']}")
+                    # print(f"  {i+1}. {dose_info['meal_name']}: {dose_info['time']}")
+                    pass
                 else:
-                    print(f"  {i+1}. {dose_info}")
+                    # print(f"  {i+1}. {dose_info}")
+                    pass
             return self.dose_times
         except Exception as e:
-            print(f"  [ERROR] 복용 시간 반환 실패: {e}")
+            # print(f"  [ERROR] 복용 시간 반환 실패: {e}")
             return []
     
     def show(self):
@@ -703,38 +723,39 @@ class DoseTimeScreen:
         try:
             from memory_monitor import log_memory
             
-            print(f"[INFO] {self.screen_name} 화면 표시 시작...")
+            # print(f"[INFO] {self.screen_name} 화면 표시 시작...")
             log_memory("DoseTimeScreen show() 시작")
             
             if hasattr(self, 'screen_obj') and self.screen_obj:
-                print(f"[INFO] 화면 객체 존재 확인됨")
+                # print(f"[INFO] 화면 객체 존재 확인됨")
                 
                 lv.screen_load(self.screen_obj)
-                print(f"[OK] {self.screen_name} 화면 로드 완료")
+                # print(f"[OK] {self.screen_name} 화면 로드 완료")
                 
                 # 화면 강제 업데이트
-                print(f"[INFO] {self.screen_name} 화면 강제 업데이트 시작...")
+                # print(f"[INFO] {self.screen_name} 화면 강제 업데이트 시작...")
                 for i in range(5):
                     lv.timer_handler()
                     time.sleep(0.01)
-                    print(f"  [INFO] 업데이트 {i+1}/5")
-                print(f"[OK] {self.screen_name} 화면 강제 업데이트 완료")
+                    # print(f"  [INFO] 업데이트 {i+1}/5")
+                # print(f"[OK] {self.screen_name} 화면 강제 업데이트 완료")
                 
                 # 디스플레이 플러시
-                print(f"[INFO] 디스플레이 플러시 실행...")
+                # print(f"[INFO] 디스플레이 플러시 실행...")
                 try:
                     lv.disp.flush()
                 except Exception as flush_error:
-                    print(f"[WARN] 디스플레이 플러시 오류 (무시): {flush_error}")
-                
+                    # print(f"[WARN] 디스플레이 플러시 오류 (무시): {flush_error}")
+                    pass
                 # 화면 표시 완료 후 메모리 상태 모니터링
                 log_memory("DoseTimeScreen show() 완료")
-                print(f"[OK] {self.screen_name} 화면 실행됨")
+                # print(f"[OK] {self.screen_name} 화면 실행됨")
             else:
-                print(f"[ERROR] {self.screen_name} 화면 객체가 없음")
+                # print(f"[ERROR] {self.screen_name} 화면 객체가 없음")
+                pass
                 
         except Exception as e:
-            print(f"  [ERROR] {self.screen_name} 화면 표시 실패: {e}")
+            # print(f"  [ERROR] {self.screen_name} 화면 표시 실패: {e}")
             import sys
             sys.print_exception(e)
     
@@ -745,67 +766,71 @@ class DoseTimeScreen:
             import gc
             import time
             
-            print("[INFO] DoseTimeScreen LVGL 실제 메모리 정리 시작")
+            # print("[INFO] DoseTimeScreen LVGL 실제 메모리 정리 시작")
             
             # 1단계: LVGL 타이머 처리
             try:
                 lv.timer_handler()
-                print("[DEBUG] DoseTimeScreen LVGL 타이머 처리 완료")
+                # print("[DEBUG] DoseTimeScreen LVGL 타이머 처리 완료")
             except Exception as e:
-                print(f"[WARN] DoseTimeScreen LVGL 타이머 처리 실패: {e}")
+                # print(f"[WARN] DoseTimeScreen LVGL 타이머 처리 실패: {e}")
+                pass
             
             # 2단계: LVGL 안전한 메모리 정리 (크래시 방지)
             try:
                 if hasattr(lv, 'mp_lv_deinit_gc'):
                     lv.mp_lv_deinit_gc()
-                    print("[OK] DoseTimeScreen LVGL MicroPython GC 종료 완료")
+                    # print("[OK] DoseTimeScreen LVGL MicroPython GC 종료 완료")
                     
                 # mem_deinit은 사용하지 않음 (크래시 원인)
                 # mem_init도 사용하지 않음 (불필요한 재초기화)
                     
                 if hasattr(lv, 'mp_lv_init_gc'):
                     lv.mp_lv_init_gc()
-                    print("[OK] DoseTimeScreen LVGL MicroPython GC 재초기화 완료")
+                    # print("[OK] DoseTimeScreen LVGL MicroPython GC 재초기화 완료")
                     
             except Exception as e:
-                print(f"[WARN] DoseTimeScreen LVGL 안전한 메모리 정리 실패: {e}")
+                # print(f"[WARN] DoseTimeScreen LVGL 안전한 메모리 정리 실패: {e}")
+                pass
             
             # 3단계: 강제 가비지 컬렉션
             try:
                 for i in range(3):
                     gc.collect()
                     time.sleep_ms(10)
-                print("[OK] DoseTimeScreen 강제 가비지 컬렉션 완료")
+                # print("[OK] DoseTimeScreen 강제 가비지 컬렉션 완료")
             except Exception as e:
-                print(f"[WARN] DoseTimeScreen 가비지 컬렉션 실패: {e}")
+                # print(f"[WARN] DoseTimeScreen 가비지 컬렉션 실패: {e}")
+                pass
             
-            print("[OK] DoseTimeScreen LVGL 실제 메모리 정리 완료")
+            # print("[OK] DoseTimeScreen LVGL 실제 메모리 정리 완료")
             
         except Exception as e:
-            print(f"[ERROR] DoseTimeScreen LVGL 실제 메모리 정리 실패: {e}")
+            # print(f"[ERROR] DoseTimeScreen LVGL 실제 메모리 정리 실패: {e}")
+            pass
     
     def _request_screen_transition_to_meal_time(self):
         """식사 시간 선택 화면으로 전환 요청 - ScreenManager에 위임 (다른 화면들과 동일한 방식)"""
-        print("[INFO] 식사 시간 선택 화면으로 전환 요청")
+        # print("[INFO] 식사 시간 선택 화면으로 전환 요청")
         
         # ScreenManager에 화면 전환 요청 (올바른 책임 분리)
         try:
             self.screen_manager.transition_to('meal_time')
-            print("[OK] 식사 시간 선택 화면으로 전환 요청 완료")
+            # print("[OK] 식사 시간 선택 화면으로 전환 요청 완료")
         except Exception as e:
-            print(f"[ERROR] 식사 시간 선택 화면 전환 요청 실패: {e}")
+            # print(f"[ERROR] 식사 시간 선택 화면 전환 요청 실패: {e}")
             import sys
             sys.print_exception(e)
         
         # 화면 전환 (올바른 책임 분리 - ScreenManager가 처리)
-        print("[INFO] 복용 시간 설정 취소 - ScreenManager에 신호 전송")
+        # print("[INFO] 복용 시간 설정 취소 - ScreenManager에 신호 전송")
         
         # ScreenManager에 복용 시간 설정 취소 신호 전송 (올바른 책임 분리)
         try:
             self.screen_manager.dose_time_cancelled()
-            print("[OK] 복용 시간 설정 취소 신호 전송 완료")
+            # print("[OK] 복용 시간 설정 취소 신호 전송 완료")
         except Exception as e:
-            print(f"[ERROR] 복용 시간 설정 취소 신호 전송 실패: {e}")
+            # print(f"[ERROR] 복용 시간 설정 취소 신호 전송 실패: {e}")
             import sys
             sys.print_exception(e)
 
@@ -815,5 +840,6 @@ class DoseTimeScreen:
             # 현재는 특별한 업데이트 로직이 없음
             pass
         except Exception as e:
-            print(f"  [ERROR] {self.screen_name} 화면 업데이트 실패: {e}")
+            # print(f"  [ERROR] {self.screen_name} 화면 업데이트 실패: {e}")
+            pass
     

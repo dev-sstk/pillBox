@@ -20,7 +20,7 @@ def initialize_stepper_motor_pins():
     - ST_CP (Storage Clock): GPIO15
     - 총 16개 출력 핀 (4개 모터 x 4개 코일)
     """
-    print("스테퍼 모터 핀 초기화 시작...")
+    # print("스테퍼 모터 핀 초기화 시작...")
     
     try:
         # 74HC595D 제어 핀 초기화
@@ -58,60 +58,60 @@ def initialize_stepper_motor_pins():
         # 출력 래치
         latch_output()
         
-        print("스테퍼 모터 핀 초기화 완료 (모든 코일 OFF)")
-        print("  - 모터 0: 0x00 (코일 OFF)")
-        print("  - 모터 1: 0x00 (코일 OFF)")
-        print("  - 모터 2: 0x00 (코일 OFF)")
-        print("  - 모터 3: 0x00 (코일 OFF)")
+        # print("스테퍼 모터 핀 초기화 완료 (모든 코일 OFF)")
+        # print("  - 모터 0: 0x00 (코일 OFF)")
+        # print("  - 모터 1: 0x00 (코일 OFF)")
+        # print("  - 모터 2: 0x00 (코일 OFF)")
+        # print("  - 모터 3: 0x00 (코일 OFF)")
         
         return True
         
     except Exception as e:
-        print(f"스테퍼 모터 핀 초기화 실패: {e}")
+        # print(f"스테퍼 모터 핀 초기화 실패: {e}")
         return False
 
 # 부팅 시 자동 실행
 if __name__ == "__main__":
-    print("=" * 50)
-    print("ESP32-C6 필박스 부팅 초기화")
-    print("=" * 50)
+    # print("=" * 50)
+    # print("ESP32-C6 필박스 부팅 초기화")
+    # print("=" * 50)
     
     # [SMOOTH] 부팅 시 메모리 정리 최소화 - 화면 깜빡임 완전 방지
     import gc
-    print("🧹 부팅 시 메모리 정리 시작...")
+    # print("🧹 부팅 시 메모리 정리 시작...")
     for i in range(2):  # 3회 → 2회로 최적화 (화면 깜빡임 완전 방지)
         gc.collect()
         time.sleep(0.005)  # 0.01초 → 0.005초로 최적화
-    print("[OK] 부팅 시 메모리 정리 완료")
+    # print("[OK] 부팅 시 메모리 정리 완료")
     
     # 스테퍼 모터 핀 초기화
     initialize_stepper_motor_pins()
     # 짧은 지연 후 메인 프로그램으로 진행 (화면 깜빡임 방지)
     time.sleep_ms(50)  # 100ms → 50ms로 최적화
     
-    print("부팅 초기화 완료")
-    print("=" * 50)
+    # print("부팅 초기화 완료")
+    # print("=" * 50)
     
     # mpy 파일 경로 설정 및 메인 프로그램 실행
-    # print("메인 프로그램 실행 시작...")
+    # # print("메인 프로그램 실행 시작...")
     # try:
     #     import sys
     #     sys.path.append('/screens')
-    #     print("  [OK] /screens 경로 추가 완료")
+    #     # print("  [OK] /screens 경로 추가 완료")
         
-    #     print("  [INFO] main.mpy 파일 확인 중...")
+    #     # print("  [INFO] main.mpy 파일 확인 중...")
     #     import main   # main.mpy import
-    #     print("  [OK] main.mpy import 완료")
+    #     # print("  [OK] main.mpy import 완료")
         
-    #     print("  [INFO] main.main() 함수 실행 중...")
+    #     # print("  [INFO] main.main() 함수 실행 중...")
     #     main.main()   # main.main() 함수 실행
-    #     print("  [OK] main.main() 실행 완료")
+    #     # print("  [OK] main.main() 실행 완료")
         
     # except ImportError as e:
-    #     print(f"  [ERROR] main.mpy import 실패: {e}")
-    #     print("  [INFO] main.py 파일을 찾을 수 없습니다.")
-    #     print("  [INFO] ESP32에 파일이 업로드되었는지 확인해주세요.")
+    #     # print(f"  [ERROR] main.mpy import 실패: {e}")
+    #     # print("  [INFO] main.py 파일을 찾을 수 없습니다.")
+    #     # print("  [INFO] ESP32에 파일이 업로드되었는지 확인해주세요.")
     # except Exception as e:
-    #     print(f"  [ERROR] 메인 프로그램 실행 실패: {e}")
+    #     # print(f"  [ERROR] 메인 프로그램 실행 실패: {e}")
     #     import sys
     #     sys.print_exception(e)
