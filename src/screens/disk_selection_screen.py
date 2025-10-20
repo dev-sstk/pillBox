@@ -6,7 +6,7 @@
 import lvgl as lv
 import time
 from ui_style import UIStyle
-from global_data import global_data
+from data_manager import DataManager
 
 class DiskSelectionScreen:
     """디스크 선택 화면 클래스 - meal_time_screen.py와 동일한 구조"""
@@ -21,7 +21,8 @@ class DiskSelectionScreen:
         self._clear_auto_assigned_disks()
         
         # JSON에서 데이터 불러오기
-        dose_times = global_data.get_dose_times()
+        data_manager = DataManager()
+        dose_times = data_manager.get_dose_times()
         if dose_times and len(dose_times) > 0:
             self.dose_info = dose_times[0].copy()  # 첫 번째 복용 시간 정보 복사
         else:

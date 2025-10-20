@@ -278,6 +278,32 @@ class WiFiManager:
         except Exception as e:
             print(f"[ERROR] WiFi 설정 삭제 실패: {e}")
     
+    def forget_specific_network(self, ssid):
+        """특정 네트워크의 연결 정보 삭제"""
+        try:
+            # 현재 저장된 설정 확인
+            try:
+                with open(self.config_file, 'r') as f:
+                    config = json.load(f)
+                saved_ssid = config.get('ssid', '')
+                
+                # 요청한 SSID와 저장된 SSID가 일치하면 삭제
+                if saved_ssid == ssid:
+                    import os
+                    os.remove(self.config_file)
+                    self.disconnect()
+                    print(f"🗑️ {ssid} 네트워크 연결 정보 삭제됨")
+                    return True
+                else:
+                    print(f"[INFO] {ssid} 네트워크는 저장된 설정이 없습니다")
+                    return False
+            except FileNotFoundError:
+                print(f"[INFO] {ssid} 네트워크는 저장된 설정이 없습니다")
+                return False
+        except Exception as e:
+            print(f"[ERROR] {ssid} 네트워크 삭제 실패: {e}")
+            return False
+    
     def get_saved_password(self, ssid):
         """저장된 비밀번호 확인"""
         try:

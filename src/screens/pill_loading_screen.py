@@ -6,7 +6,7 @@
 import time
 import lvgl as lv
 # math, json, UIStyle은 지연 임포트로 변경 (메모리 절약)
-from global_data import global_data
+from data_manager import DataManager
 
 class DiskState:
     """디스크 상태 관리 클래스 (리미트 스위치 기반)"""
@@ -286,10 +286,12 @@ class PillLoadingScreen:
             
             # 전역 데이터에서 최신 정보 가져오기
             if dose_times:
-                global_data.save_dose_times(dose_times)
+                data_manager = DataManager()
+                data_manager.save_dose_times(dose_times)
                 self.dose_times = dose_times
             else:
-                self.dose_times = global_data.get_dose_times()
+                data_manager = DataManager()
+                self.dose_times = data_manager.get_dose_times()
             
             # 선택된 식사 시간 추출 (지연 초기화)
             if self.selected_meals is None:

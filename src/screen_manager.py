@@ -184,6 +184,19 @@ class ScreenManager:
                 self.register_screen(screen_name, screen)
                 print(f"[DEBUG] register_screen 호출 완료")
                 print(f"[OK] {screen_name} 화면 직접 생성 완료")
+            elif screen_name == "wifi_password":
+                print(f"[DEBUG] WifiPasswordScreen import 시작...")
+                from screens.wifi_password_screen import WifiPasswordScreen
+                print(f"[DEBUG] WifiPasswordScreen import 완료")
+                print(f"[DEBUG] WifiPasswordScreen 인스턴스 생성 시작...")
+                # 네트워크 정보가 있으면 전달
+                selected_network = kwargs.get('selected_network', {}).get('ssid', 'Wi-Fi 네트워크')
+                screen = WifiPasswordScreen(self, selected_network)
+                print(f"[DEBUG] WifiPasswordScreen 인스턴스 생성 완료")
+                print(f"[DEBUG] register_screen 호출 시작...")
+                self.register_screen(screen_name, screen)
+                print(f"[DEBUG] register_screen 호출 완료")
+                print(f"[OK] {screen_name} 화면 직접 생성 완료")
             else:
                 print(f"[ERROR] 지원하지 않는 화면: {screen_name}")
         except Exception as e:
@@ -318,6 +331,18 @@ class ScreenManager:
         self.transition_to('meal_time')
         
         print("[OK] WiFi 스캔 완료 처리 완료")
+    
+    def wifi_password_completed(self, next_screen='meal_time'):
+        """WiFi 비밀번호 입력 완료 처리 - StartupScreen과 동일한 방식"""
+        print(f"[INFO] WiFi 비밀번호 입력 완료 처리 시작 (다음 화면: {next_screen})")
+        
+        # 1. WiFi 비밀번호 화면 정리
+        self.cleanup_screen('wifi_password')
+        
+        # 2. 다음 화면으로 전환 (StartupScreen과 동일한 구조)
+        self.transition_to(next_screen)
+        
+        print("[OK] WiFi 비밀번호 입력 완료 처리 완료")
     
     def meal_time_completed(self):
         """식사 시간 선택 완료 처리"""
@@ -737,8 +762,9 @@ class ScreenManager:
         try:
             print(f"[INFO] {screen_name} 화면 데이터 백업 시작...")
             
-            # global_data import
-            from global_data import global_data
+            # data_manager에서 global_data 기능 사용
+            from data_manager import DataManager
+            data_manager = DataManager()
             
             # 화면별 데이터 백업
             if screen_name == 'wifi_scan':
@@ -748,7 +774,7 @@ class ScreenManager:
                     data['networks'] = screen.networks
                 if hasattr(screen, 'selected_network'):
                     data['selected_network'] = screen.selected_network
-                global_data.backup_screen_data(screen_name, data)
+                data_manager.backup_screen_data(screen_name, data)
                 
             elif screen_name == 'meal_time':
                 # 식사 시간 선택 결과 백업
@@ -757,7 +783,7 @@ class ScreenManager:
                     data['selected_meals'] = screen.selected_meals
                 if hasattr(screen, 'current_selection'):
                     data['current_selection'] = screen.current_selection
-                global_data.backup_screen_data(screen_name, data)
+                data_manager.backup_screen_data(screen_name, data)
                 
             elif screen_name == 'dose_time':
                 # 복용 시간 설정 결과 백업
@@ -766,7 +792,7 @@ class ScreenManager:
                     data['dose_times'] = screen.dose_times
                 if hasattr(screen, 'current_dose_index'):
                     data['current_dose_index'] = screen.current_dose_index
-                global_data.backup_screen_data(screen_name, data)
+                data_manager.backup_screen_data(screen_name, data)
                 
             elif screen_name == 'disk_selection':
                 # 디스크 선택 결과 백업
@@ -775,7 +801,7 @@ class ScreenManager:
                     data['selected_disks'] = screen.selected_disks
                 if hasattr(screen, 'current_selection'):
                     data['current_selection'] = screen.current_selection
-                global_data.backup_screen_data(screen_name, data)
+                data_manager.backup_screen_data(screen_name, data)
                 
             elif screen_name == 'pill_loading':
                 # 알약 충전 결과 백업
@@ -784,7 +810,7 @@ class ScreenManager:
                     data['loading_progress'] = screen.loading_progress
                 if hasattr(screen, 'current_disk'):
                     data['current_disk'] = screen.current_disk
-                global_data.backup_screen_data(screen_name, data)
+                data_manager.backup_screen_data(screen_name, data)
                 
             else:
                 print(f"[INFO] {screen_name} 화면은 데이터 백업 불필요")
@@ -794,15 +820,15 @@ class ScreenManager:
             import sys
             sys.print_exception(e)
     
-    def transition_to(self, screen_name):
+    def transition_to(self, screen_name, **kwargs):
         """안전한 화면 전환 담당 - ScreenManager의 책임"""
         print(f"[INFO] 안전한 화면 전환 시작: {screen_name}")
         print(f"[DEBUG] 현재 등록된 화면 목록: {list(self.screens.keys())}")
         print(f"[DEBUG] 현재 화면: {self.current_screen_name}")
         
         try:
-            # 이전 화면 정리 (스타트업, wifi_scan, meal_time, dose_time, disk_selection, pill_loading 화면 제외 - 각자의 completed 메서드에서 정리)
-            if self.current_screen_name and self.current_screen_name not in ['startup', 'wifi_scan', 'meal_time', 'dose_time', 'disk_selection', 'pill_loading'] and self.current_screen_name != screen_name:
+            # 이전 화면 정리 (스타트업, wifi_scan, wifi_password, meal_time, dose_time, disk_selection, pill_loading 화면 제외 - 각자의 completed 메서드에서 정리)
+            if self.current_screen_name and self.current_screen_name not in ['startup', 'wifi_scan', 'wifi_password', 'meal_time', 'dose_time', 'disk_selection', 'pill_loading'] and self.current_screen_name != screen_name:
                 print(f"[INFO] 이전 화면 정리 시작: {self.current_screen_name}")
                 self.cleanup_screen(self.current_screen_name)
                 print(f"[OK] 이전 화면 정리 완료: {self.current_screen_name}")
@@ -811,10 +837,16 @@ class ScreenManager:
             print(f"[DEBUG] 화면 존재 여부 확인: {screen_name} in {list(self.screens.keys())}")
             if screen_name not in self.screens:
                 print(f"[INFO] {screen_name} 화면 생성 중...")
-                self._create_screen_directly(screen_name)
+                self._create_screen_directly(screen_name, **kwargs)
                 print(f"[DEBUG] 화면 생성 후 등록된 화면 목록: {list(self.screens.keys())}")
             else:
                 print(f"[INFO] {screen_name} 화면이 이미 존재함")
+                # 기존 화면에 네트워크 정보 전달 (wifi_password 화면인 경우)
+                if screen_name == 'wifi_password' and 'selected_network' in kwargs:
+                    wifi_password_screen = self.screens[screen_name]
+                    wifi_password_screen.selected_network = kwargs['selected_network']['ssid']
+                    wifi_password_screen.selected_network_info = kwargs['selected_network']
+                    print(f"[DEBUG] wifi_password 화면에 네트워크 정보 설정: {kwargs['selected_network']['ssid']}")
             
             # 현재 화면 참조 정리
             if self.current_screen_name:

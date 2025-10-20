@@ -127,7 +127,7 @@ class WifiScanScreen:
         # 버튼 힌트 (화면에 직접) - 모던 UI 색상
         self.hints_text = lv.label(self.screen_obj)
         # LVGL 심볼 사용 (기본 폰트에서 지원)
-        self.hints_text.set_text(f"A:O B:{lv.SYMBOL.UP} C:{lv.SYMBOL.DOWN} D: -")
+        self.hints_text.set_text(f"A:O B:{lv.SYMBOL.UP} C:{lv.SYMBOL.DOWN} D:{lv.SYMBOL.TRASH}")
         self.hints_text.set_style_text_color(lv.color_hex(0x8E8E93), 0)  # 모던 라이트 그레이
         # 기본 폰트 사용 (LVGL 심볼 지원을 위해)
         self.hints_text.align(lv.ALIGN.BOTTOM_MID, 0, -2)  # 4픽셀 더 아래로 이동 (-6 -> -2)
@@ -319,7 +319,7 @@ class WifiScanScreen:
         # 버튼 힌트 텍스트 (Modern 스타일) - 모던 UI 색상
         self.hints_text = self.ui_style.create_label(
             self.hints_container,
-            f"A:O B:{lv.SYMBOL.UP} C:{lv.SYMBOL.DOWN} D: -",
+            f"A:O B:{lv.SYMBOL.UP} C:{lv.SYMBOL.DOWN} D:{lv.SYMBOL.TRASH}",
             'text_caption',
             0x8E8E93  # 모던 라이트 그레이
         )
@@ -531,6 +531,7 @@ class WifiScanScreen:
     
     def on_button_a(self):
         """버튼 A (Select) 처리 - LVGL 리스트에서 선택"""
+        print(f"[BTN] 버튼 A (SW1) 눌림 - WiFi 네트워크 선택")
         
         # 단계별 디버깅
         if hasattr(self, 'wifi_list_items'):
@@ -544,6 +545,7 @@ class WifiScanScreen:
             
             if 0 <= selected_index < len(self.wifi_networks):
                 selected_network = self.wifi_networks[selected_index]
+                print(f"[INFO] 선택된 네트워크: {selected_network['ssid']} (보안: {selected_network.get('security', 'Unknown')})")
 
                 # 현재 연결된 네트워크인지 확인
                 from wifi_manager import get_wifi_manager
@@ -554,7 +556,8 @@ class WifiScanScreen:
                 
                 # 이미 연결된 네트워크라면 패스워드 입력 없이 바로 다음 화면으로
                 if is_currently_connected:
-                    self._request_screen_transition()
+                    print(f"[INFO] 이미 연결된 네트워크: {selected_network['ssid']}")
+                    self._request_screen_transition('meal_time')
                     return
 
                 # 보안이 있는 네트워크인지 확인
@@ -574,16 +577,20 @@ class WifiScanScreen:
                         if success:
                             time.sleep(1)
                             # 저장된 비밀번호로 연결 성공 시 바로 다음 화면으로 이동
-                            self._request_screen_transition()
+                            print(f"[INFO] 저장된 비밀번호로 연결 성공: {selected_network['ssid']}")
+                            self._request_screen_transition('meal_time')
                         else:
                             # 저장된 비밀번호가 틀렸으면 비밀번호 입력 화면으로
-                            self._show_password_screen(selected_network)
+                            print(f"[INFO] 저장된 비밀번호가 틀림, 비밀번호 입력 화면으로 이동: {selected_network['ssid']}")
+                            self._request_screen_transition('wifi_password', selected_network=selected_network)
                         return
                     
                     # 저장된 비밀번호가 없으면 패스워드 화면으로 이동
-                    self._show_password_screen(selected_network)
+                    print(f"[INFO] 저장된 비밀번호가 없음, 비밀번호 입력 화면으로 이동: {selected_network['ssid']}")
+                    self._request_screen_transition('wifi_password', selected_network=selected_network)
                 else:
                     # 보안이 없는 네트워크 - 직접 연결 시도
+                    print(f"[INFO] 보안이 없는 네트워크, 직접 연결 시도: {selected_network['ssid']}")
                     self._connect_to_open_network(selected_network)
             else:
                 pass
@@ -624,42 +631,40 @@ class WifiScanScreen:
             else:
                 pass
     def on_button_d(self):
-        """버튼 D 처리 - 기능 없음"""
-        # 버튼 D 기능 제거됨
-    
-    def _show_password_screen(self, selected_network):
-        """비밀번호 입력 화면 표시"""
-        
-        # 패스워드 화면이 등록되어 있지 않으면 동적 생성
-        if 'wifi_password' not in self.screen_manager.screens:
-            
-            # [FAST] 메모리 부족 해결: 강력한 메모리 정리
-            import gc
-            for i in range(10):  # 10회 가비지 컬렉션 (더 강력하게)
-                gc.collect()
-                time.sleep(0.05)  # 0.05초 대기 (더 오래)
-            
-            try:
-                from screens.wifi_password_screen import WifiPasswordScreen
-                wifi_password_screen = WifiPasswordScreen(self.screen_manager, selected_network['ssid'])
-                self.screen_manager.register_screen('wifi_password', wifi_password_screen)
-            except Exception as e:
-                # [FAST] 메모리 할당 실패 시 추가 메모리 정리
-                for i in range(5):
-                    gc.collect()
-                    time.sleep(0.02)
-                import sys
-                sys.print_exception(e)
+        """버튼 D 처리 - 선택한 WiFi 네트워크 연결 정보 삭제"""
+        try:
+            # 선택된 네트워크가 있는지 확인
+            if not hasattr(self, 'wifi_networks') or not self.wifi_networks:
+                print("[WARN] 스캔된 WiFi 네트워크가 없습니다")
                 return
-        else:
-            wifi_password_screen = self.screen_manager.screens['wifi_password']
-        
-        # 네트워크 정보 설정
-        wifi_password_screen.selected_network = selected_network['ssid']
-        wifi_password_screen.selected_network_info = selected_network
-        
-        # 화면 전환
-        self.screen_manager.show_screen('wifi_password')
+            
+            if not hasattr(self, 'current_selected_index') or self.current_selected_index >= len(self.wifi_networks):
+                print("[WARN] 선택된 WiFi 네트워크가 없습니다")
+                return
+            
+            # 선택된 네트워크 정보 가져오기
+            selected_network = self.wifi_networks[self.current_selected_index]
+            selected_ssid = selected_network['ssid']
+            
+            print(f"[INFO] 선택한 WiFi 네트워크 연결 정보 삭제 요청: {selected_ssid}")
+            
+            # WiFi 매니저를 통해 선택한 네트워크의 설정만 삭제
+            from wifi_manager import get_wifi_manager
+            wifi_manager = get_wifi_manager()
+            success = wifi_manager.forget_specific_network(selected_ssid)
+            
+            if success:
+                print(f"[OK] {selected_ssid} 네트워크 연결 정보 삭제 완료")
+                # 사용자에게 피드백 제공
+                print(f"[INFO] {selected_ssid} 네트워크의 저장된 비밀번호가 삭제되었습니다.")
+            else:
+                print(f"[INFO] {selected_ssid} 네트워크는 저장된 연결 정보가 없습니다.")
+            
+        except Exception as e:
+            print(f"[ERROR] WiFi 연결 정보 삭제 실패: {e}")
+            import sys
+            sys.print_exception(e)
+    
     
     def _update_selection_highlight(self):
         """선택된 항목 하이라이트 업데이트"""
@@ -680,35 +685,34 @@ class WifiScanScreen:
                     except:
                         pass
     
-    def _request_screen_transition(self):
+    def _request_screen_transition(self, screen_name='meal_time', **kwargs):
         """화면 전환 요청 - ScreenManager에 위임"""
-        print("[INFO] 화면 전환 요청 시작")
-        
-        # ScreenManager 상태 확인
-        print(f"[DEBUG] 현재 등록된 화면: {list(self.screen_manager.screens.keys())}")
-        print(f"[DEBUG] 현재 화면: {self.screen_manager.current_screen_name}")
+        print(f"[INFO] 화면 전환 요청: {screen_name}")
         
         # ScreenManager에 화면 전환 요청 (올바른 책임 분리)
         try:
-            print("[DEBUG] meal_time 화면으로 전환 시도...")
-            self.screen_manager.transition_to('meal_time')
-            print("[OK] 화면 전환 요청 완료")
+            self.screen_manager.transition_to(screen_name, **kwargs)
+            print(f"[OK] 화면 전환 요청 완료: {screen_name}")
         except Exception as e:
             print(f"[ERROR] 화면 전환 요청 실패: {e}")
             import sys
             sys.print_exception(e)
         
-        # 화면 전환 (올바른 책임 분리 - ScreenManager가 처리)
-        print("[INFO] WiFi 스캔 화면 완료 - ScreenManager에 완료 신호 전송")
-        
-        # ScreenManager에 WiFi 스캔 완료 신호 전송 (올바른 책임 분리)
-        try:
-            self.screen_manager.wifi_scan_completed()
-            print("[OK] WiFi 스캔 완료 신호 전송 완료")
-        except Exception as e:
-            print(f"[ERROR] WiFi 스캔 완료 신호 전송 실패: {e}")
-            import sys
-            sys.print_exception(e)
+        # wifi_password 화면으로 전환하는 경우가 아닐 때만 완료 신호 전송
+        if screen_name != 'wifi_password':
+            # 화면 전환 (올바른 책임 분리 - ScreenManager가 처리)
+            print("[INFO] WiFi 스캔 화면 완료 - ScreenManager에 완료 신호 전송")
+            
+            # ScreenManager에 WiFi 스캔 완료 신호 전송 (올바른 책임 분리)
+            try:
+                self.screen_manager.wifi_scan_completed()
+                print("[OK] WiFi 스캔 완료 신호 전송 완료")
+            except Exception as e:
+                print(f"[ERROR] WiFi 스캔 완료 신호 전송 실패: {e}")
+                import sys
+                sys.print_exception(e)
+        else:
+            print("[INFO] wifi_password 화면으로 전환 - 완료 신호 전송 생략")
 
     def _connect_to_open_network(self, network):
         """오픈 네트워크에 직접 연결"""
@@ -720,9 +724,11 @@ class WifiScanScreen:
         if success:
             time.sleep(1)
             # 다음 화면으로 이동
-            self._request_screen_transition()
+            print(f"[INFO] 오픈 네트워크 연결 성공: {network['ssid']}")
+            self._request_screen_transition('meal_time')
         else:
             # 연결 실패 시 현재 화면에 머물기
+            print(f"[ERROR] 오픈 네트워크 연결 실패: {network['ssid']}")
             pass
     def _scan_wifi_networks(self):
         """WiFi 네트워크 스캔"""

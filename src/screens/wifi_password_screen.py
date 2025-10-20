@@ -402,22 +402,9 @@ class WifiPasswordScreen:
             if success:
                 time.sleep(1)
                 
-                # meal_time 화면으로 이동 (없으면 생성)
-                if 'meal_time' not in self.screen_manager.screens:
-                    try:
-                        from screens.meal_time_screen import MealTimeScreen
-                        meal_time_screen = MealTimeScreen(self.screen_manager)
-                        self.screen_manager.register_screen('meal_time', meal_time_screen)
-                    except Exception as e:
-                        print(f"[ERROR] 복용 횟수 설정 화면 생성 실패: {e}")
-                        import sys
-                        sys.print_exception(e)
-                        # 실패 시 wifi_scan으로 돌아가기
-                        self.screen_manager.show_screen('wifi_scan')
-                        return
-                
-                # 복용 시간 선택 화면으로 이동
-                self.screen_manager.show_screen('meal_time')
+                # WiFi 연결 성공 시 다음 화면으로 전환
+                print("[INFO] WiFi 연결 성공 - 다음 화면으로 전환")
+                self._request_screen_transition('meal_time')
             else:
                 print("[ERROR] WiFi 연결 실패!")
                 # 연결 실패 시 현재 화면에 머물기 (팝업 제거)
@@ -430,25 +417,87 @@ class WifiPasswordScreen:
     
     def on_button_a(self):
         """버튼 A - 키보드 왼쪽으로 이동"""
-        self._move_keyboard_cursor('left')
+        try:
+            print("[DEBUG] WifiPasswordScreen on_button_a 호출됨")
+            
+            # 화면이 초기화되었는지 확인
+            if not hasattr(self, 'keyboard_layouts') or not hasattr(self, 'keyboard_mode'):
+                print("[WARN] WifiPasswordScreen이 아직 초기화되지 않음, 버튼 A 무시")
+                return
+            
+            # 추가 안전성 검사
+            if not hasattr(self, 'selected_row') or not hasattr(self, 'selected_col'):
+                print("[WARN] WifiPasswordScreen 키보드 상태가 초기화되지 않음, 버튼 A 무시")
+                return
+            
+            print("[DEBUG] WifiPasswordScreen 키보드 커서 왼쪽으로 이동")
+            self._move_keyboard_cursor('left')
+        except Exception as e:
+            print(f"[ERROR] 버튼 A 처리 실패: {e}")
+            import sys
+            sys.print_exception(e)
     
     def on_button_b(self):
         """버튼 B - 키보드 오른쪽으로 이동"""
-        self._move_keyboard_cursor('right')
+        try:
+            print("[DEBUG] WifiPasswordScreen on_button_b 호출됨")
+            
+            # 화면이 초기화되었는지 확인
+            if not hasattr(self, 'keyboard_layouts') or not hasattr(self, 'keyboard_mode'):
+                print("[WARN] WifiPasswordScreen이 아직 초기화되지 않음, 버튼 B 무시")
+                return
+            
+            # 추가 안전성 검사
+            if not hasattr(self, 'selected_row') or not hasattr(self, 'selected_col'):
+                print("[WARN] WifiPasswordScreen 키보드 상태가 초기화되지 않음, 버튼 B 무시")
+                return
+            
+            print("[DEBUG] WifiPasswordScreen 키보드 커서 오른쪽으로 이동")
+            self._move_keyboard_cursor('right')
+        except Exception as e:
+            print(f"[ERROR] 버튼 B 처리 실패: {e}")
+            import sys
+            sys.print_exception(e)
     
     def on_button_c(self):
         """버튼 C - 완료/뒤로가기"""
-        print("완료/뒤로가기")
-        
-        # 비밀번호가 입력되어 있으면 연결 시도
-        if hasattr(self, '_password') and self._password:
-            self._attempt_connection()
-        else:
-            self.screen_manager.show_screen('wifi_scan')
+        try:
+            print("[DEBUG] WifiPasswordScreen on_button_c 호출됨")
+            print("완료/뒤로가기")
+            
+            # 비밀번호가 입력되어 있으면 연결 시도
+            if hasattr(self, '_password') and self._password:
+                print("[DEBUG] 비밀번호가 입력됨, 연결 시도")
+                self._attempt_connection()
+            else:
+                print("[DEBUG] 비밀번호가 입력되지 않음, wifi_scan으로 돌아가기")
+                self._request_screen_transition('wifi_scan')
+        except Exception as e:
+            print(f"[ERROR] 버튼 C 처리 실패: {e}")
+            import sys
+            sys.print_exception(e)
     
     def on_button_d(self):
         """버튼 D - 키보드 키 선택/입력"""
-        self._press_current_keyboard_key()
+        try:
+            print("[DEBUG] WifiPasswordScreen on_button_d 호출됨")
+            
+            # 화면이 초기화되었는지 확인
+            if not hasattr(self, 'keyboard_layouts') or not hasattr(self, 'keyboard_mode'):
+                print("[WARN] WifiPasswordScreen이 아직 초기화되지 않음, 버튼 D 무시")
+                return
+            
+            # 추가 안전성 검사
+            if not hasattr(self, 'selected_row') or not hasattr(self, 'selected_col'):
+                print("[WARN] WifiPasswordScreen 키보드 상태가 초기화되지 않음, 버튼 D 무시")
+                return
+            
+            print("[DEBUG] WifiPasswordScreen 키보드 키 선택/입력")
+            self._press_current_keyboard_key()
+        except Exception as e:
+            print(f"[ERROR] 버튼 D 처리 실패: {e}")
+            import sys
+            sys.print_exception(e)
     
     def _move_keyboard_cursor(self, direction):
         """텍스트 기반 키보드 커서 이동"""
@@ -762,6 +811,31 @@ class WifiPasswordScreen:
         except Exception as e:
             print(f"[WARN] 참조 정리 실패: {e}")
     
+    def _request_screen_transition(self, screen_name):
+        """화면 전환 요청 - ScreenManager에 위임 (StartupScreen과 동일한 방식)"""
+        print(f"[INFO] 화면 전환 요청: {screen_name}")
+        
+        # ScreenManager에 화면 전환 요청 (올바른 책임 분리)
+        try:
+            self.screen_manager.transition_to(screen_name)
+            print(f"[OK] 화면 전환 요청 완료: {screen_name}")
+        except Exception as e:
+            print(f"[ERROR] 화면 전환 요청 실패: {e}")
+            import sys
+            sys.print_exception(e)
+        
+        # 화면 전환 (올바른 책임 분리 - ScreenManager가 처리)
+        print("[INFO] WiFi 비밀번호 입력 완료 - ScreenManager에 완료 신호 전송")
+        
+        # ScreenManager에 WiFi 비밀번호 입력 완료 신호 전송 (올바른 책임 분리)
+        try:
+            self.screen_manager.wifi_password_completed(screen_name)
+            print("[OK] WiFi 비밀번호 입력 완료 신호 전송 완료")
+        except Exception as e:
+            print(f"[ERROR] WiFi 비밀번호 입력 완료 신호 전송 실패: {e}")
+            import sys
+            sys.print_exception(e)
+
     def _force_garbage_collection(self):
         """강제 가비지 컬렉션 - 표준화된 시스템 사용"""
         try:

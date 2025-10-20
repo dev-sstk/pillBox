@@ -6,7 +6,7 @@
 import time
 import lvgl as lv
 from ui_style import UIStyle
-from global_data import global_data
+from data_manager import DataManager
 
 class DoseTimeScreen:
     """복용 시간 설정 화면 클래스 - 롤러 UI 스타일"""
@@ -18,11 +18,12 @@ class DoseTimeScreen:
         self.screen_obj = None
         
         # JSON에서 데이터 불러오기
-        self.dose_count = global_data.get_dose_count() or 1
-        self.selected_meals = global_data.get_selected_meals() or []  # 선택된 식사 시간 정보
+        data_manager = DataManager()
+        self.dose_count = data_manager.get_dose_count() or 1
+        self.selected_meals = data_manager.get_selected_meals() or []  # 선택된 식사 시간 정보
         
         # 전역 데이터에서 기존 정보 복원 (새로운 선택인지 확인)
-        self.dose_times = global_data.get_dose_times()
+        self.dose_times = data_manager.get_dose_times()
         print(f"[DEBUG] dose_time_screen 초기화 - 기존 dose_times: {len(self.dose_times) if self.dose_times else 0}개")
         print(f"[DEBUG] dose_time_screen 초기화 - selected_meals: {len(self.selected_meals) if self.selected_meals else 0}개")
         
@@ -345,7 +346,8 @@ class DoseTimeScreen:
         """현재 복용 시간 설정"""
         try:
             # 전역 데이터에서 최신 정보 다시 가져오기
-            latest_dose_times = global_data.get_dose_times()
+            data_manager = DataManager()
+            latest_dose_times = data_manager.get_dose_times()
             if latest_dose_times:
                 self.dose_times = latest_dose_times
                 print(f"  [INFO] 전역 데이터에서 최신 dose_times 불러옴: {len(self.dose_times)}개")
@@ -500,7 +502,8 @@ class DoseTimeScreen:
                 print(f"  [INFO] 현재 dose_times 상태: {self.dose_times}")
                 
                 # 전역 데이터에도 저장
-                global_data.save_dose_times(self.dose_times)
+                data_manager = DataManager()
+                data_manager.save_dose_times(self.dose_times)
                 print(f"  [INFO] 전역 데이터에 복용 시간 저장: {len(self.dose_times)}개")
                 for dose_info in self.dose_times:
                     if isinstance(dose_info, dict):
@@ -679,7 +682,8 @@ class DoseTimeScreen:
         """설정된 복용 시간들 반환"""
         try:
             # 전역 데이터에서 최신 정보 가져오기
-            latest_dose_times = global_data.get_dose_times()
+            data_manager = DataManager()
+            latest_dose_times = data_manager.get_dose_times()
             if latest_dose_times:
                 self.dose_times = latest_dose_times
 

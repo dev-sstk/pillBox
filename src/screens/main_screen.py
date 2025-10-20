@@ -1376,9 +1376,10 @@ class MainScreen:
     def _get_selected_disks_for_dose(self, dose_index):
         """특정 복용 시간에 대한 선택된 디스크들 가져오기 (global_data 직접 사용)"""
         try:
-            # global_data에서 직접 복용 시간 정보 가져오기
-            from global_data import global_data
-            dose_times = global_data.get_dose_times()
+            # data_manager에서 직접 복용 시간 정보 가져오기
+            from data_manager import DataManager
+            data_manager = DataManager()
+            dose_times = data_manager.get_dose_times()
             
             if dose_times and len(dose_times) > dose_index:
                 dose_info = dose_times[dose_index]

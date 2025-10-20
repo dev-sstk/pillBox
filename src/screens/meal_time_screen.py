@@ -6,7 +6,7 @@
 import time
 import lvgl as lv
 from ui_style import UIStyle
-from global_data import global_data
+from data_manager import DataManager
 
 class MealTimeScreen:
     """아침/점심/저녁 복용 이벤트 선택 화면 클래스 - Modern UI 스타일"""
@@ -457,8 +457,9 @@ class MealTimeScreen:
                 print(f"[INFO] 전달할 식사 시간 정보: {selected_meals_info}")
                 
                 # JSON에 저장
-                global_data.save_selected_meals(selected_meals_info)
-                global_data.save_dose_count(selected_count)
+                data_manager = DataManager()
+                data_manager.save_selected_meals(selected_meals_info)
+                data_manager.save_dose_count(selected_count)
                 print(f"[INFO] 식사 시간 정보 JSON에 저장: {len(selected_meals_info)}개")
                 
                 # 화면 전환 요청
@@ -485,9 +486,10 @@ class MealTimeScreen:
             data_manager.save_selected_meals([])
             
             # global_data도 함께 초기화 (동기화를 위해)
-            global_data.save_auto_assigned_disks([], [])
-            global_data.save_dose_times([])
-            global_data.save_selected_meals([])
+            data_manager = DataManager()
+            data_manager.save_auto_assigned_disks([], [])
+            data_manager.save_dose_times([])
+            data_manager.save_selected_meals([])
             
             print("[OK] 이전 자동 할당 디스크 정보 초기화 완료")
             
@@ -607,8 +609,9 @@ class MealTimeScreen:
                     })
             
             # 전역 데이터에 선택된 식사 시간 정보 저장
-            global_data.save_selected_meals(selected_meals_info)
-            global_data.save_dose_count(len(selected_meals_info))
+            data_manager = DataManager()
+            data_manager.save_selected_meals(selected_meals_info)
+            data_manager.save_dose_count(len(selected_meals_info))
             
         except Exception as e:
             print(f"[ERROR] 복용 시간 저장 중 오류: {e}")
