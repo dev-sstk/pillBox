@@ -21,7 +21,7 @@ class WiFiManager:
         time.sleep(0.5)
         
         # WiFi 설정 저장 파일
-        self.config_file = "/wifi_config.json"
+        self.config_file = "/data/wifi_config.json"
         
         # 스캔된 네트워크 목록
         self.scanned_networks = []
@@ -216,6 +216,20 @@ class WiFiManager:
     def _save_config(self, ssid, password):
         """WiFi 설정을 파일에 저장"""
         try:
+            import os
+            
+            # /data 디렉토리 존재 확인 및 생성
+            data_dir = "/data"
+            try:
+                if data_dir not in os.listdir("/"):
+                    os.mkdir(data_dir)
+                    print(f"[INFO] /data 디렉토리 생성됨")
+            except OSError as e:
+                if e.errno == 17:  # EEXIST - 디렉토리가 이미 존재
+                    print(f"[INFO] /data 디렉토리가 이미 존재함")
+                else:
+                    raise
+            
             config = {
                 'ssid': ssid,
                 'password': password,
@@ -233,6 +247,20 @@ class WiFiManager:
     def _load_saved_config(self):
         """저장된 WiFi 설정 불러오기"""
         try:
+            import os
+            
+            # /data 디렉토리 존재 확인 및 생성
+            data_dir = "/data"
+            try:
+                if data_dir not in os.listdir("/"):
+                    os.mkdir(data_dir)
+                    print(f"[INFO] /data 디렉토리 생성됨")
+            except OSError as e:
+                if e.errno == 17:  # EEXIST - 디렉토리가 이미 존재
+                    print(f"[INFO] /data 디렉토리가 이미 존재함")
+                else:
+                    raise
+            
             with open(self.config_file, 'r') as f:
                 config = json.load(f)
             
@@ -250,6 +278,20 @@ class WiFiManager:
     def try_auto_connect(self, timeout=5000):
         """저장된 WiFi 설정으로 자동 연결 시도 (Public 메서드)"""
         try:
+            import os
+            
+            # /data 디렉토리 존재 확인 및 생성
+            data_dir = "/data"
+            try:
+                if data_dir not in os.listdir("/"):
+                    os.mkdir(data_dir)
+                    print(f"[INFO] /data 디렉토리 생성됨")
+            except OSError as e:
+                if e.errno == 17:  # EEXIST - 디렉토리가 이미 존재
+                    print(f"[INFO] /data 디렉토리가 이미 존재함")
+                else:
+                    raise
+            
             with open(self.config_file, 'r') as f:
                 config = json.load(f)
             
@@ -281,6 +323,20 @@ class WiFiManager:
     def forget_specific_network(self, ssid):
         """특정 네트워크의 연결 정보 삭제"""
         try:
+            import os
+            
+            # /data 디렉토리 존재 확인 및 생성
+            data_dir = "/data"
+            try:
+                if data_dir not in os.listdir("/"):
+                    os.mkdir(data_dir)
+                    print(f"[INFO] /data 디렉토리 생성됨")
+            except OSError as e:
+                if e.errno == 17:  # EEXIST - 디렉토리가 이미 존재
+                    print(f"[INFO] /data 디렉토리가 이미 존재함")
+                else:
+                    raise
+            
             # 현재 저장된 설정 확인
             try:
                 with open(self.config_file, 'r') as f:
@@ -289,7 +345,6 @@ class WiFiManager:
                 
                 # 요청한 SSID와 저장된 SSID가 일치하면 삭제
                 if saved_ssid == ssid:
-                    import os
                     os.remove(self.config_file)
                     self.disconnect()
                     print(f"🗑️ {ssid} 네트워크 연결 정보 삭제됨")
@@ -307,6 +362,20 @@ class WiFiManager:
     def get_saved_password(self, ssid):
         """저장된 비밀번호 확인"""
         try:
+            import os
+            
+            # /data 디렉토리 존재 확인 및 생성
+            data_dir = "/data"
+            try:
+                if data_dir not in os.listdir("/"):
+                    os.mkdir(data_dir)
+                    print(f"[INFO] /data 디렉토리 생성됨")
+            except OSError as e:
+                if e.errno == 17:  # EEXIST - 디렉토리가 이미 존재
+                    print(f"[INFO] /data 디렉토리가 이미 존재함")
+                else:
+                    raise
+            
             with open(self.config_file, 'r') as f:
                 config = json.load(f)
             

@@ -341,6 +341,9 @@ class DataManager:
     def save_medication_data(self, medication_data):
         """약물 데이터 저장 (캐시 업데이트) - 지연 로딩"""
         try:
+            print(f"[DEBUG] save_medication_data 시작: {self.medication_file}")
+            print(f"[DEBUG] 저장할 데이터: {medication_data}")
+            
             json = self._get_module("json")
             time = self._get_module("time")
             
@@ -348,8 +351,12 @@ class DataManager:
                 print("[ERROR] json 모듈 로딩 실패")
                 return False
             
+            print(f"[DEBUG] JSON 모듈 로드 성공, 파일 쓰기 시작...")
+            
             with open(self.medication_file, 'w') as f:
                 json.dump(medication_data, f)
+            
+            print(f"[DEBUG] 파일 쓰기 완료, 캐시 업데이트 시작...")
             
             # 캐시 업데이트 (무효화 대신 직접 업데이트)
             self._medication_cache = medication_data
@@ -365,6 +372,8 @@ class DataManager:
             return True
         except Exception as e:
             print(f"[ERROR] 약물 데이터 저장 실패: {e}")
+            import sys
+            sys.print_exception(e)
             return False
     
     def load_medication_data(self):
@@ -408,6 +417,12 @@ class DataManager:
             with open(self.medication_file, 'r') as f:
                 medication_data = json.load(f)
             
+            # 디버그: 로드된 데이터 확인
+            print(f"[DEBUG] 로드된 약물 데이터: {medication_data}")
+            
+            # 데이터 구조 검증 및 수정
+            medication_data = self._validate_and_fix_medication_data(medication_data)
+            
             # 캐시 업데이트 (캐시가 활성화된 경우에만)
             if self._cache_enabled:
                 self._medication_cache = medication_data
@@ -436,6 +451,61 @@ class DataManager:
             except AttributeError:
                 self._cache_timestamp = 0
             return default_data
+    
+    def _validate_and_fix_medication_data(self, medication_data):
+        """약물 데이터 구조 검증 및 수정"""
+        try:
+            print(f"[DEBUG] 데이터 구조 검증 시작: {medication_data}")
+            
+            # 잘못된 disk_counts 필드가 있으면 제거
+            if "disk_counts" in medication_data:
+                print(f"[WARN] 잘못된 disk_counts 필드 발견, 제거: {medication_data['disk_counts']}")
+                del medication_data["disk_counts"]
+            
+            # disks 필드가 없으면 기본 데이터로 교체
+            if "disks" not in medication_data:
+                print("[WARN] disks 필드 없음, 기본 데이터로 교체")
+                default_data = self._get_default_medication_data()
+                medication_data["disks"] = default_data["disks"]
+            
+            # 각 디스크 데이터 검증 및 수정
+            for disk_num in ["1", "2", "3"]:
+                if disk_num not in medication_data["disks"]:
+                    print(f"[WARN] 디스크 {disk_num} 데이터 없음, 기본 데이터로 교체")
+                    default_data = self._get_default_medication_data()
+                    medication_data["disks"][disk_num] = default_data["disks"][disk_num].copy()
+                else:
+                    disk_data = medication_data["disks"][disk_num]
+                    # 필수 필드 검증
+                    required_fields = ["name", "total_capacity", "current_count", "last_refill", "medication_type"]
+                    for field in required_fields:
+                        if field not in disk_data:
+                            print(f"[WARN] 디스크 {disk_num} {field} 필드 없음, 기본값 설정")
+                            if field == "name":
+                                disk_data[field] = f"{'아침' if disk_num == '1' else '점심' if disk_num == '2' else '저녁'}약"
+                            elif field == "total_capacity":
+                                disk_data[field] = 15
+                            elif field == "current_count":
+                                disk_data[field] = 0
+                            elif field == "last_refill":
+                                disk_data[field] = None
+                            elif field == "medication_type":
+                                disk_data[field] = "morning" if disk_num == "1" else "lunch" if disk_num == "2" else "dinner"
+            
+            # refill_history 필드 검증
+            if "refill_history" not in medication_data:
+                medication_data["refill_history"] = []
+            
+            # low_stock_threshold 필드 검증
+            if "low_stock_threshold" not in medication_data:
+                medication_data["low_stock_threshold"] = 3
+            
+            print(f"[DEBUG] 데이터 구조 검증 완료: {medication_data}")
+            return medication_data
+            
+        except Exception as e:
+            print(f"[ERROR] 데이터 구조 검증 실패: {e}")
+            return self._get_default_medication_data()
     
     def _get_default_medication_data(self):
         """기본 약물 데이터 반환"""
@@ -581,8 +651,19 @@ class DataManager:
     def update_disk_count(self, disk_num, new_count):
         """디스크 약물 수량 업데이트"""
         try:
-            medication_data = self.load_medication_data()
+            print(f"[DEBUG] update_disk_count 시작: 디스크 {disk_num}, 수량 {new_count}")
+            
+            # 캐시된 데이터가 있으면 사용, 없으면 로드
+            if self._medication_cache is not None:
+                print(f"[DEBUG] 캐시된 데이터 사용")
+                medication_data = self._medication_cache.copy()
+            else:
+                print(f"[DEBUG] 파일에서 데이터 로드")
+                medication_data = self.load_medication_data()
+            
             disk_key = str(disk_num)
+            
+            print(f"[DEBUG] 로드된 medication_data: {medication_data}")
             
             # 디스크 데이터가 없으면 기본 데이터 생성
             if disk_key not in medication_data["disks"]:
@@ -593,8 +674,12 @@ class DataManager:
             # 현재 시간 가져오기 (지연 로딩)
             current_time = self._get_current_time()
             
+            print(f"[DEBUG] 업데이트 전 디스크 {disk_num} 수량: {medication_data['disks'][disk_key]['current_count']}")
+            
             medication_data["disks"][disk_key]["current_count"] = new_count
             medication_data["disks"][disk_key]["last_refill"] = f"{current_time[0]:04d}-{current_time[1]:02d}-{current_time[2]:02d}T{current_time[3]:02d}:{current_time[4]:02d}:{current_time[5]:02d}"
+            
+            print(f"[DEBUG] 업데이트 후 디스크 {disk_num} 수량: {medication_data['disks'][disk_key]['current_count']}")
             
             # 리필 기록 추가
             refill_record = {
@@ -608,26 +693,41 @@ class DataManager:
             if len(medication_data["refill_history"]) > 50:
                 medication_data["refill_history"] = medication_data["refill_history"][-50:]
             
-            return self.save_medication_data(medication_data)
+            print(f"[DEBUG] save_medication_data 호출 전: {medication_data}")
+            save_result = self.save_medication_data(medication_data)
+            print(f"[DEBUG] save_medication_data 결과: {save_result}")
+            
+            return save_result
                 
         except Exception as e:
             print(f"[ERROR] 디스크 수량 업데이트 실패: {e}")
+            import sys
+            sys.print_exception(e)
             return False
     
     def get_disk_count(self, disk_num):
         """디스크 약물 수량 조회 (최적화)"""
         try:
+            print(f"[DEBUG] get_disk_count 시작: 디스크 {disk_num}")
+            
             medication_data = self.load_medication_data()
             disk_key = str(disk_num)
             
+            print(f"[DEBUG] 로드된 medication_data: {medication_data}")
+            print(f"[DEBUG] disk_key: {disk_key}")
+            print(f"[DEBUG] medication_data['disks']: {medication_data.get('disks', {})}")
+            
             if disk_key in medication_data["disks"]:
                 current_count = medication_data["disks"][disk_key]["current_count"]
-                # 디버그 출력 최소화 (메모리 절약)
+                print(f"[DEBUG] 디스크 {disk_num} 수량: {current_count}")
                 return current_count
             else:
+                print(f"[DEBUG] 디스크 {disk_num} 데이터 없음")
                 return 0
         except Exception as e:
-            # 메모리 부족 시 조용히 실패
+            print(f"[ERROR] get_disk_count({disk_num}) 실패: {e}")
+            import sys
+            sys.print_exception(e)
             return 0
     
     def is_disk_low_stock(self, disk_num):
@@ -731,34 +831,6 @@ class DataManager:
             print(f"[ERROR] 복용 시간 저장 실패: {e}")
             return False
     
-    def get_disk_count(self, disk_num):
-        """특정 디스크의 알약 개수 조회"""
-        try:
-            medication_data = self.load_medication_data()
-            if medication_data and "disk_counts" in medication_data:
-                disk_counts = medication_data["disk_counts"]
-                if str(disk_num) in disk_counts:
-                    return disk_counts[str(disk_num)]
-            return 0
-        except Exception as e:
-            print(f"[ERROR] 디스크 {disk_num} 알약 개수 조회 실패: {e}")
-            return 0
-    
-    def update_disk_count(self, disk_num, count):
-        """특정 디스크의 알약 개수 업데이트"""
-        try:
-            medication_data = self.load_medication_data()
-            if not medication_data:
-                medication_data = {}
-            
-            if "disk_counts" not in medication_data:
-                medication_data["disk_counts"] = {}
-            
-            medication_data["disk_counts"][str(disk_num)] = count
-            return self.save_medication_data(medication_data)
-        except Exception as e:
-            print(f"[ERROR] 디스크 {disk_num} 알약 개수 업데이트 실패: {e}")
-            return False
     
     def get_all_disk_counts(self):
         """모든 디스크의 알약 개수 조회"""
@@ -986,51 +1058,6 @@ class DataManager:
             print(f"[ERROR] 복용 시간 조회 실패: {e}")
             return []
     
-    def get_selected_disks(self):
-        """선택된 디스크 정보 반환 (지연 로딩)"""
-        try:
-            print(f"[DEBUG] get_selected_disks 시작 - _dose_times 상태: {self._dose_times is not None}")
-            
-            # 캐시를 강제로 새로고침하여 최신 데이터 로드
-            print(f"[DEBUG] 캐시 강제 새로고침 시작")
-            self._dose_times = None  # 캐시 초기화
-            load_result = self._load_global_data_from_file()
-            print(f"[DEBUG] 파일 로드 결과: {load_result}")
-            
-            # 파일이 없으면 global_data에서 직접 가져오기 시도
-            if not load_result:
-                print(f"[DEBUG] global_data에서 직접 데이터 가져오기 시도")
-                try:
-                    from global_data import global_data
-                    global_dose_times = global_data.get_dose_times()
-                    if global_dose_times:
-                        self._dose_times = global_dose_times
-                        print(f"[DEBUG] global_data에서 dose_times 가져옴: {len(self._dose_times)}개")
-                except Exception as e:
-                    print(f"[WARN] global_data에서 데이터 가져오기 실패: {e}")
-            
-            print(f"[DEBUG] get_selected_disks - dose_times 개수: {len(self._dose_times) if self._dose_times else 0}")
-            
-            if self._dose_times and len(self._dose_times) > 0:
-                first_dose_info = self._dose_times[0]
-                print(f"[DEBUG] get_selected_disks - 첫 번째 dose_info: {first_dose_info}")
-                print(f"[DEBUG] get_selected_disks - dose_info 타입: {type(first_dose_info)}")
-                
-                if isinstance(first_dose_info, dict) and 'selected_disks' in first_dose_info:
-                    selected_disks = first_dose_info['selected_disks']
-                    print(f"[DEBUG] get_selected_disks - 선택된 디스크: {selected_disks}")
-                    return selected_disks
-                else:
-                    print(f"[DEBUG] get_selected_disks - selected_disks 키 없음, 키들: {list(first_dose_info.keys()) if isinstance(first_dose_info, dict) else 'dict가 아님'}")
-            else:
-                print(f"[DEBUG] get_selected_disks - dose_times 비어있음 또는 None")
-            return []
-            
-        except Exception as e:
-            print(f"[ERROR] 선택된 디스크 조회 실패: {e}")
-            import sys
-            sys.print_exception(e)
-            return []
     
     def save_selected_meals(self, selected_meals):
         """선택된 식사 시간 정보 저장 (JSON 파일 기반)"""

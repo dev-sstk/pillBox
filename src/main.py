@@ -389,8 +389,21 @@ def check_setup_complete():
     """초기 설정 완료 여부 확인"""
     try:
         import json
+        import os
         
-        setup_file = "/setup_complete.json"
+        # /data 디렉토리 존재 확인 및 생성
+        data_dir = "/data"
+        try:
+            if data_dir not in os.listdir("/"):
+                os.mkdir(data_dir)
+                print(f"[INFO] /data 디렉토리 생성됨")
+        except OSError as e:
+            if e.errno == 17:  # EEXIST - 디렉토리가 이미 존재
+                print(f"[INFO] /data 디렉토리가 이미 존재함")
+            else:
+                raise
+        
+        setup_file = "/data/setup_complete.json"
         
         # 파일이 존재하는지 확인 (MicroPython 방식)
         try:

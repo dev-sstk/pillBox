@@ -1762,9 +1762,22 @@ class MainScreen:
         """설정 완료 플래그를 false로 리셋 (스타트업 메뉴 사용 가능하게)"""
         try:
             import json
+            import os
+            
+            # /data 디렉토리 존재 확인 및 생성
+            data_dir = "/data"
+            try:
+                if data_dir not in os.listdir("/"):
+                    os.mkdir(data_dir)
+                    print(f"[INFO] /data 디렉토리 생성됨")
+            except OSError as e:
+                if e.errno == 17:  # EEXIST - 디렉토리가 이미 존재
+                    print(f"[INFO] /data 디렉토리가 이미 존재함")
+                else:
+                    raise
             
             setup_data = {"setup_complete": False}
-            setup_file = "/setup_complete.json"
+            setup_file = "/data/setup_complete.json"
             
             # 설정 완료 플래그를 false로 변경
             with open(setup_file, 'w') as f:

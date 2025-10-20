@@ -312,11 +312,19 @@ class ScreenManager:
         """스타트업 완료 처리 - 올바른 책임 분리"""
         print("[INFO] 스타트업 완료 처리 시작")
         
-        # 1. 스타트업 화면 정리
-        self.cleanup_screen('startup')
-        
-        # 2. 다음 화면으로 전환
-        self.transition_to('wifi_scan')
+        try:
+            # 1. 스타트업 화면 정리
+            self.cleanup_screen('startup')
+            
+            # 2. 다음 화면으로 전환
+            print("[INFO] WiFi 스캔 화면으로 전환 시작")
+            self.transition_to('wifi_scan')
+            print("[OK] WiFi 스캔 화면으로 전환 완료")
+            
+        except Exception as e:
+            print(f"[ERROR] 스타트업 완료 처리 중 오류: {e}")
+            import sys
+            sys.print_exception(e)
         
         print("[OK] 스타트업 완료 처리 완료")
     

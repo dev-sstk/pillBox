@@ -89,7 +89,7 @@ class PillLoadingScreen:
         self.sequential_mode = False
         self.current_sequential_index = 0
         self.sequential_disks = None  # 지연 초기화
-        self.disk_states_file = "/disk_states.json"
+        self.disk_states_file = "/data/disk_states.json"
         
         # 화면 생성 완전 제거 - show() 시점에 생성
         self._screen_created = False
@@ -685,18 +685,42 @@ class PillLoadingScreen:
         """초기 설정 완료 플래그 설정"""
         try:
             import json
+            import os
+            
+            # /data 디렉토리 존재 확인 및 생성
+            data_dir = "/data"
+            try:
+                if data_dir not in os.listdir("/"):
+                    os.mkdir(data_dir)
+                    print(f"[INFO] /data 디렉토리 생성됨")
+            except OSError as e:
+                if e.errno == 17:  # EEXIST - 디렉토리가 이미 존재
+                    print(f"[INFO] /data 디렉토리가 이미 존재함")
+                else:
+                    raise
             
             setup_data = {"setup_complete": True}
-            setup_file = "/setup_complete.json"
+            setup_file = "/data/setup_complete.json"
             
             # 설정 완료 파일 생성/업데이트
             with open(setup_file, 'w') as f:
                 json.dump(setup_data, f)
             
-            print("[OK] 초기 설정 완료 플래그 설정됨")
+            # 파일이 제대로 저장되었는지 확인
+            try:
+                with open(setup_file, 'r') as f:
+                    saved_data = json.load(f)
+                    if saved_data.get('setup_complete') == True:
+                        print("[OK] 초기 설정 완료 플래그 설정됨")
+                    else:
+                        print("[WARN] 초기 설정 완료 플래그 저장 확인 실패")
+            except Exception as verify_e:
+                print(f"[WARN] 초기 설정 완료 플래그 저장 확인 실패: {verify_e}")
             
         except Exception as e:
             print(f"[WARN] 초기 설정 완료 플래그 설정 실패: {e}")
+            import sys
+            sys.print_exception(e)
     
     def _show_simple_completion_message(self):
         """메모리 부족 시 간단한 완료 메시지 표시"""
@@ -1468,6 +1492,19 @@ class PillLoadingScreen:
     def _save_disk_states(self):
         """디스크 충전 상태를 파일에 저장"""
         try:
+            # /data 디렉토리 존재 확인 및 생성
+            import os
+            data_dir = "/data"
+            try:
+                if data_dir not in os.listdir("/"):
+                    os.mkdir(data_dir)
+                    print(f"  [INFO] /data 디렉토리 생성됨")
+            except OSError as e:
+                if e.errno == 17:  # EEXIST - 디렉토리가 이미 존재
+                    print(f"  [INFO] /data 디렉토리가 이미 존재함")
+                else:
+                    raise
+            
             # 실제로 존재하는 디스크 상태만 저장
             config = {
                 'disk_1_loaded': self.disk_states.get(0, DiskState(0)).loaded_count if 0 in self.disk_states else 0,
