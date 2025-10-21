@@ -697,7 +697,7 @@ class PillLoadingScreen:
             pass
     
     def _mark_setup_complete(self):
-        """초기 설정 완료 플래그 설정"""
+        """초기 설정 완료 플래그 설정 - boot_target.json 공통 사용"""
         try:
             import json
             import os
@@ -715,26 +715,15 @@ class PillLoadingScreen:
                 else:
                     raise
             
-            setup_data = {"setup_complete": True}
-            setup_file = "/data/setup_complete.json"
+            # boot_target.json을 사용하여 메인화면으로 부팅하도록 설정
+            boot_data = {"boot_target": "main"}
+            boot_file = "/data/boot_target.json"
             
-            # 설정 완료 파일 생성/업데이트
-            with open(setup_file, 'w') as f:
-                json.dump(setup_data, f)
+            # 부팅 타겟 파일 생성/업데이트
+            with open(boot_file, 'w') as f:
+                json.dump(boot_data, f)
             
-            # 파일이 제대로 저장되었는지 확인
-            try:
-                with open(setup_file, 'r') as f:
-                    saved_data = json.load(f)
-                    if saved_data.get('setup_complete') == True:
-                        # print("[OK] 초기 설정 완료 플래그 설정됨")
-                        pass
-                    else:
-                        # print("[WARN] 초기 설정 완료 플래그 저장 확인 실패")pass
-                        pass
-            except Exception as verify_e:
-                # print(f"[WARN] 초기 설정 완료 플래그 저장 확인 실패: {verify_e}")pass
-                pass
+            # print("[OK] 초기 설정 완료 - 메인화면으로 부팅 설정됨")
             
         except Exception as e:
             # print(f"[WARN] 초기 설정 완료 플래그 설정 실패: {e}")

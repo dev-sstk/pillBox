@@ -807,6 +807,82 @@ def reset_disk_states(port):
         print(f"❌ 디스크 상태 초기화 중 오류 발생: {e}")
         return False
 
+def delete_data_files(port):
+    """데이터 파일들 삭제 (global_data.json, dispense_log.json, boot_target.json, disk_states.json, medication.json, settings.json)"""
+    print("\n" + "=" * 60)
+    print("데이터 파일 삭제")
+    print("=" * 60)
+    
+    try:
+        # 삭제할 데이터 파일들
+        data_files = [
+            "/data/global_data.json",
+            "/data/dispense_log.json", 
+            "/data/boot_target.json",
+            "/data/disk_states.json",
+            "/data/medication.json",
+            "/data/settings.json",
+            "/data/wifi_config.json"
+        ]
+        
+        print("🗑️  삭제할 데이터 파일들:")
+        for file in data_files:
+            print(f"  - {file}")
+        
+        # 삭제 확인
+        print(f"\n⚠️  경고: 모든 데이터 파일이 삭제됩니다!")
+        print("이 작업은 다음 데이터를 삭제합니다:")
+        print("  - 전역 데이터 (global_data.json)")
+        print("  - 복용 로그 (dispense_log.json)")
+        print("  - 부팅 타겟 (boot_target.json)")
+        print("  - 디스크 상태 (disk_states.json)")
+        print("  - 약물 정보 (medication.json)")
+        print("  - 설정 정보 (settings.json)")
+        print("  - WiFi 연결 설정 (wifi_config.json)")
+        
+        confirm = input("\n정말로 모든 데이터 파일을 삭제하시겠습니까? (yes 입력): ").strip().lower()
+        
+        if confirm != "yes":
+            print("❌ 삭제가 취소되었습니다.")
+            return False
+        
+        # 파일 삭제 실행
+        print(f"\n🗑️  데이터 파일 삭제 시작...")
+        deleted_count = 0
+        failed_files = []
+        
+        for file in data_files:
+            print(f"삭제 중: {file}")
+            if delete_esp32_file(port, file):
+                deleted_count += 1
+                print(f"  ✅ {file} 삭제 완료")
+            else:
+                failed_files.append(file)
+                print(f"  ❌ {file} 삭제 실패")
+            time.sleep(0.1)  # 삭제 간격
+        
+        # 결과 출력
+        print(f"\n" + "=" * 60)
+        print("데이터 파일 삭제 완료")
+        print("=" * 60)
+        print(f"✅ 삭제된 파일: {deleted_count}개")
+        
+        if failed_files:
+            print(f"❌ 삭제 실패: {len(failed_files)}개")
+            for file in failed_files:
+                print(f"  - {file}")
+        else:
+            print("🎉 모든 데이터 파일이 성공적으로 삭제되었습니다!")
+            print("📋 삭제된 파일:")
+            for file in data_files:
+                print(f"  - {file}")
+        
+        return deleted_count > 0
+        
+    except Exception as e:
+        print(f"❌ 데이터 파일 삭제 중 오류 발생: {e}")
+        return False
+
 def cleanup_build_directory():
     """빌드 디렉토리 정리 (안전한 방식)"""
     build_path = Path(BUILD_DIR)
@@ -932,8 +1008,9 @@ def main():
     print("  6. ESP32 파일 전체 삭제")
     print("  7. 디스크 상태 초기화 (disk_states.json 업로드)")
     print("  8. 오디오 파일 업로드 (dispense_medicine.wav, take_medicine.wav)")
+    print("  9. 데이터 파일 삭제 (global_data.json, dispense_log.json, boot_target.json, disk_states.json, medication.json, settings.json, wifi_config.json)")
     
-    choice = input("\n선택 (1-8, Enter=1): ").strip()
+    choice = input("\n선택 (1-9, Enter=1): ").strip()
     if choice == "":
         choice = "1"
     
@@ -1032,6 +1109,15 @@ def main():
         
         print(f"\n선택된 포트: {port}")
         upload_audio_files(port)
+    
+    elif choice == "9":
+        # 데이터 파일 삭제
+        port = find_serial_port()
+        if not port:
+            return
+        
+        print(f"\n선택된 포트: {port}")
+        delete_data_files(port)
 
 if __name__ == "__main__":
     try:

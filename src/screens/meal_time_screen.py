@@ -356,55 +356,6 @@ class MealTimeScreen:
             sys.print_exception(e)
     
     
-    def _cleanup_lvgl(self):
-        """LVGL 정리 - 메모리 누수 방지 (실제 메모리 정리)"""
-        try:
-            import lvgl as lv
-            import gc
-            import time
-            
-            # print("[INFO] MealTimeScreen LVGL 실제 메모리 정리 시작")
-            
-            # 1단계: LVGL 타이머 처리
-            try:
-                lv.timer_handler()
-                # print("[DEBUG] MealTimeScreen LVGL 타이머 처리 완료")
-            except Exception as e:
-                # print(f"[WARN] MealTimeScreen LVGL 타이머 처리 실패: {e}")
-                pass
-            
-            # 2단계: LVGL 안전한 메모리 정리 (크래시 방지)
-            try:
-                if hasattr(lv, 'mp_lv_deinit_gc'):
-                    lv.mp_lv_deinit_gc()
-                    # print("[OK] MealTimeScreen LVGL MicroPython GC 종료 완료")
-                    
-                # mem_deinit은 사용하지 않음 (크래시 원인)
-                # mem_init도 사용하지 않음 (불필요한 재초기화)
-                    
-                if hasattr(lv, 'mp_lv_init_gc'):
-                    lv.mp_lv_init_gc()
-                    # print("[OK] MealTimeScreen LVGL MicroPython GC 재초기화 완료")
-                    
-            except Exception as e:
-                # print(f"[WARN] MealTimeScreen LVGL 안전한 메모리 정리 실패: {e}")
-                pass
-            
-            # 3단계: 강제 가비지 컬렉션
-            try:
-                for i in range(3):
-                    gc.collect()
-                    time.sleep_ms(10)
-                # print("[OK] MealTimeScreen 강제 가비지 컬렉션 완료")
-            except Exception as e:
-                # print(f"[WARN] MealTimeScreen 가비지 컬렉션 실패: {e}")
-                pass
-            
-            # print("[OK] MealTimeScreen LVGL 실제 메모리 정리 완료")
-            
-        except Exception as e:
-            # print(f"[ERROR] MealTimeScreen LVGL 실제 메모리 정리 실패: {e}")
-            pass
     
     def update(self):
         """화면 업데이트 (ScreenManager에서 호출)"""

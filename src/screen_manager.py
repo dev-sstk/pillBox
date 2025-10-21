@@ -363,13 +363,15 @@ class ScreenManager:
         # print("[OK] 식사 시간 선택 완료 처리 완료")
     
     def dose_time_completed(self):
-        """복용 시간 설정 완료 처리"""
+        """복용 시간 설정 완료 처리 - D버튼으로 진입한 경우 메인화면으로 돌아가기"""
         # print("[INFO] 복용 시간 설정 완료 처리 시작")
         
         # 1. 복용 시간 화면 정리
         self.cleanup_screen('dose_time')
         
-        # 2. 자동 할당된 디스크 정보 확인
+        # 2. D버튼 진입 감지는 dose_time_screen.py에서 처리
+        
+        # 3. 일반적인 경우 - 자동 할당된 디스크 정보 확인
         try:
             from data_manager import DataManager
             data_manager = DataManager()
@@ -389,6 +391,82 @@ class ScreenManager:
             self.transition_to('disk_selection')
         
         # print("[OK] 복용 시간 설정 완료 처리 완료")
+    
+    def _restart_to_main(self):
+        """재부팅 후 메인화면으로 돌아가기 (Pill 로딩 방식 응용)"""
+        try:
+            # print("[INFO] 재부팅 후 메인화면으로 돌아가기 시작")
+            
+            # 메인화면으로 부팅하도록 플래그 설정
+            self._set_boot_to_main()
+            
+            # 흰색 화면 만들기
+            self._make_screen_white()
+            
+            # 잠시 대기 후 재부팅
+            import time
+            time.sleep(0.1)
+            
+            # print("[INFO] ESP 리셋 시작...")
+            import machine
+            machine.reset()
+            
+        except Exception as e:
+            # print(f"[ERROR] 메인화면 재부팅 실패: {e}")
+            self.transition_to('main')
+    
+    def _set_boot_to_main(self):
+        """메인화면으로 부팅하도록 플래그 설정"""
+        try:
+            import json
+            import os
+            
+            # /data 디렉토리 존재 확인 및 생성
+            data_dir = "/data"
+            try:
+                if data_dir not in os.listdir("/"):
+                    os.mkdir(data_dir)
+            except OSError as e:
+                if e.errno == 17:  # EEXIST - 디렉토리가 이미 존재
+                    pass
+                else:
+                    raise
+            
+            boot_data = {"boot_target": "main"}
+            boot_file = "/data/boot_target.json"
+            
+            # 부팅 타겟 파일 생성/업데이트
+            with open(boot_file, 'w') as f:
+                json.dump(boot_data, f)
+            
+        except Exception as e:
+            # print(f"[ERROR] 메인화면 부팅 플래그 설정 실패: {e}")
+            pass
+    
+    def _make_screen_white(self):
+        """화면을 흰색으로 만들기"""
+        try:
+            import lvgl as lv
+            
+            # 현재 화면 객체가 있는지 확인
+            if hasattr(self, 'current_screen') and self.current_screen and hasattr(self.current_screen, 'screen_obj') and self.current_screen.screen_obj:
+                # 화면 배경을 흰색으로 설정
+                self.current_screen.screen_obj.set_style_bg_color(lv.color_hex(0xFFFFFF), 0)  # 흰색
+                
+                # 모든 자식 객체 숨기기 (깔끔한 흰색 화면을 위해)
+                if hasattr(self.current_screen, 'main_container') and self.current_screen.main_container:
+                    self.current_screen.main_container.delete()  # 메인 컨테이너 삭제
+                
+                # 새로운 빈 컨테이너 생성 (흰색 배경만)
+                self.current_screen.main_container = lv.obj(self.current_screen.screen_obj)
+                self.current_screen.main_container.set_size(lv.pct(100), lv.pct(100))
+                self.current_screen.main_container.set_style_bg_color(lv.color_hex(0xFFFFFF), 0)  # 흰색
+                self.current_screen.main_container.set_style_border_width(0, 0)  # 테두리 없음
+                self.current_screen.main_container.center()
+                
+        except Exception as e:
+            # print(f"[ERROR] 흰색 화면 만들기 실패: {e}")
+            pass
     
     def disk_selection_completed(self):
         """디스크 선택 완료 처리"""

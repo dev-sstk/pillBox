@@ -598,7 +598,7 @@ class DoseTimeScreen:
             sys.print_exception(e)
 
     def _request_screen_transition(self):
-        """화면 전환 요청 - 복용 횟수에 따라 자동 디스크 할당 또는 디스크 선택"""
+        """화면 전환 요청 - D버튼 진입 여부에 따라 분기 처리"""
         # print("[INFO] 화면 전환 요청")
 
         try:
@@ -609,7 +609,17 @@ class DoseTimeScreen:
                 data_manager.save_dose_times(self.dose_times)
                 # print(f"[INFO] 복용 시간 정보 JSON에 저장: {len(self.dose_times)}개")
 
-            # 복용 횟수에 따른 자동 디스크 할당 로직
+            # D버튼으로 진입한 경우인지 확인
+            is_d_button_entry = self._is_d_button_entry()
+            print(f"[DEBUG] D버튼 진입 감지: {is_d_button_entry}")
+            if is_d_button_entry:
+                # D버튼으로 진입한 경우 - 선택된 디스크 정보 저장 후 재부팅
+                print("[INFO] D버튼으로 진입한 경우 - 선택된 디스크 정보 저장 후 재부팅")
+                self._save_d_button_selected_disks()
+                self._restart_to_main()
+                return
+
+            # 일반적인 경우 - 복용 횟수에 따른 자동 디스크 할당 로직
             self._assign_disks_automatically()
 
             # print("[OK] 화면 전환 요청 완료")
@@ -759,55 +769,6 @@ class DoseTimeScreen:
             import sys
             sys.print_exception(e)
     
-    def _cleanup_lvgl(self):
-        """LVGL 정리 - 메모리 누수 방지 (실제 메모리 정리)"""
-        try:
-            import lvgl as lv
-            import gc
-            import time
-            
-            # print("[INFO] DoseTimeScreen LVGL 실제 메모리 정리 시작")
-            
-            # 1단계: LVGL 타이머 처리
-            try:
-                lv.timer_handler()
-                # print("[DEBUG] DoseTimeScreen LVGL 타이머 처리 완료")
-            except Exception as e:
-                # print(f"[WARN] DoseTimeScreen LVGL 타이머 처리 실패: {e}")
-                pass
-            
-            # 2단계: LVGL 안전한 메모리 정리 (크래시 방지)
-            try:
-                if hasattr(lv, 'mp_lv_deinit_gc'):
-                    lv.mp_lv_deinit_gc()
-                    # print("[OK] DoseTimeScreen LVGL MicroPython GC 종료 완료")
-                    
-                # mem_deinit은 사용하지 않음 (크래시 원인)
-                # mem_init도 사용하지 않음 (불필요한 재초기화)
-                    
-                if hasattr(lv, 'mp_lv_init_gc'):
-                    lv.mp_lv_init_gc()
-                    # print("[OK] DoseTimeScreen LVGL MicroPython GC 재초기화 완료")
-                    
-            except Exception as e:
-                # print(f"[WARN] DoseTimeScreen LVGL 안전한 메모리 정리 실패: {e}")
-                pass
-            
-            # 3단계: 강제 가비지 컬렉션
-            try:
-                for i in range(3):
-                    gc.collect()
-                    time.sleep_ms(10)
-                # print("[OK] DoseTimeScreen 강제 가비지 컬렉션 완료")
-            except Exception as e:
-                # print(f"[WARN] DoseTimeScreen 가비지 컬렉션 실패: {e}")
-                pass
-            
-            # print("[OK] DoseTimeScreen LVGL 실제 메모리 정리 완료")
-            
-        except Exception as e:
-            # print(f"[ERROR] DoseTimeScreen LVGL 실제 메모리 정리 실패: {e}")
-            pass
     
     def _request_screen_transition_to_meal_time(self):
         """식사 시간 선택 화면으로 전환 요청 - ScreenManager에 위임 (다른 화면들과 동일한 방식)"""
@@ -833,6 +794,114 @@ class DoseTimeScreen:
             # print(f"[ERROR] 복용 시간 설정 취소 신호 전송 실패: {e}")
             import sys
             sys.print_exception(e)
+
+    def _is_d_button_entry(self):
+        """D버튼으로 진입한 경우인지 확인"""
+        try:
+            import json
+            import os
+            
+            # boot_target.json 파일 확인 (MicroPython 방식)
+            boot_file = "/data/boot_target.json"
+            try:
+                with open(boot_file, 'r') as f:
+                    data = json.load(f)
+                    boot_target = data.get('boot_target', None)
+                    print(f"[DEBUG] boot_target 확인: {boot_target}")
+                    if boot_target == 'dose_time':
+                        print("[DEBUG] D버튼으로 진입한 경우 감지됨 (boot_target: dose_time)")
+                        return True
+                    return False
+            except OSError:
+                # 파일이 없으면 일반적인 설정 과정
+                print("[DEBUG] boot_target.json 파일이 없음 - 일반적인 설정 과정")
+                return False
+        except Exception as e:
+            print(f"[DEBUG] D버튼 진입 감지 실패: {e}")
+            return False
+    
+    def _restart_to_main(self):
+        """재부팅 후 메인화면으로 돌아가기"""
+        try:
+            import json
+            import os
+            
+            # /data 디렉토리 존재 확인 및 생성
+            data_dir = "/data"
+            try:
+                if data_dir not in os.listdir("/"):
+                    os.mkdir(data_dir)
+            except OSError as e:
+                if e.errno == 17:
+                    pass
+                else:
+                    raise
+            
+            # boot_target.json을 사용하여 메인화면으로 부팅하도록 설정
+            boot_data = {"boot_target": "main"}
+            boot_file = "/data/boot_target.json"
+            
+            # 부팅 타겟 파일 생성/업데이트
+            with open(boot_file, 'w') as f:
+                json.dump(boot_data, f)
+            
+            # 흰색 화면 만들기
+            self._make_screen_white()
+            
+            # 잠시 대기 후 재부팅
+            import time
+            time.sleep(0.1)
+            
+            # print("[INFO] ESP 리셋 시작...")
+            import machine
+            machine.reset()
+            
+        except Exception as e:
+            # print(f"[ERROR] 메인화면 재부팅 실패: {e}")
+            pass
+    
+    def _save_d_button_selected_disks(self):
+        """D버튼으로 진입한 경우 선택된 디스크 정보 저장"""
+        try:
+            from data_manager import DataManager
+            data_manager = DataManager()
+            
+            # 실제 알약이 있는 디스크만 선택된 것으로 저장
+            selected_disks = []
+            for disk_num in [1, 2, 3]:
+                count = data_manager.get_disk_count(disk_num)
+                if count > 0:
+                    selected_disks.append(disk_num)
+            
+            print(f"[DEBUG] D버튼 진입 - 선택된 디스크 저장: {selected_disks}")
+            
+            # dose_times에 selected_disks 정보 추가
+            if self.dose_times and len(self.dose_times) > 0:
+                for dose_info in self.dose_times:
+                    if isinstance(dose_info, dict):
+                        dose_info['selected_disks'] = selected_disks
+                
+                # DataManager에 저장
+                data_manager.save_dose_times(self.dose_times)
+                print(f"[DEBUG] selected_disks 정보 저장 완료: {selected_disks}")
+            
+        except Exception as e:
+            print(f"[DEBUG] D버튼 선택된 디스크 저장 실패: {e}")
+    
+    def _make_screen_white(self):
+        """화면을 흰색으로 만들기"""
+        try:
+            if hasattr(self, 'screen_obj') and self.screen_obj:
+                self.screen_obj.set_style_bg_color(lv.color_hex(0xFFFFFF), 0)
+                if hasattr(self, 'main_container') and self.main_container:
+                    self.main_container.delete()
+                self.main_container = lv.obj(self.screen_obj)
+                self.main_container.set_size(lv.pct(100), lv.pct(100))
+                self.main_container.set_style_bg_color(lv.color_hex(0xFFFFFF), 0)
+                self.main_container.set_style_border_width(0, 0)
+                self.main_container.center()
+        except Exception as e:
+            pass
 
     def update(self):
         """화면 업데이트"""

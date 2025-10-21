@@ -192,9 +192,6 @@ def run_screen_test(screen_name, **kwargs):
     # print("=" * 60)
     
     try:
-        # 이전 리소스 정리
-        cleanup_lvgl()
-        
         # LVGL 환경 설정
         if not setup_lvgl():
             # print("[ERROR] LVGL 환경 설정 실패")
@@ -244,10 +241,7 @@ def run_screen_test(screen_name, **kwargs):
                 screen = MealTimeScreen(screen_manager)
             elif screen_name == "dose_time":
                 from screens.dose_time_screen import DoseTimeScreen
-                # dose_count와 selected_meals 매개변수 받기
-                dose_count = kwargs.get('dose_count', 1)
-                selected_meals = kwargs.get('selected_meals', None)
-                screen = DoseTimeScreen(screen_manager, dose_count=dose_count, selected_meals=selected_meals)
+                screen = DoseTimeScreen(screen_manager)
             elif screen_name == "main":
                 from screens.main_screen import MainScreen
                 screen = MainScreen(screen_manager)
@@ -270,6 +264,14 @@ def run_screen_test(screen_name, **kwargs):
             elif screen_name == "pill_loading":
                 from screens.pill_loading_screen import PillLoadingScreen
                 screen = PillLoadingScreen(screen_manager)
+            elif screen_name == "dose_time":
+                # 시간-분 설정 화면 (dose_time 화면 사용)
+                from screens.dose_time_screen import DoseTimeScreen
+                screen = DoseTimeScreen(screen_manager)
+            elif screen_name == "meal_time":
+                # 복용시간선택 화면 (meal_time 화면 사용)
+                from screens.meal_time_screen import MealTimeScreen
+                screen = MealTimeScreen(screen_manager)
             elif screen_name == "pill_dispense":
                 # print("[ERROR] pill_dispense 화면은 현재 사용되지 않습니다")
                 return
@@ -349,42 +351,33 @@ def run_screen_test(screen_name, **kwargs):
 
 
 
-def check_setup_complete():
-    """초기 설정 완료 여부 확인"""
+
+
+def check_boot_target():
+    """부팅 타겟 확인 (D버튼으로 설정된 특정 화면으로 부팅)"""
     try:
         import json
         import os
         
-        # /data 디렉토리 존재 확인 및 생성
-        data_dir = "/data"
-        try:
-            if data_dir not in os.listdir("/"):
-                os.mkdir(data_dir)
-                # print(f"[INFO] /data 디렉토리 생성됨")
-        except OSError as e:
-            if e.errno == 17:  # EEXIST - 디렉토리가 이미 존재
-                # print(f"[INFO] /data 디렉토리가 이미 존재함")
-                pass
-            else:
-                raise
+        boot_file = "/data/boot_target.json"
         
-        setup_file = "/data/setup_complete.json"
-        
-        # 파일이 존재하는지 확인 (MicroPython 방식)
+        # 파일이 존재하는지 확인
         try:
-            with open(setup_file, 'r') as f:
+            with open(boot_file, 'r') as f:
                 data = json.load(f)
-                setup_complete = data.get('setup_complete', False)
-                # print(f"[INFO] 초기 설정 완료 상태: {setup_complete}")
-                return setup_complete
+                boot_target = data.get('boot_target', None)
+                if boot_target:
+                    # print(f"[INFO] 부팅 타겟 발견: {boot_target}")
+                    # 부팅 타겟 파일은 화면에서 사용한 후 삭제하도록 유지
+                    return boot_target
+                return None
         except OSError:
-            # 파일이 없으면 처음 부팅
-            # print("[INFO] 초기 설정 완료 파일이 없음 - 처음 부팅")
-            return False
+            # 파일이 없으면 일반 부팅
+            return None
             
     except Exception as e:
-        # print(f"[WARN] 초기 설정 상태 확인 실패: {e}")
-        return False
+        # print(f"[WARN] 부팅 타겟 확인 실패: {e}")
+        return None
 
 
 def main():
@@ -393,19 +386,18 @@ def main():
     # print("필박스 시스템 시작")
     # print("=" * 60)
     
-    # 초기 설정 완료 여부 확인
-    setup_complete = check_setup_complete()
-    
+    # 부팅 타겟 확인 (D버튼으로 설정된 특정 화면으로 부팅)
+    boot_target = check_boot_target()
     
     try:
-        if setup_complete:
-            # 초기 설정이 완료된 경우 - 바로 메인화면으로
-            # print("[INFO] 초기 설정 완료됨 - 메인화면으로 바로 이동...")
-            run_screen_test("main")
+        if boot_target:
+            # 특정 화면으로 부팅 (D버튼으로 설정된 경우)
+            # print(f"[INFO] 특정 화면으로 부팅: {boot_target}")
+            run_screen_test(boot_target)
         else:
-            # 초기 설정이 필요한 경우 - 스타트업 화면부터 시작
-            # print("[INFO] 초기 설정 필요 - 스타트업 화면부터 시작...")
-            run_screen_test("startup")
+            # 처음 부팅 - WiFi 스캔부터 시작
+            # print("[INFO] 처음 부팅 - WiFi 스캔부터 시작...")
+            run_screen_test("wifi_scan")
         
     except KeyboardInterrupt:
         # print("\n🛑 프로그램이 중단되었습니다")

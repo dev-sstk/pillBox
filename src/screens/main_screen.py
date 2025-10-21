@@ -902,62 +902,6 @@ class MainScreen:
             # print(f"[WARN] 메모리 모니터 실패: {e}")
             pass
     
-    def _cleanup_lvgl(self):
-        """화면 전환 전 LVGL 객체 안전 정리 (ChatGPT 추천 방법)"""
-        import lvgl as lv
-        import gc
-        import time
-        
-        # print("[INFO] MainScreen LVGL 정리 시작")
-        
-        # 메모리 모니터링 (정리 전)
-        self._monitor_memory("BEFORE CLEANUP")
-        
-        try:
-            # 1️⃣ 현재 화면 객체가 존재하면 자식부터 모두 삭제
-            if hasattr(self, 'screen_obj') and self.screen_obj:
-                try:
-                    # 모든 자식 객체 삭제
-                    while self.screen_obj.get_child_count() > 0:
-                        child = self.screen_obj.get_child(0)
-                        if child:
-                            child.delete()
-                    # print("[OK] LVGL 자식 객체 삭제 완료")
-                except Exception as e:
-                    # print(f"[WARN] 자식 삭제 중 오류: {e}")
-                    pass
-                # 화면 자체 삭제
-                try:
-                    self.screen_obj.delete()
-                    # print("[OK] 화면 객체 삭제 완료")
-                except Exception as e:
-                    # print(f"[WARN] 화면 객체 삭제 실패: {e}")
-                    pass
-                self.screen_obj = None  # Python 참조 제거
-            
-            # 2️⃣ 스타일 / 폰트 등 Python 객체 참조 해제
-            if hasattr(self, 'ui_style'):
-                self.ui_style = None
-            
-            # 3️⃣ LVGL 내부 타이머 및 큐 정리
-            try:
-                lv.timer_handler()
-            except:
-                pass
-            
-            # 4️⃣ 가비지 컬렉션 (여러 번 수행)
-            for i in range(3):
-                gc.collect()
-                time.sleep_ms(10)
-            
-            # 메모리 모니터링 (정리 후)
-            self._monitor_memory("AFTER CLEANUP")
-            
-            # print("[OK] MainScreen LVGL 정리 완료")
-            
-        except Exception as e:
-            # print(f"[ERROR] LVGL 정리 실패: {e}")
-            pass
         
     def update(self):
         """화면 업데이트 (ScreenManager에서 주기적으로 호출) - 메모리 최적화"""
@@ -1367,11 +1311,16 @@ class MainScreen:
                         # print(f"[DEBUG] DataManager에서 선택된 디스크 불러오기: {selected_disks}")
                         return selected_disks
                     else:
-                        # print("[DEBUG] selected_disks 키가 없음 - 테스트용 데이터 추가")
-                        # 테스트용으로 selected_disks 추가
-                        test_selected_disks = [1, 2]  # 디스크 1, 2 선택
-                        data_manager.add_selected_disks_to_current_data(test_selected_disks)
-                        return test_selected_disks
+                        # print("[DEBUG] selected_disks 키가 없음 - 실제 알약이 있는 디스크 자동 감지")
+                        # selected_disks가 없으면 실제 알약이 있는 디스크를 자동으로 감지
+                        disks_with_pills = []
+                        for disk_num in [1, 2, 3]:
+                            count = self.data_manager.get_disk_count(disk_num)
+                            print(f"[DEBUG] 디스크 {disk_num}: {count}개 알약")
+                            if count > 0:
+                                disks_with_pills.append(disk_num)
+                        print(f"[DEBUG] 실제 알약이 있는 디스크 자동 감지: {disks_with_pills}")
+                        return disks_with_pills
                 else:
                     # print(f"[DEBUG] first_dose_info가 딕셔너리가 아님: {type(first_dose_info)}")
                     pass
@@ -1705,19 +1654,191 @@ class MainScreen:
             self._update_status("일정 이동 실패")
     
     def on_button_d(self):
-        """버튼 D - 흰색 화면 만들기 후 재부팅"""
-        # print("🟢 버튼 D: 흰색 화면 만들기 후 재부팅")
-        self._update_status("흰색 화면 만들기 후 재부팅...")
+        """버튼 D - 네트워크 연결 상태와 디스크 알약 상태에 따른 조건부 재부팅"""
+        # print("🟢 버튼 D: 조건부 재부팅 시작")
+        self._update_status("상태 확인 중...")
         
-        # 흰색 화면 만들기
-        self._make_screen_white()
+        # 네트워크 연결 상태 확인
+        is_network_connected = self._check_network_connection()
         
-        # 잠시 대기 후 재부팅
-        import time
-        time.sleep(0.1)  # 2초 대기
+        # 디스크 알약 상태 확인
+        has_pills_in_disk = self._check_disk_pill_status()
         
-        # 재부팅 실행
-        self._restart_to_startup_menu()
+        print(f"[DEBUG] 네트워크 연결: {is_network_connected}, 디스크 알약: {has_pills_in_disk}")
+        
+        # 조건에 따른 분기 처리
+        if is_network_connected and has_pills_in_disk:
+            # 케이스 1: 네트워크 연결됨 + 알약 있음
+            # print("[INFO] 케이스 1: 네트워크 연결됨 + 알약 있음 - 시간-분 설정으로 재부팅")
+            self._update_status("시간-분 설정으로 재부팅...")
+            self._make_screen_white()
+            self._restart_to_dose_time()
+        elif is_network_connected and not has_pills_in_disk:
+            # 케이스 2: 네트워크 연결됨 + 알약 없음
+            # print("[INFO] 케이스 2: 네트워크 연결됨 + 알약 없음 - 복용시간선택으로 재부팅")
+            self._update_status("복용시간선택으로 재부팅...")
+            self._make_screen_white()
+            self._restart_to_meal_time()
+        else:
+            # 케이스 3: 네트워크 연결 안됨 + 알약 없음 (현재 로직)
+            # print("[INFO] 케이스 3: 네트워크 연결 안됨 + 알약 없음 - 네트워크 선택으로 재부팅")
+            self._update_status("네트워크 선택으로 재부팅...")
+            self._make_screen_white()
+            self._restart_to_wifi_scan()
+    
+    def _check_network_connection(self):
+        """네트워크 연결 상태 확인"""
+        try:
+            import network
+            import time
+            
+            # WiFi 인터페이스 직접 체크
+            wlan = network.WLAN(network.STA_IF)
+            is_active = wlan.active()
+            is_connected = wlan.isconnected()
+            
+            print(f"[DEBUG] WiFi active: {is_active}, connected: {is_connected}")
+            
+            # WiFiManager도 체크
+            try:
+                from wifi_manager import WiFiManager
+                wifi_manager = WiFiManager()
+                wifi_manager_connected = wifi_manager.is_connected
+                print(f"[DEBUG] WiFiManager.is_connected: {wifi_manager_connected}")
+            except Exception as e:
+                print(f"[DEBUG] WiFiManager 체크 실패: {e}")
+                wifi_manager_connected = False
+            
+            # 둘 중 하나라도 연결되어 있으면 True
+            result = is_connected or wifi_manager_connected
+            print(f"[DEBUG] 최종 네트워크 연결 상태: {result}")
+            return result
+            
+        except Exception as e:
+            print(f"[ERROR] 네트워크 연결 상태 확인 실패: {e}")
+            return False
+    
+    def _check_disk_pill_status(self):
+        """디스크 알약 상태 확인 (하나라도 알약이 있으면 True)"""
+        try:
+            from data_manager import DataManager
+            data_manager = DataManager()
+            
+            # 모든 디스크 확인 (1, 2, 3)
+            for disk_num in [1, 2, 3]:
+                count = data_manager.get_disk_count(disk_num)
+                print(f"[DEBUG] 디스크 {disk_num}: {count}개 알약")
+                if count > 0:
+                    print(f"[DEBUG] 디스크 {disk_num}: {count}개 알약 있음")
+                    return True
+            
+            print("[DEBUG] 모든 디스크에 알약 없음")
+            return False
+        except Exception as e:
+            # print(f"[ERROR] 디스크 알약 상태 확인 실패: {e}")
+            return False
+    
+    def _restart_to_dose_time(self):
+        """시간-분 설정 화면으로 재부팅 (Pill 로딩 방식 응용)"""
+        try:
+            # print("[INFO] 시간-분 설정으로 재부팅 시작")
+            
+            # 시간-분 설정으로 부팅하도록 플래그 설정
+            self._set_boot_to_dose_time()
+            
+            # 흰색 화면 만들기
+            self._make_screen_white()
+            
+            # 잠시 대기 후 재부팅
+            import time
+            time.sleep(0.1)
+            
+            # print("[INFO] ESP 리셋 시작...")
+            import machine
+            machine.reset()
+            
+        except Exception as e:
+            # print(f"[ERROR] 시간 설정 재부팅 실패: {e}")
+            self._restart_to_wifi_scan()
+    
+    def _restart_to_meal_time(self):
+        """복용시간선택 화면으로 재부팅 (Pill 로딩 방식 응용)"""
+        try:
+            # print("[INFO] 복용시간선택으로 재부팅 시작")
+            
+            # 복용시간선택으로 부팅하도록 플래그 설정
+            self._set_boot_to_meal_time()
+            
+            # 흰색 화면 만들기
+            self._make_screen_white()
+            
+            # 잠시 대기 후 재부팅
+            import time
+            time.sleep(0.1)
+            
+            # print("[INFO] ESP 리셋 시작...")
+            import machine
+            machine.reset()
+            
+        except Exception as e:
+            # print(f"[ERROR] 복용시간선택 재부팅 실패: {e}")
+            self._restart_to_wifi_scan()
+    
+    def _set_boot_to_dose_time(self):
+        """시간-분 설정으로 부팅하도록 플래그 설정"""
+        try:
+            import json
+            import os
+            
+            # /data 디렉토리 존재 확인 및 생성
+            data_dir = "/data"
+            try:
+                if data_dir not in os.listdir("/"):
+                    os.mkdir(data_dir)
+            except OSError as e:
+                if e.errno == 17:  # EEXIST - 디렉토리가 이미 존재
+                    pass
+                else:
+                    raise
+            
+            boot_data = {"boot_target": "dose_time"}
+            boot_file = "/data/boot_target.json"
+            
+            # 부팅 타겟 파일 생성/업데이트
+            with open(boot_file, 'w') as f:
+                json.dump(boot_data, f)
+            
+        except Exception as e:
+            # print(f"[ERROR] 시간 설정 부팅 플래그 설정 실패: {e}")
+            pass
+    
+    def _set_boot_to_meal_time(self):
+        """복용시간선택으로 부팅하도록 플래그 설정"""
+        try:
+            import json
+            import os
+            
+            # /data 디렉토리 존재 확인 및 생성
+            data_dir = "/data"
+            try:
+                if data_dir not in os.listdir("/"):
+                    os.mkdir(data_dir)
+            except OSError as e:
+                if e.errno == 17:  # EEXIST - 디렉토리가 이미 존재
+                    pass
+                else:
+                    raise
+            
+            boot_data = {"boot_target": "meal_time"}
+            boot_file = "/data/boot_target.json"
+            
+            # 부팅 타겟 파일 생성/업데이트
+            with open(boot_file, 'w') as f:
+                json.dump(boot_data, f)
+            
+        except Exception as e:
+            # print(f"[ERROR] 복용시간선택 부팅 플래그 설정 실패: {e}")
+            pass
     
     def _make_screen_white(self):
         """화면을 흰색으로 만들기 (디스플레이 테스트용)"""
@@ -1753,12 +1874,12 @@ class MainScreen:
             # print(f"[ERROR] 화면을 흰색으로 변경 실패: {e}")
             self._update_status("화면 변경 실패")
     
-    def _restart_to_startup_menu(self):
-        """재부팅 후 스타트업 메뉴 사용을 위한 처리"""
+    def _restart_to_wifi_scan(self):
+        """재부팅 후 WiFi 스캔 사용을 위한 처리"""
         try:
-            # print("[INFO] 재부팅 후 스타트업 메뉴 사용 준비 중...")
+            # print("[INFO] 재부팅 후 WiFi 스캔 사용 준비 중...")
             
-            # 설정 완료 플래그를 false로 변경 (스타트업 메뉴 사용 가능하게)
+            # 설정 완료 플래그를 false로 변경 (WiFi 스캔 사용 가능하게)
             self._reset_setup_flag()
             
             # print("[INFO] 즉시 재부팅합니다...")
@@ -1772,7 +1893,7 @@ class MainScreen:
             self._update_status("재부팅 실패")
     
     def _reset_setup_flag(self):
-        """설정 완료 플래그를 false로 리셋 (스타트업 메뉴 사용 가능하게)"""
+        """설정 완료 플래그를 false로 리셋 (스타트업 메뉴 사용 가능하게) - boot_target.json 공통 사용"""
         try:
             import json
             import os
@@ -1790,14 +1911,15 @@ class MainScreen:
                 else:
                     raise
             
-            setup_data = {"setup_complete": False}
-            setup_file = "/data/setup_complete.json"
+            # boot_target.json을 사용하여 WiFi 스캔으로 부팅하도록 설정
+            boot_data = {"boot_target": "wifi_scan"}
+            boot_file = "/data/boot_target.json"
             
-            # 설정 완료 플래그를 false로 변경
-            with open(setup_file, 'w') as f:
-                json.dump(setup_data, f)
+            # 부팅 타겟 파일 생성/업데이트
+            with open(boot_file, 'w') as f:
+                json.dump(boot_data, f)
             
-            # print("[OK] 설정 완료 플래그를 false로 리셋 완료")
+            # print("[OK] 설정 완료 플래그를 false로 리셋 - 스타트업으로 부팅 설정됨")
             
         except Exception as e:
             # print(f"[WARN] 설정 완료 플래그 리셋 실패: {e}")
