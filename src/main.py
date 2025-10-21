@@ -185,10 +185,10 @@ def cleanup_lvgl():
         # print(f"[WARN] 리소스 정리 중 오류 (무시됨): {e}")
         pass
 
-def run_screen_test(screen_name, **kwargs):
-    """특정 화면 테스트 실행"""
+def start_application(screen_name, **kwargs):
+    """애플리케이션 시작 및 화면 실행"""
     # print("=" * 60)
-    # print(f"필박스 {screen_name} 화면 테스트")
+    # print(f"필박스 {screen_name} 화면 시작")
     # print("=" * 60)
     
     try:
@@ -393,11 +393,11 @@ def main():
         if boot_target:
             # 특정 화면으로 부팅 (D버튼으로 설정된 경우)
             # print(f"[INFO] 특정 화면으로 부팅: {boot_target}")
-            run_screen_test(boot_target)
+            start_application(boot_target)
         else:
             # 처음 부팅 - WiFi 스캔부터 시작
             # print("[INFO] 처음 부팅 - WiFi 스캔부터 시작...")
-            run_screen_test("wifi_scan")
+            start_application("wifi_scan")
         
     except KeyboardInterrupt:
         # print("\n🛑 프로그램이 중단되었습니다")

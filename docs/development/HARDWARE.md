@@ -36,7 +36,6 @@ PillBox는 ESP32-C6 마이크로컨트롤러 기반의 스마트 알약 공급�
 | GPIO | 기능 | 방향 | 연결 대상 | 프로토콜 | 설명 |
 |------|------|------|-----------|----------|------|
 | **입출력 제어** |
-| IO0 | DI | OUT | 74HC595D Data Input | GPIO | 모터 제어용 데이터 입력 |
 | IO1 | LED_PWR/B | OUT | Power LED / RGB Blue | PWM | 전원 표시 LED / RGB LED Blue |
 | IO2 | SER (DI) | OUT | 74HC595D Serial Data | GPIO | 시프트 레지스터 데이터 |
 | IO3 | SH_CP / CLK | OUT | 74HC595/74HC165 공용 | GPIO | 시프트 클럭 (공유) |
@@ -45,25 +44,19 @@ PillBox는 ESP32-C6 마이크로컨트롤러 기반의 스마트 알약 공급�
 | IO6 | BCLK | OUT | MAX98357A Bit Clock | I2S | I2S 비트 클럭 |
 | IO7 | LRCLK | OUT | MAX98357A L/R Clock | I2S | I2S 워드 셀렉트 |
 | **입력** |
-| IO9 | BOOT | IN | Boot Button | GPIO | 부트 모드 선택 |
 | IO10 | DATA_OUT | IN | 74HC165 Q7 Output | GPIO | 버튼/센서 데이터 입력 |
-| IO11 | PHOTO_OUT | IN | Photo Sensor | GPIO | 포토 센서 입력 |
-| **서보 모터** |
-| IO12 | SERVO1 | OUT | Servo Motor 1 | PWM | 서보 모터 제어 1 |
-| IO13 | SERVO2 | OUT | Servo Motor 2 | PWM | 서보 모터 제어 2 |
 | **시프트 레지스터** |
 | IO15 | ST_CP / PL | OUT | 74HC595/74HC165 공용 | GPIO | 스토리지 클럭/병렬 로드 |
 | **기타** |
-| IO4 | BAT_AD | IN | Battery ADC | ADC | 배터리 전압 모니터링 |
-| IO8 | GPIO | I/O | General Purpose | GPIO | 범용 GPIO |
+| IO11 | NC | - | Not Connected | - | 미사용 (NC) |
 | IO18 | SOUND | OUT | Buzzer | PWM | 부저 출력 |
 | **디스플레이 (SPI)** |
-| IO14 | LCD_RES | OUT | ST7735S Reset | GPIO | 디스플레이 리셋 (미사용) |
 | IO19 | LCD_DC | OUT | ST7735S D/C | GPIO | 데이터/커맨드 선택 |
-| IO20 | LCD_RES | OUT | ST7735S Reset | GPIO | 디스플레이 리셋 (실제 사용) |
+| IO20 | LCD_RES | OUT | ST7735S Reset | GPIO | 디스플레이 리셋 |
 | IO21 | LCD_SDA (MOSI) | OUT | ST7735S SPI Data | SPI | SPI MOSI |
 | IO22 | LCD_SCL (SCK) | OUT | ST7735S SPI Clock | SPI | SPI Clock |
 | IO23 | LCD_CS | OUT | ST7735S Chip Select | GPIO | SPI 칩 선택 |
+| 3V3 | LCD_BLK | - | ST7735S Backlight | - | 백라이트 전원 (직결) |
 | **전원 및 접지** |
 | 3V3 | Power | - | 3.3V Power Supply | - | 시스템 전원 |
 | GND | Ground | - | Ground (Pin 1, 28, 29) | - | 접지 |

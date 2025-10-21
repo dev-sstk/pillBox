@@ -40,8 +40,8 @@ PillBox는 ESP32-C6 기반의 스마트 알약 공급기 시스템으로, MicroP
 ┌─────────────────────────────────────────────────────────────┐
 │                       Application Layer                      │
 │  ┌──────────────┐  ┌──────────────┐                        │
-│  │  Main App    │  │  PillBox App │                        │
-│  │  (main.py)   │  │(pillbox_app) │                        │
+│  │  Main App    │  │              │                        │
+│  │  (main.py)   │  │              │                        │
 │  └──────────────┘  └──────────────┘                        │
 └─────────────────────────────────────────────────────────────┘
                             │
@@ -96,8 +96,7 @@ PillBox는 ESP32-C6 기반의 스마트 알약 공급기 시스템으로, MicroP
 최상위 레벨로, 시스템의 진입점과 전체 실행 흐름을 관리합니다.
 
 **주요 컴포넌트:**
-- `main.py`: 메인 애플리케이션 진입점 ✅
-- `pillbox_app.py`: PillBox 통합 시스템 (실제 제품용) ✅
+- `main.py`: 메인 애플리케이션 (통합 시스템) ✅
 
 **책임:**
 - 시스템 초기화 (LVGL, 하드웨어, 네트워크) ✅
@@ -169,11 +168,11 @@ PillBox는 ESP32-C6 기반의 스마트 알약 공급기 시스템으로, MicroP
 
 ## 핵심 컴포넌트
 
-### 1. PillBoxApp (`pillbox_app.py`) ✅ 완전 구현
+### 1. Main Application (`main.py`) ✅ 완전 구현
 **역할**: 메인 애플리케이션 클래스
 
 ```python
-class PillBoxApp:
+class MainApplication:
     - button_interface: ButtonInterface ✅
     - screen_manager: ScreenManager ✅
     - audio_system: AudioSystem ✅
@@ -296,6 +295,30 @@ Pin 4-7     → Limit Switches (리미트 스위치)
 - GPIO 7: LRCLK (Left/Right Clock)
 - GPIO 5: DIN (Data Input)
 - 샘플레이트: 16kHz, 16bit, Mono
+
+### 6. BootTarget 시스템 (신규)
+**역할**: 조건부 재부팅 및 화면 전환 관리
+
+**핵심 컴포넌트:**
+- `boot_target.json`: 부팅 타겟 설정 파일
+- `main.py`: 부팅 시 타겟 확인 및 화면 전환
+- `MainScreen.on_button_d()`: D버튼 조건부 재부팅 로직
+
+**부팅 타겟 값:**
+- `"main"`: 메인 화면으로 부팅 (기본값)
+- `"dose_time"`: 시간-분 설정 화면으로 부팅
+- `"meal_time"`: 복용시간선택 화면으로 부팅
+- `"wifi_scan"`: WiFi 스캔 화면으로 부팅
+
+**조건부 재부팅 로직:**
+```python
+if network_connected and pills_exist:
+    boot_target = "dose_time"      # 시간-분 설정
+elif network_connected and no_pills:
+    boot_target = "meal_time"      # 복용시간선택
+else:
+    boot_target = "wifi_scan"      # WiFi 스캔
+```
 
 **기능:**
 - `play_voice()`: 안내 음성 재생 (블로킹/비블로킹)
@@ -439,6 +462,31 @@ ULN2003A 전류 증폭
 [Pill Loading Screen] ← (사용자: 알약 로딩)
        ↓
 [Main Screen] (메인 화면)
+```
+
+### D버튼 조건부 재부팅 플로우 (신규)
+```
+[Main Screen] - D버튼 누름
+       ↓
+네트워크 연결 상태 확인
+       ↓
+┌─────────────────────────────────────┐
+│ 네트워크 연결됨 + 알약 있음          │
+│ → boot_target: "dose_time"          │
+│ → 재부팅 → [Dose Time Screen]       │
+└─────────────────────────────────────┘
+       ↓
+┌─────────────────────────────────────┐
+│ 네트워크 연결됨 + 알약 없음          │
+│ → boot_target: "meal_time"          │
+│ → 재부팅 → [Meal Time Screen]       │
+└─────────────────────────────────────┘
+       ↓
+┌─────────────────────────────────────┐
+│ 네트워크 연결 안됨 + 알약 없음       │
+│ → boot_target: "wifi_scan"          │
+│ → 재부팅 → [WiFi Scan Screen]       │
+└─────────────────────────────────────┘
 ```
 
 ### 메인 화면 플로우
@@ -589,14 +637,19 @@ I2S(
 - UTF-8 인코딩 사용
 - 모든 UI 텍스트 및 음성 안내 한글화
 
+### 8. 데이터 영속성 (Data Persistence)
+- JSON 기반 설정 및 데이터 영구 저장
+- 7개 데이터 파일 통합 관리 (global_data, dispense_log, boot_target, disk_states, medication, settings, wifi_config)
+- DataManager를 통한 중앙집중식 데이터 관리
+- build_and_upload.py 통합 데이터 파일 삭제 도구
+
 ---
 
 ## 디렉토리 구조
 
 ```
 src/
-├── main.py                      # 화면 테스트 시스템 (개발용)
-├── pillbox_app.py               # 메인 애플리케이션 (통합)
+├── main.py                      # 메인 애플리케이션 (통합)
 ├── screen_manager.py            # 화면 관리자
 ├── audio_system.py              # 오디오 시스템
 ├── motor_control.py             # 모터 제어

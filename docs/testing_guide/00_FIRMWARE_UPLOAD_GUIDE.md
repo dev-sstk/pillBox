@@ -4,85 +4,106 @@
 
 ## 📋 개요
 
-ESP32-C6 기반 필박스 시스템에 소스코드를 업로드하는 방법을 설명합니다. `ampy` 도구를 사용하여 MicroPython 파일을 ESP32-C6에 전송합니다.
+ESP32-C6 기반 필박스 시스템에 소스코드를 업로드하는 방법을 설명합니다. `mpremote` 도구를 사용하여 MicroPython 파일을 ESP32-C6에 전송합니다.
 
 ## 🔧 사전 준비
 
-### 1. ampy 설치
+### 1. mpremote 설치
 ```bash
-pip install adafruit-ampy
+pip install mpremote
 ```
 
-### 2. ESP32-C6 연결 확인
+### 2. build_and_upload.py 사용 (권장)
+```bash
+python build_and_upload.py
+```
+
+### 3. ESP32-C6 연결 확인
 - USB 케이블로 ESP32-C6을 PC에 연결
 - 장치 관리자에서 COM 포트 확인 (예: COM4)
 - ESP32-C6이 정상적으로 인식되는지 확인
 
-### 3. MicroPython 펌웨어 확인
+### 4. MicroPython 펌웨어 확인
 - ESP32-C6에 MicroPython 펌웨어가 설치되어 있는지 확인
 - 터미널에서 ESP32-C6에 접속 가능한지 확인
 
 ## 🚀 업로드 방법
 
-### 1. 기본 파일 업로드
+### 방법 1: build_and_upload.py 사용 (권장)
+
+#### 자동 빌드 및 업로드
+```bash
+python build_and_upload.py
+```
+
+**메뉴 선택:**
+- `1`: Python 파일을 mpy로 빌드 후 업로드 (권장)
+- `2`: Python 파일을 그대로 업로드
+- `4`: 개별 파일 빌드 후 업로드
+
+### 방법 2: 수동 mpremote 사용
 
 #### 메인 파일 업로드
 ```bash
-ampy -p COM4 put .\src\main.py
+mpremote connect COM4 cp src/main.py /main.py
 ```
 
 #### 화면 파일 업로드
 ```bash
 # 스타트업 화면
-ampy -p COM4 put .\src\screens\startup_screen.py screens/startup_screen.py
+mpremote connect COM4 cp src/screens/startup_screen.py /screens/startup_screen.py
 
 # Wi-Fi 스캔 화면
-ampy -p COM4 put .\src\screens\wifi_scan_screen.py screens/wifi_scan_screen.py
+mpremote connect COM4 cp src/screens/wifi_scan_screen.py /screens/wifi_scan_screen.py
 
 # Wi-Fi 비밀번호 화면
-ampy -p COM4 put .\src\screens\wifi_password_screen.py screens/wifi_password_screen.py
-
-# 복용 횟수 설정 화면
-ampy -p COM4 put .\src\screens\dose_count_screen.py screens/dose_count_screen.py
+mpremote connect COM4 cp src/screens/wifi_password_screen.py /screens/wifi_password_screen.py
 
 # 복용 시간 설정 화면
-ampy -p COM4 put .\src\screens\dose_time_screen.py screens/dose_time_screen.py
+mpremote connect COM4 cp src/screens/dose_time_screen.py /screens/dose_time_screen.py
 
 # 알약 로딩 화면
-ampy -p COM4 put .\src\screens\pill_loading_screen.py screens/pill_loading_screen.py
+mpremote connect COM4 cp src/screens/pill_loading_screen.py /screens/pill_loading_screen.py
+
+# 메인 화면
+mpremote connect COM4 cp src/screens/main_screen.py /screens/main_screen.py
+
+# 복용시간선택 화면
+mpremote connect COM4 cp src/screens/meal_time_screen.py /screens/meal_time_screen.py
+
+# 디스크 선택 화면
+mpremote connect COM4 cp src/screens/disk_selection_screen.py /screens/disk_selection_screen.py
 ```
 
-### 2. 핵심 모듈 업로드
-
-#### 시스템 모듈
+#### 핵심 모듈 업로드
 ```bash
 # 화면 관리자
-ampy -p COM4 put .\src\screen_manager.py
+mpremote connect COM4 cp src/screen_manager.py /screen_manager.py
 
 # UI 스타일
-ampy -p COM4 put .\src\ui_style.py
+mpremote connect COM4 cp src/ui_style.py /ui_style.py
 
 # LVGL 유틸리티
-ampy -p COM4 put .\src\lv_utils.py
+mpremote connect COM4 cp src/lv_utils.py /lv_utils.py
 
 # 디스플레이 드라이버
-ampy -p COM4 put .\src\st77xx.py
-```
+mpremote connect COM4 cp src/st77xx.py /st77xx.py
 
-#### 하드웨어 제어 모듈
-```bash
 # 버튼 인터페이스
-ampy -p COM4 put .\src\button_interface.py
+mpremote connect COM4 cp src/button_interface.py /button_interface.py
 
 # 모터 제어
-ampy -p COM4 put .\src\motor_control.py
+mpremote connect COM4 cp src/motor_control.py /motor_control.py
 
 # Wi-Fi 관리
-ampy -p COM4 put .\src\wifi_manager.py
+mpremote connect COM4 cp src/wifi_manager.py /wifi_manager.py
 
 # 오디오 시스템
-ampy -p COM4 put .\src\audio_system.py
-ampy -p COM4 put .\src\audio_files_info.py
+mpremote connect COM4 cp src/audio_system.py /audio_system.py
+mpremote connect COM4 cp src/audio_files_info.py /audio_files_info.py
+
+# 데이터 관리
+mpremote connect COM4 cp src/data_manager.py /data_manager.py
 ```
 
 ### 3. 오디오 파일 업로드
@@ -90,14 +111,14 @@ ampy -p COM4 put .\src\audio_files_info.py
 #### WAV 파일 업로드
 ```bash
 # 오디오 파일 디렉토리 생성
-ampy -p COM4 mkdir wav
+mpremote connect COM4 fs mkdir /wav
 
 # WAV 파일들 업로드
-ampy -p COM4 put .\src\wav\wav_alarm.wav wav/wav_alarm.wav
-ampy -p COM4 put .\src\wav\wav_select.wav wav/wav_select.wav
-ampy -p COM4 put .\src\wav\wav_adjust.wav wav/wav_adjust.wav
-ampy -p COM4 put .\src\wav\refill_mode_selected_bomin.wav wav/refill_mode_selected_bomin.wav
-ampy -p COM4 put .\src\wav\refill_mode_selected_bomin_compressed.wav wav/refill_mode_selected_bomin_compressed.wav
+mpremote connect COM4 cp src/wav/wav_alarm.wav /wav/wav_alarm.wav
+mpremote connect COM4 cp src/wav/wav_select.wav /wav/wav_select.wav
+mpremote connect COM4 cp src/wav/wav_adjust.wav /wav/wav_adjust.wav
+mpremote connect COM4 cp src/wav/refill_mode_selected_bomin.wav /wav/refill_mode_selected_bomin.wav
+mpremote connect COM4 cp src/wav/refill_mode_selected_bomin_compressed.wav /wav/refill_mode_selected_bomin_compressed.wav
 ```
 
 ## 📁 디렉토리 구조
@@ -119,9 +140,11 @@ ampy -p COM4 put .\src\wav\refill_mode_selected_bomin_compressed.wav wav/refill_
 │   ├── startup_screen.py
 │   ├── wifi_scan_screen.py
 │   ├── wifi_password_screen.py
-│   ├── dose_count_screen.py
 │   ├── dose_time_screen.py
-│   └── pill_loading_screen.py
+│   ├── pill_loading_screen.py
+│   ├── main_screen.py
+│   ├── meal_time_screen.py
+│   └── disk_selection_screen.py
 └── wav/                      # 오디오 파일들
     ├── wav_alarm.wav
     ├── wav_select.wav

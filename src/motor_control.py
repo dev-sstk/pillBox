@@ -110,16 +110,16 @@ class StepperMotorController:
         self.motor_steps = [0, 0, 0, 0, 0]  # 모터 1,2,3,4의 현재 스텝 (인덱스 0 사용 안함)
         self.motor_positions = [0, 0, 0, 0, 0]  # 각 모터의 현재 칸 위치 (인덱스 0 사용 안함)
         
-        # ULN2003 시퀀스 (8스텝 시퀀스)
+        # ULN2003 시퀀스 (8스텝 시퀀스) - 역순으로 수정 (보드 커넥터 핀배열 역순 대응)
         self.stepper_sequence = [
-            0b00001000,  # 0x08 - A
-            0b00001100,  # 0x0C - A,B
-            0b00000100,  # 0x04 - B
-            0b00000110,  # 0x06 - B,C
-            0b00000010,  # 0x02 - C
-            0b00000011,  # 0x03 - C,D
+            0b00001001,  # 0x09 - D,A (역순)
             0b00000001,  # 0x01 - D
-            0b00001001   # 0x09 - D,A
+            0b00000011,  # 0x03 - C,D
+            0b00000010,  # 0x02 - C
+            0b00000110,  # 0x06 - B,C
+            0b00000100,  # 0x04 - B
+            0b00001100,  # 0x0C - A,B
+            0b00001000   # 0x08 - A
         ]
         
         # 4개 모터의 현재 상태 (각 모터당 8비트)
@@ -253,8 +253,8 @@ class StepperMotorController:
                     # print(f"모터 {motor_index} 리미트 스위치 감지! 회전 중단")
                     return False
                 
-                # 각 모터의 독립적인 스텝 계산 (test_74hc595_stepper.py와 동일)
-                self.motor_steps[motor_index] = (self.motor_steps[motor_index] + direction) % 8
+                # 각 모터의 독립적인 스텝 계산 (test_74hc595_stepper.py와 동일) - 역방향으로 수정
+                self.motor_steps[motor_index] = (self.motor_steps[motor_index] - direction) % 8
                 current_step = self.motor_steps[motor_index]
                 
                 # 모터 스텝 설정
@@ -273,8 +273,8 @@ class StepperMotorController:
             # # print(f"    [TOOL] 모터 {motor_index} 연속 회전 시작: {steps}스텝")
             
             for i in range(steps):
-                # 각 모터의 독립적인 스텝 계산 (test_74hc595_stepper.py와 동일)
-                self.motor_steps[motor_index] = (self.motor_steps[motor_index] + direction) % 8
+                # 각 모터의 독립적인 스텝 계산 (test_74hc595_stepper.py와 동일) - 역방향으로 수정
+                self.motor_steps[motor_index] = (self.motor_steps[motor_index] - direction) % 8
                 current_step = self.motor_steps[motor_index]
                 
                 # 모터 스텝 설정
@@ -332,7 +332,7 @@ class StepperMotorController:
             
             # 회전하면서 리미트 스위치 감지
             while not self.is_limit_switch_pressed(motor_index):
-                self.step_motor(motor_index, -1, 1)  # 반시계 방향으로 1스텝
+                self.step_motor(motor_index, 1, 1)  # 시계 방향으로 1스텝 (역방향 수정)
             
             # 원점 위치 설정
             self.motor_positions[motor_index] = 0
@@ -388,7 +388,7 @@ class StepperMotorController:
             steps_needed = (compartment - current_pos) * self.steps_per_compartment
             
             if steps_needed != 0:
-                direction = 1 if steps_needed > 0 else -1
+                direction = -1 if steps_needed > 0 else 1  # 역방향 수정
                 steps = abs(steps_needed)
                 
                 # print(f"모터 {motor_index}: 칸 {current_pos} → 칸 {compartment} ({steps}스텝)")
@@ -769,8 +769,8 @@ class PillBoxMotorSystem:
                 if i % 100 == 0 or i == steps - 8:  # 100스텝마다 진행 상황 출력
                     # print(f"    📍 배출구 슬라이드 역회전 {i+1}/{steps}스텝 진행 중...")
                     pass
-                # step_motor 함수 사용 (test 파일과 동일, 역방향: -1)
-                success = self.motor_controller.step_motor(motor_index, -1, remaining_steps)
+                # step_motor 함수 사용 (test 파일과 동일, 역방향: 1로 수정)
+                success = self.motor_controller.step_motor(motor_index, 1, remaining_steps)
                 if not success:
                     # print(f"    [ERROR] 모터 {motor_index} 역회전 중단됨")
                     return False

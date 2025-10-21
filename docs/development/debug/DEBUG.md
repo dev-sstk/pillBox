@@ -141,7 +141,7 @@ def _real_loading(self, disk_index):
 #### **최적화 전**
 ```python
 # src/main.py
-def run_screen_test(screen_name):
+def start_application(screen_name):
     while True:
         # LVGL 이벤트 처리
         lv.timer_handler()  # 항상 호출
@@ -156,7 +156,7 @@ def _main_loop(self):
 #### **최적화 후**
 ```python
 # src/main.py
-def run_screen_test(screen_name):
+def start_application(screen_name):
     while True:
         # ⚡ 최적화: LVGL 이벤트 처리 최적화 (모터 제어 중에는 제한)
         current_screen = screen_manager.get_current_screen()

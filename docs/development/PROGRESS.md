@@ -17,7 +17,7 @@
 - **오디오 시스템**: MAX98357A I2S 기반 음성 출력 시스템
 
 #### **2. UI/UX 시스템**
-- **화면 관리**: 8개 화면 완전 구현 (Startup, WiFi, Password, Dose, Main, Loading, Settings)
+- **화면 관리**: 8개 화면 완전 구현 (Startup, WiFi Scan, WiFi Password, Meal Time, Dose Time, Disk Selection, Pill Loading, Main)
 - **Modern UI**: Xiaomi 스타일 Modern UI 디자인 적용
 - **한글 폰트**: NotoSansKR 폰트 지원
 - **버튼 매핑**: A, B, C, D 버튼 일관된 매핑 시스템
@@ -41,6 +41,8 @@
 - **복용 시간 관리**: 복용 스케줄 데이터 관리
 - **약물 수량 추적**: 디스크별 약물 수량 관리
 - **디렉토리 자동 생성**: `/data` 디렉토리 자동 생성 및 관리
+- **7개 데이터 파일**: global_data.json, dispense_log.json, boot_target.json, disk_states.json, medication.json, settings.json, wifi_config.json
+- **데이터 파일 삭제 도구**: build_and_upload.py에 통합 데이터 파일 삭제 메뉴 추가
 
 #### **6. 시간 동기화 시스템 (100%)**
 - **NTP 서버 연결**: pool.ntp.org 기반 시간 동기화
@@ -89,10 +91,11 @@
 - **약물 추적**: 디스크별 약물 수량 관리 ✅
 - **백업/복원**: 설정 백업 및 복원 시스템 ✅
 
-#### **3. 고급 UI 기능 (20%)**
-- **메인 화면**: 기본 메인 화면만 구현
-- **설정 화면**: 기본 설정 화면만 구현
-- **미구현**: 복용 기록 표시, 약물 상태 표시, 알람 설정
+#### **3. 고급 UI 기능 (100%)** ✅
+- **메인 화면**: 완전 구현 - 알약 개수 표시, 시간 표시, 상태 표시 ✅
+- **설정 화면**: 완전 구현 - WiFi 설정, 시간 설정, 알람 설정 ✅
+- **D버튼 조건부 재부팅**: 스마트 재부팅 시스템 완전 구현 ✅
+- **화면 전환 최적화**: 부드러운 화면 전환 및 상태 관리 ✅
 
 ---
 
@@ -139,6 +142,8 @@ DataManager              ✅ 완전 구현
 PersistentStorage        ✅ 완전 구현
 JSONFileManager          ✅ 완전 구현
 BackupSystem             ✅ 완전 구현
+7개 데이터 파일 관리     ✅ 완전 구현
+데이터 파일 삭제 도구    ✅ 완전 구현
 ```
 
 ---
