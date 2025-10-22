@@ -1415,7 +1415,7 @@ class PillLoadingScreen:
                         if step_count % 100 == 0:
                             # print(f"  [TOOL] 모터 {motor_index} 회전 시도 (스텝 {step_count})")
                             pass
-                        success = self.motor_system.motor_controller.step_motor_continuous(motor_index, -1, 1)
+                        success = self.motor_system.motor_controller.step_motor_continuous(motor_index, 1, 1)
                         if not success:
                             # print(f"  [ERROR] 모터 {motor_index} 회전 실패 (스텝 {step_count})")
                             break
