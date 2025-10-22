@@ -2565,7 +2565,7 @@ class MainScreen:
                     return False
                 
                 # 2. 배출구 열림 (디스크별 단계)
-                open_success = motor_system.control_motor3_direct(disk_num)  # 디스크 번호 = 단계
+                open_success = motor_system.control_motor4_direct(disk_num)  # 디스크 번호 = 단계
                 if not open_success:
                     # print(f"[ERROR] 디스크 {disk_num} 배출구 열림 실패")
                     return False
@@ -2624,7 +2624,7 @@ class MainScreen:
                     return False
                 
                 # 2. 배출구 열림 (디스크별 단계)
-                open_success = motor_system.control_motor3_direct(disk_num)  # 디스크 번호 = 단계
+                open_success = motor_system.control_motor4_direct(disk_num)  # 디스크 번호 = 단계
                 if not open_success:
                     # print(f"[ERROR] 디스크 {disk_num} 배출구 열림 실패")
                     return False
