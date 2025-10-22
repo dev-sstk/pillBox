@@ -365,8 +365,8 @@ class StepperMotorController:
                         self.motor_steps[motor_index] = 0
                         # print(f"[OK] 모터 {motor_index} 원점 보정 완료")
                     else:
-                        # 이 모터는 1스텝 진행
-                        self.motor_steps[motor_index] = (self.motor_steps[motor_index] - 1) % 8
+                        # 이 모터는 1스텝 진행 (시계방향)
+                        self.motor_steps[motor_index] = (self.motor_steps[motor_index] + 1) % 8
                         current_step = self.motor_steps[motor_index]
                         self.motor_states[motor_index] = self.stepper_sequence[current_step]
             
@@ -904,22 +904,22 @@ class PillBoxMotorSystem:
             
             # print(f"  [WARN] 모터 동작 중 - UI 업데이트 및 다른 프로세스 중단")
             
-            # 1단계: 정방향 회전
-            # print(f"  📍 1단계: 정방향 {degrees}도 회전 시작...")
-            success = self._rotate_motor3_steps(motor_index, 1, steps)
+            # 1단계: 역방향 회전 (열림)
+            # print(f"  📍 1단계: 역방향 {degrees}도 회전 시작...")
+            success = self._rotate_motor3_steps(motor_index, -1, steps)
             if not success:
-                # print(f"    [ERROR] 모터 4 정방향 회전 실패")
+                # print(f"    [ERROR] 모터 4 역방향 회전 실패")
                 return False
             
             # 약이 떨어질 시간 대기
             # print(f"  ⏳ 약이 떨어질 시간 대기 (2초)...")
             time.sleep(2)
             
-            # 2단계: 역방향 회전 (원위치)
-            # print(f"  📍 2단계: 역방향 {degrees}도 회전 시작...")
-            success = self._rotate_motor3_steps(motor_index, -1, steps)
+            # 2단계: 정방향 회전 (원위치)
+            # print(f"  📍 2단계: 정방향 {degrees}도 회전 시작...")
+            success = self._rotate_motor3_steps(motor_index, 1, steps)
             if not success:
-                # print(f"    [ERROR] 모터 4 역방향 회전 실패")
+                # print(f"    [ERROR] 모터 4 정방향 회전 실패")
                 return False
             
             # [FAST] 모터 4 사용 후 모든 모터 전원 OFF

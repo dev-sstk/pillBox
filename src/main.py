@@ -397,7 +397,7 @@ def main():
         else:
             # 처음 부팅 - WiFi 스캔부터 시작
             # print("[INFO] 처음 부팅 - WiFi 스캔부터 시작...")
-            start_application("wifi_scan")
+            start_application("startup")
         
     except KeyboardInterrupt:
         # print("\n🛑 프로그램이 중단되었습니다")
