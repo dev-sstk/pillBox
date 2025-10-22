@@ -822,7 +822,6 @@ def delete_data_files(port):
             "/data/disk_states.json",
             "/data/medication.json",
             "/data/settings.json",
-            "/data/wifi_config.json"
         ]
         
         print("🗑️  삭제할 데이터 파일들:")
