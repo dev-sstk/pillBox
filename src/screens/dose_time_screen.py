@@ -845,11 +845,13 @@ class DoseTimeScreen:
             with open(boot_file, 'w') as f:
                 json.dump(boot_data, f)
             
+            # 설정 완료 메시지 표시
+            self._show_completion_message()
+            
             # 흰색 화면 만들기
             self._make_screen_white()
             
             # 잠시 대기 후 재부팅
-            import time
             time.sleep(0.1)
             
             # print("[INFO] ESP 리셋 시작...")
@@ -858,6 +860,53 @@ class DoseTimeScreen:
             
         except Exception as e:
             # print(f"[ERROR] 메인화면 재부팅 실패: {e}")
+            pass
+    
+    def _show_completion_message(self):
+        """설정 완료 메시지 표시"""
+        try:
+            # print("[INFO] 설정 완료 메시지 표시 시작...")
+            
+            # 새로운 메시지 컨테이너 생성 (기존 컨테이너와 별개)
+            message_container = lv.obj(self.screen_obj)
+            message_container.set_size(128, 160)
+            message_container.align(lv.ALIGN.CENTER, 0, 0)
+            message_container.set_style_bg_color(lv.color_hex(0xFFFFFF), 0)  # 흰색 배경
+            message_container.set_style_bg_opa(255, 0)  # 불투명
+            message_container.set_style_border_width(0, 0)
+            message_container.set_style_pad_all(0, 0)
+            
+            # 스크롤바 비활성화
+            message_container.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
+            message_container.set_scroll_dir(lv.DIR.NONE)
+            
+            # "디바이스를 재시작합니다." 텍스트
+            desc_label = lv.label(message_container)
+            desc_label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
+            desc_label.align(lv.ALIGN.CENTER, 0, 0)
+            desc_label.set_style_text_color(lv.color_hex(0x666666), 0)  # 회색
+            # 노토산스 폰트 직접 적용
+            korean_font = getattr(lv, "font_notosans_kr_regular", None)
+            if korean_font:
+                desc_label.set_style_text_font(korean_font, 0)
+            else:
+                desc_label.set_style_text_font(lv.font_default, 0)
+            
+            # 스크롤바 비활성화
+            # title_label.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
+            # title_label.set_scroll_dir(lv.DIR.NONE)
+            desc_label.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
+            desc_label.set_scroll_dir(lv.DIR.NONE)
+            desc_label.set_text("설정 완료,\n디바이스를\n재시작합니다.")
+            
+            # 1초 대기
+            import time
+            time.sleep(1.5)
+            
+            # print("[OK] 설정 완료 메시지 표시 완료")
+            
+        except Exception as e:
+            # print(f"[ERROR] 설정 완료 메시지 표시 실패: {e}")
             pass
     
     def _save_d_button_selected_disks(self):

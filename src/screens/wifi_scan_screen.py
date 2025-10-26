@@ -733,16 +733,16 @@ class WifiScanScreen:
             # print(f"[ERROR] 오픈 네트워크 연결 실패: {network['ssid']}")
             pass
     def _scan_wifi_networks(self):
-        """WiFi 네트워크 스캔"""
+        """WiFi 네트워크 스캔 - 빠른 스캔"""
         self.scanning = True
         
         try:
-            # WiFi 매니저를 통해 네트워크 스캔 (재시도 로직 추가)
+            # 빠른 스캔을 위해 재시도 시간 단축
             scanned_networks = get_wifi_manager().scan_networks(force=True)
             
-            # 스캔 결과가 없으면 재시도
+            # 스캔 결과가 없으면 짧은 재시도 (2초 → 0.5초)
             if not scanned_networks:
-                time.sleep(2)
+                time.sleep(0.5)  # 2초 → 0.5초로 단축
                 scanned_networks = get_wifi_manager().scan_networks(force=True)
             
             if scanned_networks:

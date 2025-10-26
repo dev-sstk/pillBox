@@ -619,50 +619,227 @@ class PillLoadingScreen:
     def _complete_current_disk_loading(self):
         """현재 디스크 충전 완료 후 다음 디스크로"""
         try:
-            # print(f"[INFO] 현재 디스크 충전 완료")
+            print("현재 디스크 충전 완료")
             self.current_sequential_index += 1
             
-            if self.current_sequential_index < len(self.sequential_disks):
+            # 모든 디스크가 15칸 완료되었는지 다시 확인
+            all_disks_completed = True
+            for disk_idx in range(3):
+                if self._is_disk_selected(disk_idx):
+                    if self.disk_states[disk_idx].loaded_count < 15:
+                        all_disks_completed = False
+                        break
+            
+            if all_disks_completed:
+                print("모든 디스크 충전 완료 - 메인화면으로 이동")
+                self._complete_sequential_loading()
+            elif self.current_sequential_index < len(self.sequential_disks):
                 # 다음 디스크로
-                # print(f"[INFO] 다음 디스크로 이동")
+                print("다음 디스크로 이동")
                 self._start_current_disk_loading()
             else:
                 # 모든 디스크 완료
-                # print(f"[INFO] 모든 디스크 충전 완료!")
+                print("모든 디스크 충전 완료!")
                 self._complete_sequential_loading()
                 
         except Exception as e:
-            # print(f"[ERROR] 현재 디스크 충전 완료 처리 실패: {e}")
-            pass
+            print(f"현재 디스크 충전 완료 처리 실패: {e}")
+            import sys
+            sys.print_exception(e)
     
-    def _complete_sequential_loading(self):
-        """순차적 충전 완료"""
+    def _is_disk_selected(self, disk_index):
+        """디스크가 선택된 디스크 목록에 있는지 확인"""
         try:
-            # print(f"[INFO] 순차적 충전 완료 - 데이터 저장 후 ESP 리셋")
+            print(f"디스크 {disk_index+1} 선택 확인 시작...")
+            
+            # 순차적 모드에서 순차적 디스크 목록에 있는지 확인
+            if self.sequential_mode and self.sequential_disks:
+                is_selected = disk_index in self.sequential_disks
+                print(f"순차적 모드: 디스크 {disk_index+1} 선택됨 = {is_selected}")
+                return is_selected
+            
+            # 선택된 디스크 모드에서 선택된 디스크 목록에 있는지 확인
+            if hasattr(self, 'selected_disks') and self.selected_disks:
+                is_selected = disk_index in self.selected_disks
+                print(f"선택된 디스크 모드: 디스크 {disk_index+1} 선택됨 = {is_selected}")
+                return is_selected
+            
+            # 기본적으로 모든 디스크가 선택된 것으로 간주 (초기 상태)
+            print(f"기본 모드: 디스크 {disk_index+1} 선택됨 = True (모든 디스크 선택)")
+            return True
+            
+        except Exception as e:
+            print(f"디스크 선택 확인 실패: {e}")
+            return True  # 오류 시에도 선택된 것으로 간주
+    
+    def _check_completion_and_proceed(self):
+        """완충 감지 및 다음 단계 처리"""
+        try:
+            print("완충 감지 및 다음 단계 처리 시작...")
+            
+            if self.sequential_mode:
+                # 순차적 모드에서 모든 디스크가 15칸 완료되었는지 확인
+                all_disks_completed = True
+                for disk_idx in range(3):
+                    if self._is_disk_selected(disk_idx):
+                        if self.disk_states[disk_idx].loaded_count < 15:
+                            all_disks_completed = False
+                            print(f"디스크 {disk_idx+1} 진행률: {self.disk_states[disk_idx].loaded_count}/15칸")
+                        else:
+                            print(f"디스크 {disk_idx+1} 완료: 15/15칸")
+                
+                if all_disks_completed:
+                    print("모든 디스크 충전 완료 - 메인화면으로 이동")
+                    self._complete_sequential_loading()
+                elif self.current_disk_state.loaded_count >= 15:
+                    print("현재 디스크 15칸 완료 - 다음 디스크로 이동")
+                    self._complete_current_disk_loading()
+                else:
+                    print(f"현재 디스크 진행률: {self.current_disk_state.loaded_count}/15칸")
+            else:
+                # 개별 선택 모드에서 모든 선택된 디스크 완료 확인
+                all_completed = True
+                for disk_idx in range(3):
+                    if self._is_disk_selected(disk_idx):
+                        if self.disk_states[disk_idx].loaded_count < 15:
+                            all_completed = False
+                            print(f"디스크 {disk_idx+1} 진행률: {self.disk_states[disk_idx].loaded_count}/15칸")
+                        else:
+                            print(f"디스크 {disk_idx+1} 완료: 15/15칸")
+                
+                if all_completed:
+                    print("모든 선택된 디스크 충전 완료 - 메인화면으로 이동")
+                    self._complete_individual_loading()
+            
+            print("완충 감지 및 다음 단계 처리 완료")
+            
+        except Exception as e:
+            print(f"완충 감지 처리 실패: {e}")
+            import sys
+            sys.print_exception(e)
+    
+    def _complete_individual_loading(self):
+        """개별 선택 모드 충전 완료 처리"""
+        try:
+            print("개별 선택 모드 충전 완료 처리 시작...")
             
             # DataManager에 약물 수량 저장
+            print("DataManager에 약물 수량 저장")
             self._save_medication_data_to_datamanager()
             
-            # 초기 설정 완료 플래그 설정
-            self._mark_setup_complete()
-            
-            # print("[INFO] 알약 충전 완료 - 흰색 화면 후 ESP 리셋합니다")
+            # 설정 완료 메시지 표시
+            print("설정 완료 메시지 표시")
+            self._show_completion_message()
             
             # 흰색 화면 만들기
+            print("흰색 화면 만들기")
             self._make_screen_white()
+            
+            # 부팅 타겟을 메인화면으로 설정
+            print("부팅 타겟을 메인화면으로 설정")
+            self._set_boot_target_to_main()
             
             # 잠시 대기 후 재부팅
             import time
             time.sleep(0.1)
             
-            # print("[INFO] ESP 리셋 시작...")
+            print("ESP 리셋 시작...")
             import machine
             machine.reset()
             
         except Exception as e:
-            # print(f"[ERROR] 순차적 충전 완료 처리 실패: {e}")
+            print(f"개별 선택 모드 충전 완료 처리 실패: {e}")
             import sys
             sys.print_exception(e)
+    
+    def _complete_sequential_loading(self):
+        """순차적 충전 완료"""
+        try:
+            print("순차적 충전 완료 - 메인화면으로 이동")
+            
+            # DataManager에 약물 수량 저장
+            print("DataManager에 약물 수량 저장")
+            self._save_medication_data_to_datamanager()
+            
+            # 메인화면으로 이동
+                        
+            # 설정 완료 메시지 표시
+            print("설정 완료 메시지 표시")
+            self._show_completion_message()
+            print("설정 완료 메시지 표시 완료")
+            
+            # 흰색 화면 만들기
+            print("흰색 화면 만들기")
+            self._make_screen_white()
+            print("흰색 화면 만들기 완료")
+            
+            # 부팅 타겟을 메인화면으로 설정
+            print("부팅 타겟을 메인화면으로 설정")
+            self._set_boot_target_to_main()
+            print("부팅 타겟 설정 완료")
+            
+            # 잠시 대기 후 재부팅
+            print("재부팅 전 대기 시작")
+            import time
+            time.sleep(0.1)
+            print("재부팅 전 대기 완료")
+            
+            print("ESP 리셋 시작...")
+            import machine
+            machine.reset()
+            
+        except Exception as e:
+            print(f"순차적 충전 완료 처리 실패: {e}")
+            import sys
+            sys.print_exception(e)
+    
+    def _show_completion_message(self):
+        """설정 완료 메시지 표시"""
+        try:
+            # print("[INFO] 설정 완료 메시지 표시 시작...")
+            
+            # 새로운 메시지 컨테이너 생성 (기존 컨테이너와 별개)
+            message_container = lv.obj(self.screen_obj)
+            message_container.set_size(128, 160)
+            message_container.align(lv.ALIGN.CENTER, 0, 0)
+            message_container.set_style_bg_color(lv.color_hex(0xFFFFFF), 0)  # 흰색 배경
+            message_container.set_style_bg_opa(255, 0)  # 불투명
+            message_container.set_style_border_width(0, 0)
+            message_container.set_style_pad_all(0, 0)
+            
+            # 스크롤바 비활성화
+            message_container.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
+            message_container.set_scroll_dir(lv.DIR.NONE)
+            # "디바이스를 재시작합니다." 텍스트
+            desc_label = lv.label(message_container)
+            # 노토산스 폰트 직접 적용
+            korean_font = getattr(lv, "font_notosans_kr_regular", None)
+            if korean_font:
+                desc_label.set_style_text_font(korean_font, 0)
+            else:
+                desc_label.set_style_text_font(lv.font_default, 0)
+            
+            
+            # 스크롤바 비활성화
+            # title_label.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
+            # title_label.set_scroll_dir(lv.DIR.NONE)
+            desc_label.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
+            desc_label.set_scroll_dir(lv.DIR.NONE)
+            desc_label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
+            desc_label.align(lv.ALIGN.CENTER, 0, 0)
+            desc_label.set_style_text_color(lv.color_hex(0x666666), 0)  # 회색
+            desc_label.set_text("설정 완료,\n디바이스를\n재시작합니다.")
+            
+            
+            # 1초 대기
+            import time
+            time.sleep(1.5)
+            
+            # print("[OK] 설정 완료 메시지 표시 완료")
+            
+        except Exception as e:
+            # print(f"[ERROR] 설정 완료 메시지 표시 실패: {e}")
+            pass
     
     def _make_screen_white(self):
         """화면을 흰색으로 만들기 (디스플레이 테스트용)"""
@@ -819,21 +996,40 @@ class PillLoadingScreen:
             from data_manager import DataManager
             data_manager = DataManager()
             
-            # 각 디스크의 최종 수량을 DataManager에 저장
-            for disk_num in [1, 2, 3]:
-                disk_index = disk_num - 1  # 디스크 번호를 인덱스로 변환 (1->0, 2->1, 3->2)
-                if disk_index in self.disk_states:
-                    final_count = self.disk_states[disk_index].loaded_count
-                    success = data_manager.update_disk_count(disk_num, final_count)
-                    if success:
-                        # print(f"[OK] 디스크 {disk_num} 수량 저장: {final_count}개")
-                        pass
+            # 각 식사별로 올바른 디스크에만 저장
+            if hasattr(self, 'dose_times') and self.dose_times:
+                print(f"[DEBUG] 식사별 알약 개수 저장 시작...")
+                for i, dose_time in enumerate(self.dose_times):
+                    if i < 3:  # 최대 3개 식사
+                        disk_num = i + 1  # 디스크 1, 2, 3
+                        disk_index = i  # 디스크 인덱스 0, 1, 2
+                        
+                        if disk_index in self.disk_states:
+                            final_count = self.disk_states[disk_index].loaded_count
+                            meal_name = dose_time.get('meal_name', f'식사{i+1}')
+                            print(f"[DEBUG] {meal_name} -> 디스크 {disk_num}: {final_count}개 저장")
+                            
+                            success = data_manager.update_disk_count(disk_num, final_count)
+                            if success:
+                                print(f"[OK] {meal_name} 디스크 {disk_num} 수량 저장: {final_count}개")
+                            else:
+                                print(f"[ERROR] {meal_name} 디스크 {disk_num} 수량 저장 실패")
+                        else:
+                            print(f"[WARN] {dose_time.get('meal_name', f'식사{i+1}')} 디스크 {disk_num} 상태 정보 없음")
+            else:
+                # 기본 디스크별 저장 (식사 정보가 없는 경우)
+                print(f"[DEBUG] 기본 디스크별 알약 개수 저장...")
+                for disk_num in [1, 2, 3]:
+                    disk_index = disk_num - 1  # 디스크 번호를 인덱스로 변환 (1->0, 2->1, 3->2)
+                    if disk_index in self.disk_states:
+                        final_count = self.disk_states[disk_index].loaded_count
+                        success = data_manager.update_disk_count(disk_num, final_count)
+                        if success:
+                            print(f"[OK] 디스크 {disk_num} 수량 저장: {final_count}개")
+                        else:
+                            print(f"[ERROR] 디스크 {disk_num} 수량 저장 실패")
                     else:
-                        # print(f"[ERROR] 디스크 {disk_num} 수량 저장 실패")
-                        pass
-                else:
-                    # print(f"[WARN] 디스크 {disk_num} 상태 정보 없음 (인덱스 {disk_index})")
-                    pass
+                        print(f"[WARN] 디스크 {disk_num} 상태 정보 없음 (인덱스 {disk_index})")
             # print("[OK] DataManager 약물 수량 저장 완료")
             
         except Exception as e:
@@ -841,8 +1037,8 @@ class PillLoadingScreen:
             pass
         
     def _create_modern_screen(self):
-        """Modern 스타일 화면 생성 (dose_count_screen과 일관된 스타일)"""
-        # print(f"  [INFO] {self.screen_name} Modern 화면 생성 시작...")
+        """간단한 텍스트 기반 UI 화면 생성"""
+        # print(f"  [INFO] {self.screen_name} 간단한 UI 화면 생성 시작...")
         
         # 강력한 메모리 정리
         import gc
@@ -862,31 +1058,249 @@ class PillLoadingScreen:
         
         # print(f"  [OK] 화면 객체 생성 완료")
         
-        # 순차적 충전 모드인 경우 바로 충전 화면 생성
-        if self.sequential_mode:
-            # print(f"  [INFO] 순차적 충전 모드 - 바로 충전 화면 생성")
-            self._create_loading_screen_directly()
-            # 순차적 충전 모드에서는 버튼 힌트만 생성
-            # print(f"  [INFO] 하단 버튼힌트 컨테이너 생성...")
-            self._create_button_hints_area() # 하단 버튼힌트 컨테이너
-            import gc; gc.collect()
-        else:
-            # 개별 선택 모드인 경우 기존 방식
-            # print(f"  [INFO] 개별 선택 모드 - 기존 화면 생성")
-            # 3개 영역으로 구조화 (단계별 메모리 정리)
-            # print(f"  [INFO] 상단 상태 컨테이너 생성...")
-            self._create_status_container()  # 상단 상태 컨테이너
-            import gc; gc.collect()
-            
-            # print(f"  [INFO] 중앙 메인 컨테이너 생성...")
-            self._create_main_container()    # 중앙 메인 컨테이너
-            import gc; gc.collect()
-            
-            # print(f"  [INFO] 하단 버튼힌트 컨테이너 생성...")
-            self._create_button_hints_area() # 하단 버튼힌트 컨테이너
-            import gc; gc.collect()
+        # 새로운 간단한 UI 생성
+        self._create_simple_ui()
         
-        # print(f"  [OK] Modern 화면 생성 완료")
+        # print(f"  [OK] 간단한 UI 화면 생성 완료")
+    
+    def _create_simple_ui(self):
+        """간단한 텍스트 기반 UI 생성"""
+        try:
+            # 제목 생성
+            self.title_text = lv.label(self.screen_obj)
+            self.title_text.set_style_text_color(lv.color_hex(0x1D1D1F), 0)
+            self.title_text.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
+            self.title_text.align(lv.ALIGN.TOP_MID, 0, 10)
+            
+            # 한국어 폰트 적용
+            korean_font = getattr(lv, "font_notosans_kr_regular", None)
+            if korean_font:
+                self.title_text.set_style_text_font(korean_font, 0)
+            
+            self.title_text.set_text("알약 충전")
+            
+            # 디스크 상태 표시 영역 생성
+            self._create_disk_status_area()
+            
+            # 버튼 힌트 영역 생성
+            self._create_button_hints_area()
+            
+        except Exception as e:
+            # print(f"  [ERROR] 간단한 UI 생성 실패: {e}")
+            pass
+    
+    def _create_disk_status_area(self):
+        """디스크 상태 표시 영역 생성"""
+        try:
+            # 복용 패턴에 따른 디스크 상태 표시
+            self._update_disk_status_display()
+            
+        except Exception as e:
+            # print(f"  [ERROR] 디스크 상태 영역 생성 실패: {e}")
+            pass
+    
+    def _update_disk_status_display(self):
+        """디스크 상태 표시 업데이트"""
+        try:
+            print("디스크 상태 표시 업데이트 시작...")
+            
+            # 디스크 상태 강제 초기화
+            if not hasattr(self, 'disk_states') or not self.disk_states:
+                self._ensure_disk_states()
+            
+            # 디버깅: 자동 할당 모드 확인
+            is_auto = self._is_auto_assigned_mode()
+            print(f"자동 할당 모드: {is_auto}")
+            print(f"디스크 상태: {self.disk_states}")
+            
+            # 기존 상태 표시 라벨들 정리
+            if hasattr(self, 'disk_status_labels') and self.disk_status_labels:
+                for label in self.disk_status_labels:
+                    if label:
+                        label.delete()
+            
+            self.disk_status_labels = []
+            
+            # 복용 패턴에 따른 디스크 상태 표시
+            if is_auto:
+                # 자동 할당 모드: 아침약, 점심약, 저녁약 표시
+                print("식사별 상태 표시 생성")
+                self._create_meal_status_display()
+            else:
+                # 수동 선택 모드: 디스크1, 디스크2, 디스크3 표시
+                print("디스크별 상태 표시 생성")
+                self._create_disk_status_display()
+            
+            # 디스크 상태가 표시되지 않는 경우 강제로 디스크 상태 표시
+            if not self.disk_status_labels or len(self.disk_status_labels) == 0:
+                print("디스크 상태가 표시되지 않음 - 강제로 디스크 상태 표시")
+                self._create_disk_status_display()
+            
+            print("디스크 상태 표시 업데이트 완료")
+                
+        except Exception as e:
+            print(f"디스크 상태 표시 업데이트 실패: {e}")
+            import sys
+            sys.print_exception(e)
+    
+    def _is_auto_assigned_mode(self):
+        """자동 할당 모드인지 확인"""
+        try:
+            print(f"[DEBUG] 자동 할당 모드 확인 시작...")
+            print(f"[DEBUG] dose_times: {self.dose_times}")
+            print(f"[DEBUG] dose_times 길이: {len(self.dose_times) if self.dose_times else 0}")
+            
+            # 복용 횟수가 2회 이상이면 자동 할당 모드
+            if hasattr(self, 'dose_times') and self.dose_times and len(self.dose_times) >= 2:
+                print(f"[DEBUG] 복용 횟수 2회 이상으로 자동 할당 모드")
+                return True
+            
+            # DataManager에서 자동 할당된 디스크 확인
+            from data_manager import DataManager
+            data_manager = DataManager()
+            auto_assigned_disks = data_manager.get_auto_assigned_disks()
+            print(f"[DEBUG] DataManager 자동 할당 디스크: {auto_assigned_disks}")
+            print(f"[DEBUG] DataManager 자동 할당 디스크 길이: {len(auto_assigned_disks) if auto_assigned_disks else 0}")
+            
+            is_auto = auto_assigned_disks and len(auto_assigned_disks) > 0
+            print(f"[DEBUG] 자동 할당 모드 결과: {is_auto}")
+            return is_auto
+        except Exception as e:
+            print(f"[DEBUG] 자동 할당 모드 확인 오류: {e}")
+            return False
+    
+    def _create_meal_status_display(self):
+        """식사별 상태 표시 생성"""
+        try:
+            print("식사별 상태 표시 생성 시작...")
+            
+            # 복용 패턴에 따른 식사 이름들
+            meal_names = self._get_meal_names_by_pattern()
+            print(f"식사 이름들: {meal_names}")
+            
+            y_offset = -20  # 제목 아래쪽에서 시작
+            for i, meal_name in enumerate(meal_names):
+                print(f"식사 {i}: {meal_name} 생성 중")
+                # 식사 이름과 상태 표시
+                label = lv.label(self.screen_obj)
+                label.set_style_text_color(lv.color_hex(0x1D1D1F), 0)
+                label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
+                label.align(lv.ALIGN.CENTER, 0, y_offset + i * 20)
+                
+                # 한국어 폰트 적용
+                korean_font = getattr(lv, "font_notosans_kr_regular", None)
+                if korean_font:
+                    label.set_style_text_font(korean_font, 0)
+                
+                # 디스크 상태 가져오기
+                disk_idx = i  # 디스크 인덱스
+                
+                # 디스크 상태가 없으면 초기화
+                if not hasattr(self, 'disk_states') or not self.disk_states:
+                    self._ensure_disk_states()
+                
+                if disk_idx in self.disk_states:
+                    loaded_count = self.disk_states[disk_idx].loaded_count
+                    total_count = self.disk_states[disk_idx].total_compartments
+                    label.set_text(f"{meal_name}  {loaded_count}/{total_count}")
+                    print(f"식사 {i} 상태: {loaded_count}/{total_count}")
+                else:
+                    label.set_text(f"{meal_name}  0/15")
+                    print(f"식사 {i} 상태: 0/15 (기본값)")
+                
+                self.disk_status_labels.append(label)
+            
+            print("식사별 상태 표시 생성 완료")
+                
+        except Exception as e:
+            # print(f"  [ERROR] 식사 상태 표시 생성 실패: {e}")
+            pass
+    
+    def _create_disk_status_display(self):
+        """디스크별 상태 표시 생성"""
+        try:
+            print("디스크별 상태 표시 생성 시작...")
+            
+            # 선택된 디스크만 표시
+            selected_disks = []
+            if hasattr(self, 'selected_disks') and self.selected_disks:
+                # 선택된 디스크 번호를 인덱스로 변환 (1,2,3 → 0,1,2)
+                # 번호 순으로 정렬하여 표시 (1,2,3 순서)
+                sorted_disk_numbers = sorted(self.selected_disks)
+                selected_disks = [disk_num - 1 for disk_num in sorted_disk_numbers]
+                print(f"선택된 디스크 번호: {self.selected_disks}")
+                print(f"정렬된 디스크 번호: {sorted_disk_numbers}")
+                print(f"선택된 디스크 인덱스: {selected_disks}")
+            else:
+                # 선택된 디스크가 없으면 모든 디스크 표시 (기존 방식)
+                selected_disks = [0, 1, 2]
+                print("선택된 디스크 없음 - 모든 디스크 표시")
+            
+            y_offset = -20  # 제목 아래쪽에서 시작
+            for i, disk_index in enumerate(selected_disks):
+                print(f"디스크 {disk_index+1} 상태 표시 생성 중")
+                # 디스크 이름과 상태 표시
+                label = lv.label(self.screen_obj)
+                label.set_style_text_color(lv.color_hex(0x1D1D1F), 0)
+                label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
+                label.align(lv.ALIGN.CENTER, 0, y_offset + i * 20)
+                
+                # 한국어 폰트 적용
+                korean_font = getattr(lv, "font_notosans_kr_regular", None)
+                if korean_font:
+                    label.set_style_text_font(korean_font, 0)
+                
+                # 디스크 상태가 없으면 초기화
+                if not hasattr(self, 'disk_states') or not self.disk_states:
+                    self._ensure_disk_states()
+                
+                if disk_index in self.disk_states:
+                    loaded_count = self.disk_states[disk_index].loaded_count
+                    total_count = self.disk_states[disk_index].total_compartments
+                    label.set_text(f"디스크{disk_index+1}  {loaded_count}/{total_count}")
+                    print(f"디스크 {disk_index+1} 상태: {loaded_count}/{total_count}")
+                else:
+                    label.set_text(f"디스크{disk_index+1}  0/15")
+                    print(f"디스크 {disk_index+1} 상태: 0/15 (기본값)")
+                
+                self.disk_status_labels.append(label)
+            
+            print("디스크별 상태 표시 생성 완료")
+                
+        except Exception as e:
+            print(f"디스크 상태 표시 생성 실패: {e}")
+            import sys
+            sys.print_exception(e)
+    
+    def _get_meal_names_by_pattern(self):
+        """복용 패턴에 따른 식사 이름들 반환"""
+        try:
+            print(f"[DEBUG] dose_times 전체 구조: {self.dose_times}")
+            
+            # 복용 패턴에 따른 식사 이름들
+            if hasattr(self, 'dose_times') and self.dose_times:
+                meal_names = []
+                for dose_time in self.dose_times:
+                    print(f"[DEBUG] dose_time 항목: {dose_time}")
+                    if isinstance(dose_time, dict):
+                        # meal_name 키가 있으면 사용
+                        if 'meal_name' in dose_time:
+                            meal_names.append(dose_time['meal_name'])
+                        # meal 키가 있으면 사용
+                        elif 'meal' in dose_time:
+                            meal_names.append(dose_time['meal'])
+                    elif isinstance(dose_time, str):
+                        # 문자열인 경우 직접 사용
+                        meal_names.append(dose_time)
+                print(f"[DEBUG] dose_times에서 식사 이름 추출: {meal_names}")
+                return meal_names
+            else:
+                # 기본값
+                print(f"[DEBUG] dose_times가 없어서 기본값 사용")
+                return ["아침약", "점심약", "저녁약"]
+        except Exception as e:
+            print(f"[DEBUG] _get_meal_names_by_pattern 오류: {e}")
+            return ["아침약", "점심약", "저녁약"]
     
     def _create_loading_screen_directly(self):
         """순차적 충전 모드에서 바로 충전 화면을 메인 화면으로 생성"""
@@ -1051,11 +1465,14 @@ class PillLoadingScreen:
             sys.print_exception(e)
     
     def _update_loading_screen(self):
-        """순차적 충전 모드에서 다음 디스크로 화면 업데이트"""
+        """충전 화면 실시간 업데이트"""
         try:
-            # print(f"  [INFO] 충전 화면 업데이트 시작...")
+            print("충전 화면 실시간 업데이트 시작...")
             
-            # 제목은 _switch_to_disk_loading()에서 설정되므로 여기서는 업데이트하지 않음
+            # 현재 디스크 상태 확인
+            if not hasattr(self, 'current_disk_state') or not self.current_disk_state:
+                print("현재 디스크 상태가 없음")
+                return
             
             # 진행률 업데이트
             if hasattr(self, 'progress_arc') and hasattr(self, 'progress_label'):
@@ -1063,18 +1480,25 @@ class PillLoadingScreen:
                 arc_angle = int((progress / 100) * 360)
                 self.progress_arc.set_angles(0, arc_angle)
                 self.progress_label.set_text(f"{progress:.0f}%")
-                # print(f"  [OK] 진행률 업데이트 완료: {progress:.0f}%")
+                print(f"진행률 업데이트: {progress:.0f}%")
             
             # 세부 정보 업데이트
             if hasattr(self, 'detail_label'):
                 loaded_count = self.current_disk_state.loaded_count
                 self.detail_label.set_text(f"{loaded_count}/15칸")
-                # print(f"  [OK] 세부 정보 업데이트 완료: {loaded_count}/15칸 (디스크 {self.selected_disk_index})")
+                print(f"세부 정보 업데이트: {loaded_count}/15칸")
             
-            # print(f"  [OK] 충전 화면 업데이트 완료")
+            # 디스크 상태 표시 업데이트
+            self._update_disk_visualization()
+            
+            # LVGL 화면 갱신
+            import lvgl as lv
+            lv.timer_handler()
+            
+            print("충전 화면 실시간 업데이트 완료")
             
         except Exception as e:
-            # print(f"  [ERROR] 충전 화면 업데이트 실패: {e}")
+            print(f"충전 화면 업데이트 실패: {e}")
             import sys
             sys.print_exception(e)
     
@@ -1173,60 +1597,82 @@ class PillLoadingScreen:
         # print("  [OK] 하단 버튼힌트 컨테이너 생성 완료")
 
     def _update_disk_visualization(self):
-        """아크 프로그레스 바 업데이트 (리미트 스위치 기반)"""
+        """디스크 상태 표시 업데이트 (간단한 텍스트 기반)"""
         try:
-            # 진행률 업데이트
-            if hasattr(self, 'progress_label'):
-                progress = self.current_disk_state.get_loading_progress()
-                
-                # 아크 프로그레스 바 업데이트
-                if hasattr(self, 'progress_arc'):
-                    # 0-360도 범위로 변환 (0% = 0도, 100% = 360도)
-                    arc_angle = int((progress / 100) * 360)
-                    self.progress_arc.set_angles(0, arc_angle)
-                
-                # 진행률 텍스트 업데이트
-                self.progress_label.set_text(f"{progress:.0f}%")
-                
-                # 세부 정보 업데이트 (리미트 스위치 기반 카운트)
-                if hasattr(self, 'detail_label'):
-                    loaded_count = self.current_disk_state.loaded_count
-                    self.detail_label.set_text(f"{loaded_count}/15칸")
+            print("디스크 상태 표시 업데이트 시작...")
             
-            # [FAST] LVGL 화면 갱신 제거 (모터 성능 우선)
-            # import lvgl as lv
-            # lv.timer_handler()
+            # 디스크 상태 표시 업데이트
+            self._update_disk_status_display()
             
-            # [FAST] 파일 저장 제거 (매 칸마다 저장하지 않음, 3칸 완료 후에만 저장)
-            # self._save_disk_states()
+            # LVGL 화면 갱신
+            import lvgl as lv
+            lv.timer_handler()
+            
+            print("디스크 상태 표시 업데이트 완료")
             
         except Exception as e:
-            # print(f"  [ERROR] 아크 프로그레스 바 업데이트 실패: {e}")
-            pass
+            print(f"디스크 상태 표시 업데이트 실패: {e}")
+            import sys
+            sys.print_exception(e)
 
     def on_button_a(self):
-        """버튼 A 처리 - 3칸씩 충전"""
-        if self.current_mode == 'loading':
-            # print("3칸씩 충전 실행")
-            # 3칸씩 충전 로직 구현
-            if self.current_disk_state.can_load_more():
-                # 실제 모터 제어로 3칸씩 충전
-                disk_index = self.current_disk_state.disk_id
-                # print(f"충전 시작: {self.current_disk_state.loaded_count + 1}/15칸")
-                
-                # 실제 모터 제어 실행 (3칸을 한 번에 처리)
-                success = self._real_loading(disk_index)
-                if success:
-                    # _real_loading에서 이미 3칸이 처리되었으므로 카운터는 그대로
-                    # print(f"충전 완료: {self.current_disk_state.loaded_count}/15칸")
-                    pass
-                else:
-                    # print(f"충전 실패: {self.current_disk_state.loaded_count}/15칸")
-                    pass
+        """버튼 A 처리 - 모든 디스크 동시 회전, 선택된 디스크들에 3칸씩 충전"""
+        print(f"A버튼: 현재 모드 = {self.current_mode}")
+        
+        # 충전 모드로 전환 (아직 충전 모드가 아닌 경우)
+        if self.current_mode != 'loading':
+            print("충전 모드로 전환")
+            self.current_mode = 'loading'
+            
+            # 순차적 충전 모드인 경우 첫 번째 디스크로 설정
+            if self.sequential_mode and self.sequential_disks:
+                print("순차적 충전 모드 - 첫 번째 디스크로 설정")
+                self.current_sequential_index = 0
+                self.selected_disk_index = self.sequential_disks[0]
+                self.current_disk_state = self.disk_states[self.selected_disk_index]
             else:
-                # print("더 이상 충전할 칸이 없습니다")
-                pass
-            self._update_loading_screen()
+                # 개별 선택 모드인 경우 첫 번째 디스크로 설정
+                print("개별 선택 모드 - 첫 번째 디스크로 설정")
+                self.selected_disk_index = 0
+                self.current_disk_state = self.disk_states[0]
+        
+        print("A버튼: 모든 디스크 동시 회전으로 3칸씩 충전 실행")
+        
+        # 선택된 디스크들이 더 충전할 수 있는지 확인
+        can_load_more = False
+        for disk_idx in range(3):
+            if self._is_disk_selected(disk_idx) and disk_idx in self.disk_states:
+                if self.disk_states[disk_idx].can_load_more():
+                    can_load_more = True
+                    break
+        
+        if can_load_more:
+            print("충전 시작: 모든 디스크 동시 회전")
+            
+            # 실제 모터 제어 실행 (모든 디스크 동시 회전, 선택된 디스크들에만 알약 개수 업데이트)
+            success = self._real_loading(self.current_disk_state.disk_id)
+            if success:
+                print("충전 완료: 선택된 디스크들에 3칸씩 추가")
+                
+                # 화면 실시간 업데이트
+                self._update_loading_screen()
+                
+                # 디스크 상태 저장
+                self._save_disk_states()
+                
+                # 완충 감지 및 다음 단계 처리
+                self._check_completion_and_proceed()
+            else:
+                print("충전 실패")
+        else:
+            print("더 이상 충전할 칸이 없습니다")
+            # 모든 디스크가 완료되었는지 확인
+            if self.sequential_mode:
+                print("모든 디스크 충전 완료 - 메인화면으로 이동")
+                self._complete_sequential_loading()
+            else:
+                print("개별 선택 모드 - 모든 선택된 디스크 충전 완료")
+                self._complete_individual_loading()
     
     def on_button_b(self):
         """버튼 B 처리 - 기능 없음"""
@@ -1235,46 +1681,53 @@ class PillLoadingScreen:
     
     def on_button_c(self):
         """버튼 C 처리 - 뒤로가기"""
-        if self.current_mode == 'loading':
-            try:
-                # 현재 충전 상태 저장
-                self._save_disk_states()
-                # print("[INFO] 뒤로가기 전 충전 상태 저장 완료")
+        print(f"C버튼: 현재 모드 = {self.current_mode}")
+        print(f"C버튼: sequential_mode = {self.sequential_mode}")
+        print(f"C버튼: dose_times 길이 = {len(self.dose_times) if self.dose_times else 0}")
+        
+        try:
+            print("C버튼: 뒤로가기 처리 시작")
+            
+            # 현재 충전 상태 저장
+            print("뒤로가기 전 충전 상태 저장")
+            self._save_disk_states()
+            
+            # 복용 횟수에 따른 뒤로가기 처리
+            dose_count = len(self.dose_times) if self.dose_times else 1
+            print(f"현재 복용 횟수: {dose_count}")
+            
+            # 순차적 충전 모드에서 이전 디스크로 돌아가기
+            if self.sequential_mode and self.sequential_disks and self.current_sequential_index > 0:
+                # 이전 디스크로 이동
+                self.current_sequential_index -= 1
+                previous_disk_index = self.sequential_disks[self.current_sequential_index]
+                disk_num = previous_disk_index + 1
                 
-                # 복용 횟수에 따른 뒤로가기 처리
-                dose_count = len(self.dose_times) if self.dose_times else 1
-                # print(f"[INFO] 현재 복용 횟수: {dose_count}")
+                print(f"뒤로가기 - 디스크 {disk_num}로 이동")
                 
-                # 순차적 충전 모드에서 이전 디스크로 돌아가기
-                if self.sequential_mode and self.sequential_disks and self.current_sequential_index > 0:
-                    # 이전 디스크로 이동
-                    self.current_sequential_index -= 1
-                    previous_disk_index = self.sequential_disks[self.current_sequential_index]
-                    disk_num = previous_disk_index + 1
-                    
-                    # print(f"뒤로가기 - 디스크 {disk_num}로 이동")
-                    
-                    # 이전 디스크 충전 화면으로 전환
-                    self._switch_to_disk_loading(previous_disk_index)
-                    # print(f"[OK] 디스크 {disk_num} 충전 화면으로 이동 완료")
-                    
+                # 이전 디스크 충전 화면으로 전환
+                self._switch_to_disk_loading(previous_disk_index)
+                print(f"디스크 {disk_num} 충전 화면으로 이동 완료")
+                
+            else:
+                # 첫 번째 디스크인 경우 복용 횟수에 따라 분기
+                if dose_count >= 2:
+                    # 복용 횟수가 2 이상이면 복용 시간 설정 화면으로
+                    print("뒤로가기 - 복용 시간 설정 화면으로 이동 (복용 횟수 2 이상)")
+                    self._request_screen_transition_to_dose_time()
+                    print("복용 시간 설정 화면으로 이동 완료")
                 else:
-                    # 첫 번째 디스크인 경우 복용 횟수에 따라 분기
-                    if dose_count >= 2:
-                        # 복용 횟수가 2 이상이면 복용 시간 설정 화면으로
-                        # print("뒤로가기 - 복용 시간 설정 화면으로 이동 (복용 횟수 2 이상)")
-                        self._request_screen_transition_to_dose_time()
-                        # print("[OK] 복용 시간 설정 화면으로 이동 완료")
-                    else:
-                        # 복용 횟수가 1이면 디스크 선택 화면으로
-                        # print("뒤로가기 - 디스크 선택 화면으로 이동 (복용 횟수 1)")
-                        self._request_screen_transition_to_disk_selection()
-                        # print("[OK] 디스크 선택 화면으로 이동 완료")
-                        
-            except Exception as e:
-                # print(f"[ERROR] 화면 이동 실패: {e}")
-                import sys
-                sys.print_exception(e)
+                    # 복용 횟수가 1이면 디스크 선택 화면으로
+                    print("뒤로가기 - 디스크 선택 화면으로 이동 (복용 횟수 1)")
+                    self._request_screen_transition_to_disk_selection()
+                    print("디스크 선택 화면으로 이동 완료")
+            
+            print("C버튼 뒤로가기 처리 완료")
+                    
+        except Exception as e:
+            print(f"뒤로가기 처리 실패: {e}")
+            import sys
+            sys.print_exception(e)
     
     def _switch_to_disk_loading(self, disk_index):
         """특정 디스크 충전 화면으로 전환"""
@@ -1337,28 +1790,74 @@ class PillLoadingScreen:
             sys.print_exception(e)
     
     def on_button_d(self):
-        """버튼 D 처리 - 다음으로 (다음 디스크 또는 완료)"""
-        if self.current_mode == 'loading':
-            # print("다음으로 - 다음 디스크 또는 완료")
+        """버튼 D 처리 - 재부팅 후 메인화면에서 시작"""
+        try:
+            print("D버튼: 재부팅 후 메인화면에서 시작")
             
-            if self.sequential_mode:
-                # 순차적 충전 모드에서 다음 디스크로 이동
-                if self.current_disk_state.loaded_count >= 15:
-                    # print(f"[INFO] 디스크 {self.selected_disk_index} 15칸 완료 - 다음 디스크로 이동")
-                    self._complete_current_disk_loading()
+            # DataManager에 약물 수량 저장
+            print("DataManager에 약물 수량 저장")
+            self._save_medication_data_to_datamanager()
+            
+            # 설정 완료 메시지 표시
+            print("설정 완료 메시지 표시")
+            self._show_completion_message()
+            
+            # 흰색 화면 만들기
+            print("흰색 화면 만들기")
+            self._make_screen_white()
+            
+            # 부팅 타겟을 메인화면으로 설정
+            print("부팅 타겟을 메인화면으로 설정")
+            self._set_boot_target_to_main()
+            
+            # 잠시 대기 후 재부팅
+            import time
+            time.sleep(0.1)
+            
+            print("ESP 리셋 시작...")
+            import machine
+            machine.reset()
+            
+        except Exception as e:
+            print(f"D버튼 처리 실패: {e}")
+            import sys
+            sys.print_exception(e)
+    
+    def _set_boot_target_to_main(self):
+        """부팅 타겟을 메인화면으로 설정"""
+        try:
+            print("부팅 타겟 설정 시작...")
+            
+            # /data 디렉토리 존재 확인 및 생성
+            import os
+            data_dir = "/data"
+            try:
+                if data_dir not in os.listdir("/"):
+                    os.mkdir(data_dir)
+                    print("/data 디렉토리 생성됨")
+            except OSError as e:
+                if e.errno == 17:  # EEXIST - 디렉토리가 이미 존재
+                    print("/data 디렉토리가 이미 존재함")
+                    pass
                 else:
-                    # print(f"[INFO] 현재 디스크 충전 완료")
-                    # print(f"[INFO] 다음 디스크로 이동")
-                    self._complete_current_disk_loading()
-            else:
-                # 개별 선택 모드에서는 메인 화면으로
-                # print(f"[INFO] 모든 디스크 충전 완료 - 메인 화면으로 이동")
-                
-                # DataManager에 약물 수량 저장
-                self._save_medication_data_to_datamanager()
-                
-                # 화면 전환 요청
-                self._request_screen_transition()
+                    raise
+            
+            # boot_target.json 파일 생성 (main.py에서 읽는 경로와 동일)
+            boot_config = {
+                "boot_target": "main"
+            }
+            
+            import json
+            boot_file = "/data/boot_target.json"
+            with open(boot_file, "w") as f:
+                json.dump(boot_config, f)
+            
+            print("부팅 타겟 설정 완료: 메인화면")
+            
+        except Exception as e:
+            print(f"부팅 타겟 설정 실패: {e}")
+            import sys
+            sys.print_exception(e)
     
     def update(self):
         """화면 업데이트 - ScreenManager에서 호출됨"""
@@ -1368,128 +1867,147 @@ class PillLoadingScreen:
     
 
     def _real_loading(self, disk_index):
-        """실제 모터 제어를 통한 알약 충전 (리미트 스위치 엣지 감지 방식)"""
-        # print(f"  [INFO] 실제 모터 제어: 디스크 {disk_index + 1} 충전 시작")
+        """실제 모터 제어를 통한 알약 충전 (모든 디스크 동시 회전, 선택된 디스크들에 알약 개수 업데이트)"""
+        print("실제 모터 제어: 모든 디스크 동시 회전 시작")
         
         try:
             self._ensure_motor_system()
             if not self.motor_system or not self.motor_system.motor_controller:
-                # print("  [ERROR] 모터 시스템이 초기화되지 않음")
+                print("모터 시스템이 초기화되지 않음")
                 return False
             
-            # [FAST] 충전 시작 전 모든 모터 코일 OFF (전력 소모 방지)
-            # print(f"  [FAST] 충전 시작 전 모든 모터 코일 OFF")
+            # 충전 시작 전 모든 모터 코일 OFF (전력 소모 방지)
+            print("충전 시작 전 모든 모터 코일 OFF")
             self.motor_system.motor_controller.stop_all_motors()
             
-            if self.current_disk_state.start_loading():
-                # print(f"  [INFO] 모터 회전 시작 (리미트 스위치 눌림 감지 3번까지)")
+            # 모든 디스크의 상태를 시작 상태로 설정
+            all_disks_ready = True
+            for disk_idx in range(3):  # 디스크 0, 1, 2
+                if disk_idx in self.disk_states:
+                    if not self.disk_states[disk_idx].start_loading():
+                        all_disks_ready = False
+                        break
+            
+            if all_disks_ready:
+                # print(f"  [INFO] 모든 디스크 모터 회전 시작 (리미트 스위치 눌림 감지 3번까지)")
                 
-                # 리미트 스위치 상태 추적 변수 (한 번만 초기화)
-                prev_limit_state = False
-                current_limit_state = False
+                # 모든 디스크의 리미트 스위치 상태 추적 변수
+                prev_limit_states = [False, False, False]
+                current_limit_states = [False, False, False]
                 step_count = 0
                 max_steps = 8000  # 최대 8000스텝 후 강제 종료 (안전장치)
                 
-                # 초기 리미트 스위치 상태 확인
-                motor_index = disk_index + 1  # disk_index는 0,1,2이지만 모터 번호는 1,2,3이므로 +1
-                current_limit_state = self.motor_system.motor_controller.is_limit_switch_pressed(motor_index)
-                # print(f"  [INFO] 초기 리미트 스위치 상태: {'눌림' if current_limit_state else '안눌림'}")
+                # 초기 리미트 스위치 상태 확인 (모든 디스크)
+                for motor_idx in range(1, 4):  # 모터 번호 1, 2, 3
+                    current_limit_states[motor_idx - 1] = self.motor_system.motor_controller.is_limit_switch_pressed(motor_idx)
+                    # print(f"  [INFO] 디스크 {motor_idx} 초기 리미트 스위치 상태: {'눌림' if current_limit_states[motor_idx - 1] else '안눌림'}")
                 
                 # 초기 상태가 눌린 경우 첫 번째 감지를 무시하기 위한 플래그
-                skip_first_detection = current_limit_state
+                skip_first_detections = current_limit_states.copy()
                 
                 try:
-                    # 단일 루프로 3칸 모두 처리
-                    while self.current_disk_state.is_loading and step_count < max_steps:
+                    # 모든 디스크 동시 회전 + 리미트 스위치 감지 방식
+                    motor_controller = self.motor_system.motor_controller
+                    import time
+                    
+                    # 모든 모터를 먼저 정지
+                    motor_controller.stop_all_motors()
+                    
+                    # 모든 디스크를 동시에 3칸씩 이동 (리미트 스위치 감지)
+                    step_count = 0
+                    limit_released = [False, False, False]  # 각 디스크별 리미트 스위치 해제 상태
+                    compartment_count = [0, 0, 0]  # 각 디스크별 이동한 칸 수
+                    compartment_done = [False, False, False]  # 각 디스크별 3칸 이동 완료 상태
+                    counting_started = [False, False, False]  # 각 디스크별 카운트 시작 상태
+                    
+                    while not all(compartment_done):  # 안전장치 증가
                         step_count += 1
                         
-                        # 100스텝마다 진행 상황 출력
-                        if step_count % 100 == 0:
-                            # print(f"  📍 충전 진행 중... 스텝 {step_count}, 현재 상태: {self.current_disk_state.loaded_count}칸")
-                            pass
-                        # 1스텝씩 회전 (리미트 스위치 감지되어도 계속 회전) - 반시계방향
-                        # disk_index는 0,1,2이지만 모터 번호는 1,2,3이므로 +1
-                        motor_index = disk_index + 1
+                        # 모든 모터를 동시에 1스텝씩 진행 (내부 상태만 업데이트)
+                        for motor_idx in range(1, 4):  # 모터 번호 1, 2, 3
+                            if not compartment_done[motor_idx - 1]:
+                                motor_controller.motor_steps[motor_idx] = (motor_controller.motor_steps[motor_idx] - 1) % 8
+                                current_step = motor_controller.motor_steps[motor_idx]
+                                motor_controller.motor_states[motor_idx] = motor_controller.stepper_sequence[current_step]
                         
-                        # 100스텝마다 모터 동작 확인
-                        if step_count % 100 == 0:
-                            # print(f"  [TOOL] 모터 {motor_index} 회전 시도 (스텝 {step_count})")
-                            pass
-                        success = self.motor_system.motor_controller.step_motor_continuous(motor_index, -1, 1)
-                        if not success:
-                            # print(f"  [ERROR] 모터 {motor_index} 회전 실패 (스텝 {step_count})")
-                            break
+                        # 모터4는 항상 OFF 상태로 유지
+                        motor_controller.motor_states[4] = 0x00
                         
-                        # 현재 리미트 스위치 상태 확인 (엣지 감지 정확성 위해 매 스텝 체크)
-                        # disk_index는 0,1,2이지만 모터 번호는 1,2,3이므로 +1
-                        current_limit_state = self.motor_system.motor_controller.is_limit_switch_pressed(motor_index)
+                        motor_controller.update_motor_output()
                         
-                        # 리미트 스위치 상태 변화 디버깅 (50스텝마다)
+                        # 회전 속도 조절 (더 빠르게)
+                        time.sleep_us(1000)
+                        
+                        # 최적화: 10스텝마다만 시프트 레지스터 출력 및 리미트 스위치 감지
                         if step_count % 50 == 0:
-                            # print(f"  [DEBUG] 스텝 {step_count}: 리미트 스위치 상태 = {'눌림' if current_limit_state else '안눌림'}")
-                            pass
-                        # 리미트 스위치 눌림 감지: 이전에 안눌려있었고 지금 눌린 상태
-                        if not prev_limit_state and current_limit_state:
-                            loading_complete = False  # 기본값 설정
+                            # 모든 모터 상태를 한 번에 출력 (10스텝마다)
                             
-                            # 초기 상태가 눌린 경우 첫 번째 감지를 무시
-                            if skip_first_detection:
-                                # print(f"  ⏭️ 첫 번째 리미트 스위치 감지 무시 (초기 상태) - 스텝 {step_count}")
-                                skip_first_detection = False  # 다음부터는 정상 감지
-                            else:
-                                # print(f"  [BTN] 리미트 스위치 눌림 감지! ({self.current_disk_state.loaded_count + 1}칸) - 스텝 {step_count}")
-                                # 리미트 스위치 눌림 감지 시 충전 완료 (데이터만 업데이트, UI는 주기적으로)
-                                loading_complete = self.current_disk_state.complete_loading()
-                            
-                            # [FAST] UI 업데이트 제거 - 200스텝마다 갱신으로 충분 (끊김 완전 제거)
-                            # self._update_disk_visualization()
-                            
-                            # 3칸 충전이 완료되면 루프 종료
-                            if loading_complete:
-                                # print(f"  [OK] 3칸 충전 완료! 총 {self.current_disk_state.loaded_count}칸")
-                                # [OK] 3칸 완료 후 UI 최종 업데이트 & 파일 저장
-                                self._update_disk_visualization()  # 최종 상태 반영
-                                
-                                # 충전 완료 후 잠시 대기 (리미트 스위치 상태 안정화)
-                                import time
-                                time.sleep(0.1)
-                                self._save_disk_states()
-                                
-                                # 15칸 충전 완료 시 자동으로 다음 디스크로 넘어가기
-                                if self.current_disk_state.loaded_count >= 15:
-                                    if self.sequential_mode:
-                                        # print(f"  [INFO] 15칸 충전 완료 - 자동으로 다음 디스크로 이동")
-                                        self._complete_current_disk_loading()
-                                else:
-                                    # print(f"  [INFO] 3칸 충전 완료 - 다음 3칸 충전을 위해 D버튼을 눌러주세요")
-                                    pass
-                                break
-                        
-                        # 상태 업데이트 (매번 업데이트, 리셋 안함!)
-                        prev_limit_state = current_limit_state
-                        
-                        # [FAST] 최고 성능 - UI 업데이트 완전 제거 (끊김 0%)
-                        # 모터 회전 중에는 UI 업데이트 안함, 3칸 완료 후에만 최종 업데이트
-                        # 이렇게 하면 완전히 끊김 없는 부드러운 회전 가능
-                        pass
+                            # 리미트 스위치 상태 확인 (10스텝마다)
+                            for motor_idx in range(1, 4):  # 모터 번호 1, 2, 3
+                                if not compartment_done[motor_idx - 1]:
+                                    is_pressed = motor_controller.is_limit_switch_pressed(motor_idx)
+                                    
+                                    if not is_pressed and not limit_released[motor_idx - 1]:
+                                        # 리미트 스위치가 떼어짐 - 카운트 시작
+                                        limit_released[motor_idx - 1] = True
+                                        counting_started[motor_idx - 1] = True
+                                    elif is_pressed and limit_released[motor_idx - 1] and counting_started[motor_idx - 1]:
+                                        # 리미트 스위치가 다시 눌림 - 1칸 이동 완료
+                                        compartment_count[motor_idx - 1] += 1
+                                        limit_released[motor_idx - 1] = False  # 다음 칸을 위해 리셋
+                                        
+                                        # 3칸 이동 완료 확인 (4번째 눌림 시에 3칸으로 업데이트)
+                                        if compartment_count[motor_idx - 1] >= 3:
+                                            compartment_done[motor_idx - 1] = True
                     
-                    # 안전장치: 최대 스텝 수에 도달한 경우
-                    if step_count >= max_steps:
-                        # print(f"  [WARN] 최대 스텝 수 ({max_steps}) 도달, 충전 강제 종료")
-                        self.current_disk_state.is_loading = False
-                        # 현재까지의 진행 상황 저장
-                        self._update_disk_visualization()
-                        self._save_disk_states()
+                    # 모든 디스크가 3칸씩 이동한 후 알약 개수 업데이트 (완료된 디스크만)
+                    if all(compartment_done):
+                        print("모든 디스크 3칸 이동 완료 - 알약 개수 업데이트")
+                        for disk_idx in range(3):
+                            if self._is_disk_selected(disk_idx):
+                                # 3칸씩 추가 (15칸 완료되면 15로 설정)
+                                old_count = self.disk_states[disk_idx].loaded_count
+                                if self.disk_states[disk_idx].loaded_count + 3 >= 15:
+                                    self.disk_states[disk_idx].loaded_count = 15
+                                    self.disk_states[disk_idx].is_loading = False
+                                    print(f"디스크 {disk_idx+1}: {old_count} → 15 (완료)")
+                                else:
+                                    self.disk_states[disk_idx].loaded_count += 3
+                                    print(f"디스크 {disk_idx+1}: {old_count} → {self.disk_states[disk_idx].loaded_count}")
+                    else:
+                        print("일부 디스크 이동 미완료")
+                        pass                    
+                    
+                    # 모든 모터 코일 OFF (전력 소모 방지)
+                    print("모든 모터 코일 OFF")
+                    motor_controller.stop_all_motors()
+                    
+                    # 실시간 화면 업데이트
+                    print("실시간 화면 업데이트 시작")
+                    self._update_disk_visualization()
+                    time.sleep(0.1)
+                    
+                    # 디스크 상태 저장
+                    print("디스크 상태 저장")
+                    self._save_disk_states()
+                    
+                    # 완충 감지 및 다음 단계 처리
+                    self._check_completion_and_proceed()
+                    
+                    print("모터 제어 완료")
+                    return True
                 
                 except Exception as e:
                     # print(f"  [ERROR] 모터 제어 중 오류: {e}")
-                    # 오류 발생 시에도 모터 정지
-                    self.motor_system.motor_controller.stop_motor(motor_index)
+                    # 오류 발생 시에도 모든 모터 정지
+                    for motor_idx in range(1, 4):
+                        self.motor_system.motor_controller.stop_motor(motor_idx)
                     return False
                 
-                # [FAST] 충전 완료 후 모터 코일 OFF (전력 소모 방지)
-                # print(f"  [FAST] 충전 완료, 모터 {motor_index} 코일 OFF")
-                self.motor_system.motor_controller.stop_motor(motor_index)
+                # [FAST] 충전 완료 후 모든 모터 코일 OFF (전력 소모 방지)
+                # print(f"  [FAST] 충전 완료, 모든 모터 코일 OFF")
+                for motor_idx in range(1, 4):
+                    self.motor_system.motor_controller.stop_motor(motor_idx)
                 
                 # 완전히 충전된 경우 확인
                 if not self.current_disk_state.can_load_more():
@@ -1511,16 +2029,18 @@ class PillLoadingScreen:
     def _save_disk_states(self):
         """디스크 충전 상태를 파일에 저장"""
         try:
+            print("디스크 충전 상태 저장 시작...")
+            
             # /data 디렉토리 존재 확인 및 생성
             import os
             data_dir = "/data"
             try:
                 if data_dir not in os.listdir("/"):
                     os.mkdir(data_dir)
-                    # print(f"  [INFO] /data 디렉토리 생성됨")
+                    print("/data 디렉토리 생성됨")
             except OSError as e:
                 if e.errno == 17:  # EEXIST - 디렉토리가 이미 존재
-                    # print(f"  [INFO] /data 디렉토리가 이미 존재함")
+                    print("/data 디렉토리가 이미 존재함")
                     pass
                 else:
                     raise
@@ -1537,10 +2057,11 @@ class PillLoadingScreen:
             with open(self.disk_states_file, 'w') as f:
                 json.dump(config, f)
             
-            # print(f"  [SAVE] 디스크 충전 상태 저장됨: 디스크1={config['disk_1_loaded']}, 디스크2={config['disk_2_loaded']}, 디스크3={config['disk_3_loaded']}")
+            print(f"디스크 충전 상태 저장됨: 디스크1={config['disk_1_loaded']}, 디스크2={config['disk_2_loaded']}, 디스크3={config['disk_3_loaded']}")
+            print("디스크 충전 상태 저장 완료")
             
         except Exception as e:
-            # print(f"  [ERROR] 디스크 충전 상태 저장 실패: {e}")
+            print(f"디스크 충전 상태 저장 실패: {e}")
             import sys
             sys.print_exception(e)
     
@@ -1609,51 +2130,45 @@ class PillLoadingScreen:
     
     def _request_screen_transition_to_disk_selection(self):
         """디스크 선택 화면으로 전환 요청 - ScreenManager에 위임 (다른 화면들과 동일한 방식)"""
-        # print("[INFO] 디스크 선택 화면으로 전환 요청")
+        print("디스크 선택 화면으로 전환 요청")
         
         # ScreenManager에 화면 전환 요청 (올바른 책임 분리)
         try:
             self.screen_manager.transition_to('disk_selection')
-            # print("[OK] 디스크 선택 화면으로 전환 요청 완료")
+            print("디스크 선택 화면으로 전환 요청 완료")
         except Exception as e:
-            # print(f"[ERROR] 디스크 선택 화면 전환 요청 실패: {e}")
+            print(f"디스크 선택 화면 전환 요청 실패: {e}")
             import sys
             sys.print_exception(e)
-        
-        # 화면 전환 (올바른 책임 분리 - ScreenManager가 처리)
-        # print("[INFO] 알약 충전 뒤로가기 - ScreenManager에 신호 전송")
         
         # ScreenManager에 알약 충전 뒤로가기 신호 전송 (올바른 책임 분리)
         try:
             self.screen_manager.pill_loading_back_to_disk_selection()
-            # print("[OK] 알약 충전 뒤로가기 신호 전송 완료")
+            print("알약 충전 뒤로가기 신호 전송 완료")
         except Exception as e:
-            # print(f"[ERROR] 알약 충전 뒤로가기 신호 전송 실패: {e}")
+            print(f"알약 충전 뒤로가기 신호 전송 실패: {e}")
             import sys
             sys.print_exception(e)
     
     def _request_screen_transition_to_dose_time(self):
         """복용 시간 설정 화면으로 전환 요청 - ScreenManager에 위임 (다른 화면들과 동일한 방식)"""
-        # print("[INFO] 복용 시간 설정 화면으로 전환 요청")
+        print("복용 시간 설정 화면으로 전환 요청")
         
         # ScreenManager에 화면 전환 요청 (올바른 책임 분리)
         try:
             self.screen_manager.transition_to('dose_time')
-            # print("[OK] 복용 시간 설정 화면으로 전환 요청 완료")
+            print("복용 시간 설정 화면으로 전환 요청 완료")
         except Exception as e:
-            # print(f"[ERROR] 복용 시간 설정 화면 전환 요청 실패: {e}")
+            print(f"복용 시간 설정 화면 전환 요청 실패: {e}")
             import sys
             sys.print_exception(e)
-        
-        # 화면 전환 (올바른 책임 분리 - ScreenManager가 처리)
-        # print("[INFO] 알약 충전 뒤로가기 - ScreenManager에 신호 전송")
         
         # ScreenManager에 알약 충전 뒤로가기 신호 전송 (올바른 책임 분리)
         try:
             self.screen_manager.pill_loading_back_to_dose_time()
-            # print("[OK] 알약 충전 뒤로가기 신호 전송 완료")
+            print("알약 충전 뒤로가기 신호 전송 완료")
         except Exception as e:
-            # print(f"[ERROR] 알약 충전 뒤로가기 신호 전송 실패: {e}")
+            print(f"알약 충전 뒤로가기 신호 전송 실패: {e}")
             import sys
             sys.print_exception(e)
 

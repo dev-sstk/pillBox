@@ -16,9 +16,9 @@ class WiFiManager:
         self.wifi = network.WLAN(network.STA_IF)
         self.wifi.active(True)
         
-        # WiFi 초기화 대기 (빠른 부팅을 위해 짧게)
-        # print("📡 WiFi 초기화 중... (0.5초 대기)")
-        time.sleep(0.5)
+        # WiFi 초기화 대기 (빠른 부팅을 위해 더 짧게)
+        # print("📡 WiFi 초기화 중... (0.2초 대기)")
+        time.sleep(0.2)
         
         # WiFi 설정 저장 파일
         self.config_file = "/data/wifi_config.json"
@@ -26,7 +26,7 @@ class WiFiManager:
         # 스캔된 네트워크 목록
         self.scanned_networks = []
         self.last_scan_time = 0
-        self.scan_interval = 30000  # 30초마다 스캔
+        self.scan_interval = 10000  # 10초마다 스캔 (30초 → 10초로 단축)
         
         # 연결 상태
         self.is_connected = False
@@ -59,12 +59,12 @@ class WiFiManager:
         # print("📡 WiFi 네트워크 스캔 시작...")
         
         try:
-            # WiFi 재초기화 (연결 실패 후 스캔을 위해 중요!)
+            # WiFi 재초기화 (연결 실패 후 스캔을 위해 중요!) - 빠른 스캔
             # print("  📡 WiFi 재초기화 시작...")
             self.wifi.active(False)
-            time.sleep_ms(500)
+            time.sleep_ms(200)  # 500ms → 200ms로 단축
             self.wifi.active(True)
-            time.sleep_ms(2000)  # 초기화 대기 (중요!)
+            time.sleep_ms(1000)  # 2000ms → 1000ms로 단축
             
             # print(f"  📡 WiFi 활성 상태: {self.wifi.active()}")
             

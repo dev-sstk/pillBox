@@ -249,18 +249,6 @@ def start_application(screen_name, **kwargs):
                 # 약품 배출 테스트 함수들을 바로 사용할 수 있도록 전역 변수로 설정
                 global main_screen_instance
                 main_screen_instance = screen
-                # print("[OK] 약품 배출 테스트 함수들이 전역 변수로 설정됨")
-                # print("[TIP] 사용법:")
-                # print("   main_screen_instance.test_auto()        # 자동 배출 테스트")
-                # print("   main_screen_instance.test_manual(0)     # 수동 배출 테스트")
-                # print("   main_screen_instance.test_slide(1)      # 슬라이드 테스트")
-                # print("   main_screen_instance.test_disk(0)       # 디스크 테스트")
-                # print("   main_screen_instance.test_all()         # 모든 테스트")
-                # print("   main_screen_instance.show_status()      # 상태 확인")
-                # print("   main_screen_instance.reset_schedule()   # 일정 초기화")
-            elif screen_name == "notification":
-                # print("[ERROR] notification 화면은 현재 사용되지 않습니다")
-                return
             elif screen_name == "pill_loading":
                 from screens.pill_loading_screen import PillLoadingScreen
                 screen = PillLoadingScreen(screen_manager)
@@ -272,9 +260,6 @@ def start_application(screen_name, **kwargs):
                 # 복용시간선택 화면 (meal_time 화면 사용)
                 from screens.meal_time_screen import MealTimeScreen
                 screen = MealTimeScreen(screen_manager)
-            elif screen_name == "pill_dispense":
-                # print("[ERROR] pill_dispense 화면은 현재 사용되지 않습니다")
-                return
             else:
                 # print(f"[ERROR] 알 수 없는 화면: {screen_name}")
                 return False

@@ -204,22 +204,26 @@ class StepperMotorController:
         # 전송 (상위 바이트 먼저)
         upper_byte = (combined_data >> 8) & 0xFF
         lower_byte = combined_data & 0xFF
+        
+        # print(f"    [MOTOR] 상태: {[hex(self.motor_states[i]) for i in range(1, 4)]}")
+        # print(f"    [MOTOR] 출력: 0x{upper_byte:02X} 0x{lower_byte:02X}")
 
         # 디버깅: 모터 상태 출력 (첫 번째 호출에서만)
-        if not hasattr(self, '_debug_printed'):
-            # print(f"  [SEARCH] 모터 상태: {[hex(self.motor_states[i]) for i in range(4)]}")
-            # print(f"  [SEARCH] 모터 스텝: {self.motor_steps}")
-            # print(f"  [SEARCH] 출력 데이터: 0x{upper_byte:02X} 0x{lower_byte:02X}")
-            self._debug_printed = True
+        # if not hasattr(self, '_debug_printed'):
+        #     # print(f"  [SEARCH] 모터 상태: {[hex(self.motor_states[i]) for i in range(4)]}")
+        #     # print(f"  [SEARCH] 모터 스텝: {self.motor_steps}")
+        #     # print(f"  [SEARCH] 출력 데이터: 0x{upper_byte:02X} 0x{lower_byte:02X}")
+        #     self._debug_printed = True
 
         self.shift_out(upper_byte)
         self.shift_out(lower_byte)
     
-    def set_motor_step(self, motor_index, step_value):
+    def set_motor_step(self, motor_index, step_value, update_output=True):
         """특정 모터의 스텝 설정 (test_74hc595_stepper.py와 동일)"""
         if 1 <= motor_index <= 4:
             self.motor_states[motor_index] = self.stepper_sequence[step_value % 8]
-            self.update_motor_output()
+            if update_output:
+                self.update_motor_output()
     
     def step_motor_continuous(self, motor_index, direction=1, steps=1):
         """스테퍼모터 회전 (리미트 스위치 감지되어도 계속 회전) - 최적화된 성능"""
@@ -248,6 +252,30 @@ class StepperMotorController:
         else:
             # print(f"    [ERROR] 잘못된 모터 인덱스: {motor_index} (1-4 범위여야 함)")
             return False
+    
+    def step_all_motors_simultaneous(self, directions, steps=1):
+        """모든 모터를 동시에 회전 (한번의 패킷으로 모든 모터 제어) - 최적화된 성능"""
+        # directions: [motor1_direction, motor2_direction, motor3_direction, motor4_direction]
+        # 각 방향은 1 또는 -1
+        
+        for i in range(steps):
+            # 모든 모터의 스텝을 동시에 계산
+            for motor_idx in range(1, 5):  # 모터 1, 2, 3, 4
+                if motor_idx <= len(directions):
+                    direction = directions[motor_idx - 1]
+                    self.motor_steps[motor_idx] = (self.motor_steps[motor_idx] + direction) % 8
+                    current_step = self.motor_steps[motor_idx]
+                    
+                    # 모터 스텝 설정 (내부 상태만 업데이트, 아직 출력하지 않음)
+                    self.set_motor_step(motor_idx, current_step, update_output=False)
+            
+            # 모든 모터 상태를 한번에 출력 (한번의 패킷 전송)
+            self.update_motor_output()
+            
+            # 회전 속도 조절
+            time.sleep_us(self.step_delay_us)
+        
+        return True
     
     def stop_motor(self, motor_index):
         """모터 정지 (코일 OFF)"""
@@ -376,6 +404,54 @@ class PillBoxMotorSystem:
             # print("디스크 동시 보정 실패")
             return False
     
+    def rotate_multiple_disks_simultaneous(self, disk_indices, steps_per_disk):
+        """여러 디스크 동시 회전 (3개 디스크 동시 충전용) - 리미트 스위치 무시하고 정확히 3칸씩"""
+        try:
+            print(f"3개 디스크 동시 회전 시작: 디스크 {disk_indices}, 각 {steps_per_disk}칸")
+            
+            # 모든 모터를 먼저 정지
+            self.motor_controller.stop_all_motors()
+            
+            # 모터 번호로 변환 (디스크 인덱스 + 1)
+            motor_indices = [disk_index + 1 for disk_index in disk_indices]
+            print(f"모터 번호: {motor_indices}")
+            
+            # 원점보정 방식으로 연속적으로 3칸씩 회전 (리미트 스위치 무시)
+            print(f"  연속 동시 회전 시작: {steps_per_disk}칸")
+            
+            # 각 스텝마다 모든 모터를 동시에 1스텝씩 진행 (원점보정 방식)
+            for step in range(steps_per_disk):
+                print(f"  동시 회전 {step+1}/{steps_per_disk}칸")
+                
+                # 각 모터별로 1스텝씩 진행 (원점보정과 동일한 방식)
+                for motor_index in motor_indices:
+                    if 1 <= motor_index <= 3:
+                        # 이 모터는 1스텝 진행 (리미트 스위치 확인 없이)
+                        old_step = self.motor_controller.motor_steps[motor_index]
+                        self.motor_controller.motor_steps[motor_index] = (self.motor_controller.motor_steps[motor_index] - 1) % 8
+                        current_step = self.motor_controller.motor_steps[motor_index]
+                        self.motor_controller.motor_states[motor_index] = self.motor_controller.stepper_sequence[current_step]
+                        print(f"    모터 {motor_index}: {old_step} -> {current_step}, 상태: {self.motor_controller.motor_states[motor_index]}")
+                
+                # 모든 모터 상태를 한 번에 출력 (원점보정과 동일)
+                print(f"    update_motor_output 호출")
+                self.motor_controller.update_motor_output()
+                
+                # 회전 속도 조절 (원점보정과 동일한 속도)
+                time.sleep_us(self.motor_controller.step_delay_us)
+            
+            # 약이 떨어질 시간 대기 (최종에만)
+            time.sleep_ms(500)
+            
+            # 모든 모터 정지 (최종에만)
+            self.motor_controller.stop_all_motors()
+            print(f"3개 디스크 동시 회전 완료: 각 {steps_per_disk}칸")
+            return True
+            
+        except Exception as e:
+            # print(f"[ERROR] 3개 디스크 동시 회전 실패: {e}")
+            return False
+    
     def rotate_disk(self, disk_num, steps):
         """디스크 회전 (실제 하드웨어 제어) - 우선순위 모드"""
         try:
@@ -489,7 +565,7 @@ class PillBoxMotorSystem:
             return False
     
     def _rotate_motor4_steps(self, motor_index, direction, steps):
-        """모터 4 스텝 회전 (내부 함수) - 모터4 전용 느린 속도"""
+        """모터 4 스텝 회전 (내부 함수)"""
         try:
             total_steps = steps
             for i in range(0, total_steps, 8):
@@ -499,9 +575,8 @@ class PillBoxMotorSystem:
                 if i % 100 == 0 or i == total_steps - 8:
                     # print(f"    📍 모터 4 {i+1}/{total_steps}스텝 진행 중...")
                     pass
-                
-                # 모터4 전용 느린 속도로 회전 (750μs 딜레이)
-                success = self._step_motor4_continuous(motor_index, direction, remaining_steps)
+                # step_motor_continuous 함수 사용 - 완전 블로킹
+                success = self.motor_controller.step_motor_continuous(motor_index, direction, remaining_steps)
                 if not success:
                     # print(f"    [ERROR] 모터 4 회전 중단됨")
                     return False
@@ -510,22 +585,4 @@ class PillBoxMotorSystem:
             
         except Exception as e:
             # print(f"[ERROR] 모터 4 스텝 회전 실패: {e}")
-            return False
-    
-    def _step_motor4_continuous(self, motor_index, direction, steps):
-        """모터4 전용 연속 회전 (750μs 딜레이) - 힘 강화"""
-        if 1 <= motor_index <= 4:
-            for i in range(steps):
-                # 각 모터의 독립적인 스텝 계산
-                self.motor_controller.motor_steps[motor_index] = (self.motor_controller.motor_steps[motor_index] + direction) % 8
-                current_step = self.motor_controller.motor_steps[motor_index]
-                
-                # 모터 스텝 설정
-                self.motor_controller.set_motor_step(motor_index, current_step)
-                
-                # 모터4 전용 느린 속도 (750μs 딜레이)
-                time.sleep_us(750)
-            
-            return True
-        else:
             return False

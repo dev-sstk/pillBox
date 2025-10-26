@@ -24,7 +24,7 @@ class MainScreen:
         self.last_update_time = 0
         
         # 실시간 정보 (최소한만 초기화)
-        self.current_time = "00:00"  # 기본값으로 설정
+        self.current_time = "   ..."  # 기본값으로 설정
         self.next_dose_time = ""
         self.time_until_next = ""
         
@@ -62,13 +62,14 @@ class MainScreen:
         # 알람 상태 모니터링 - 지연 로딩
         self._last_alarm_check = None
         
-        # 시간 초기화를 지연 초기화 플래그들 설정 후 실행
-        self._initialize_time()
+        
+        # Modern 화면 생성
+        self._create_modern_screen()
         
         # print("[DEBUG] 메인 화면 초기화 - 메모리 최적화 지연 로딩 방식")
         
-        # 샘플 데이터 초기화
-        self._init_sample_data()
+        # # 샘플 데이터 초기화
+        # self._init_sample_data()
     
     @property
     def rtc(self):
@@ -179,15 +180,9 @@ class MainScreen:
             self.wifi_connected = False  # WiFi 연결 상태 설정
             self._current_date = "2025-10-17"
         
-        # 복용 일정 데이터 초기화
-        self._init_sample_data()
         
-        # Modern 화면 생성
-        self._create_modern_screen()
         
-        # 시간 초기화 (WiFi 자동 연결 및 NTP 설정)
-        # print("[INFO] MainScreen 시간 초기화 시작...")
-        self._initialize_time()
+        # 시간 초기화 완료
         # print("[INFO] MainScreen 시간 초기화 완료")
         
         # print(f"[OK] {self.screen_name} 화면 초기화 완료")
@@ -256,7 +251,6 @@ class MainScreen:
     
     
     def _init_sample_data(self):
-        """샘플 데이터 초기화 - dose_time_screen에서 설정한 시간 가져오기"""
         # NTP 시간을 활용한 현재 날짜 가져오기 (RTC 백업 포함)
         try:
             # WiFi 매니저에서 한국 시간 가져오기 (지연 로딩)
@@ -292,6 +286,13 @@ class MainScreen:
             data_manager = DataManager()
             auto_assigned_disks = data_manager.get_auto_assigned_disks()
             
+            print(f"[DEBUG] _init_sample_data에서 auto_assigned_disks: {auto_assigned_disks}")
+            print(f"[DEBUG] _init_sample_data에서 auto_assigned_disks 길이: {len(auto_assigned_disks) if auto_assigned_disks else 0}")
+            
+            # dose_times도 확인
+            dose_times = data_manager.get_dose_times()
+            print(f"[DEBUG] _init_sample_data에서 dose_times: {dose_times}")
+            
             if auto_assigned_disks:
                 # 자동 할당된 디스크만 표시
                 self.dose_schedule = []
@@ -302,13 +303,12 @@ class MainScreen:
                         "meal_name": disk_info['meal_name'],
                         "disk_number": disk_info['disk_number']
                     })
-                # print(f"  [INFO] 자동 할당된 디스크에서 시간 가져옴: {len(auto_assigned_disks)}개")
+                print(f"[DEBUG] 자동 할당된 디스크에서 시간 가져옴: {len(auto_assigned_disks)}개")
                 for disk_info in auto_assigned_disks:
-                    # print(f"    - {disk_info['meal_name']}: {disk_info['time']} (디스크 {disk_info['disk_number']})")
-                    pass
+                    print(f"[DEBUG]   - {disk_info['meal_name']}: {disk_info['time']} (디스크 {disk_info['disk_number']})")
             else:
+                print(f"[DEBUG] auto_assigned_disks가 비어있음 - 기본값 사용")
                 # 자동 할당 정보가 없으면 DataManager에서 설정한 시간 가져오기
-                pass
                 from data_manager import DataManager
                 data_manager = DataManager()
                 dose_times = data_manager.get_dose_times()
@@ -527,10 +527,61 @@ class MainScreen:
             self.schedule_labels = []
             self.pill_count_labels = []  # 모든 일정의 알약 개수 라벨 저장
             
-            # dose_schedule이 비어있으면 기본값 사용
+            # dose_schedule이 비어있으면 auto_assigned_disks에서 생성
             if not hasattr(self, 'dose_schedule') or not self.dose_schedule:
-                # print("  [WARN] dose_schedule이 비어있음, 기본값 사용")
-                self.dose_schedule = [{"time": "08:00", "status": "pending"}]
+                print(f"[DEBUG] dose_schedule이 비어있음 - auto_assigned_disks에서 생성 시도")
+                
+                # DataManager에서 auto_assigned_disks 확인
+                try:
+                    from data_manager import DataManager
+                    data_manager = DataManager()
+                    auto_assigned_disks = data_manager.get_auto_assigned_disks()
+                    
+                    # dose_times를 우선적으로 사용하여 dose_schedule 생성
+                    dose_times = data_manager.get_dose_times()
+                    print(f"[DEBUG] _create_schedule_area에서 dose_times: {dose_times}")
+                    
+                    if dose_times and len(dose_times) > 0:
+                        print(f"[DEBUG] dose_times에서 dose_schedule 생성: {len(dose_times)}개")
+                        self.dose_schedule = []
+                        for i, dose_time in enumerate(dose_times):
+                            if isinstance(dose_time, dict):
+                                time_str = dose_time.get('time', '08:00')
+                                meal_name = dose_time.get('meal_name', f'식사{i+1}')
+                                disk_number = i + 1  # 디스크 번호는 순서대로
+                                
+                                self.dose_schedule.append({
+                                    "time": time_str,
+                                    "status": "pending",
+                                    "meal_name": meal_name,
+                                    "disk_number": disk_number
+                                })
+                        print(f"[DEBUG] dose_times에서 생성된 dose_schedule: {self.dose_schedule}")
+                    elif auto_assigned_disks and len(auto_assigned_disks) > 0:
+                        print(f"[DEBUG] auto_assigned_disks에서 dose_schedule 생성: {len(auto_assigned_disks)}개")
+                        print(f"[DEBUG] auto_assigned_disks 내용: {auto_assigned_disks}")
+                        self.dose_schedule = []
+                        for disk_info in auto_assigned_disks:
+                            self.dose_schedule.append({
+                                "time": disk_info['time'],
+                                "status": "pending",
+                                "meal_name": disk_info['meal_name'],
+                                "disk_number": disk_info['disk_number']
+                            })
+                        print(f"[DEBUG] auto_assigned_disks에서 생성된 dose_schedule: {self.dose_schedule}")
+                    else:
+                        print(f"[DEBUG] auto_assigned_disks가 비어있음 - 기본값 사용")
+                        self.dose_schedule = [{"time": "08:00", "status": "pending"}]
+                except Exception as e:
+                    print(f"[DEBUG] auto_assigned_disks 확인 실패: {e} - 기본값 사용")
+                    self.dose_schedule = [{"time": "08:00", "status": "pending"}]
+            else:
+                print(f"[DEBUG] dose_schedule이 이미 설정됨 - 덮어쓰지 않음")
+                # 이미 설정된 dose_schedule 사용
+                pass
+            
+            print(f"[DEBUG] dose_schedule 개수: {len(self.dose_schedule)}")
+            print(f"[DEBUG] dose_schedule 내용: {self.dose_schedule}")
             
             for i, schedule in enumerate(self.dose_schedule):
                 # 상태에 따른 아이콘 (LVGL 심볼 사용)
@@ -732,12 +783,9 @@ class MainScreen:
                     from motor_control import PillBoxMotorSystem
                     self.motor_system = PillBoxMotorSystem()
                     # print("  [OK] 실제 모터 시스템 재시도 초기화 완료")
-                except Exception as e2:
-                    # print(f"  [ERROR] 실제 모터 시스템 초기화 최종 실패: {e2}")
-                    # 모의 시스템 사용
-                    self.motor_system = MockMotorSystem()
-                    # print("  [WARN] 모의 모터 시스템 사용")
-        
+                except Exception as e:
+                    pass
+                        
         return self.motor_system
     
     def show(self):
@@ -749,13 +797,20 @@ class MainScreen:
         
         if hasattr(self, 'screen_obj') and self.screen_obj:
             lv.screen_load(self.screen_obj)
-            # print(f"[OK] {self.screen_name} 화면 로드 완료")
+            print(f"[OK] {self.screen_name} 화면 로드 완료")
             
             # 화면 강제 업데이트
             for i in range(3):
                 lv.timer_handler()
                 time.sleep(0.01)
             # print(f"[OK] {self.screen_name} 화면 업데이트 완료")
+            
+            # 시간 초기화를 지연 초기화 플래그들 설정 후 실행
+            self._initialize_time()
+            
+            # 복용 일정 데이터 초기화
+            self._init_sample_data()
+        
             
             # 자동 배출 모니터링 시작 (메모리 사용량 고려)
             self._start_auto_dispense_monitoring()
@@ -769,16 +824,16 @@ class MainScreen:
             # print("[INFO] MainScreen 자동 배출 모니터링 후 메모리 정리 완료")
             
             # ST7735 디스플레이 PWM 정리 (메모리 누수 방지)
-            self._cleanup_display_pwm()
+            # self._cleanup_display_pwm()
             
             # 화면 표시 완료 후 메모리 상태 모니터링
-            memory_info = log_memory("MainScreen show() 완료")
+            # memory_info = log_memory("MainScreen show() 완료")
             
             # 메모리 사용률이 높으면 추가 정리
-            if memory_info and memory_info['usage_percent'] > 85:
-                # print("[WARN] MainScreen 메모리 사용률이 높음, 추가 정리 수행")
-                cleanup_memory("MainScreen show() 후 정리")
-                log_memory("MainScreen show() 후 정리 완료")
+            # if memory_info and memory_info['usage_percent'] > 85:
+            #     # print("[WARN] MainScreen 메모리 사용률이 높음, 추가 정리 수행")
+            #     cleanup_memory("MainScreen show() 후 정리")
+            #     log_memory("MainScreen show() 후 정리 완료")
         else:
             # print(f"[WARN] {self.screen_name} 화면 객체가 없음 - 화면 생성 시도")
             # 화면이 없으면 생성
@@ -805,7 +860,7 @@ class MainScreen:
                 # print("[INFO] MainScreen 자동 배출 모니터링 후 메모리 정리 완료")
                 
                 # ST7735 디스플레이 PWM 정리
-                self._cleanup_display_pwm()
+                # self._cleanup_display_pwm()
                 
                 # print(f"[OK] {self.screen_name} 화면 실행됨")
             else:
@@ -1397,12 +1452,18 @@ class MainScreen:
         try:
             # 자동 할당된 디스크 정보 우선 확인
             auto_assigned_disks = self.data_manager.get_auto_assigned_disks()
+            print(f"[DEBUG] 메인화면 자동 할당 디스크: {auto_assigned_disks}")
+            print(f"[DEBUG] 메인화면 자동 할당 디스크 길이: {len(auto_assigned_disks) if auto_assigned_disks else 0}")
             
             if auto_assigned_disks and len(auto_assigned_disks) > 0:
                 # 자동 할당된 디스크 정보 사용
-                # print(f"[DEBUG] 자동 할당된 디스크 정보로 개별 수량 표시: {len(auto_assigned_disks)}개")
+                print(f"[DEBUG] 자동 할당된 디스크 정보로 개별 수량 표시: {len(auto_assigned_disks)}개")
+                
+                print(f"[DEBUG] pill_count_labels 개수: {len(self.pill_count_labels) if self.pill_count_labels else 0}")
+                print(f"[DEBUG] auto_assigned_disks 개수: {len(auto_assigned_disks)}")
                 
                 for i, pill_count_label in enumerate(self.pill_count_labels):
+                    print(f"[DEBUG] 루프 {i}: pill_count_label 처리 중")
                     if i < len(auto_assigned_disks):
                         disk_info = auto_assigned_disks[i]
                         disk_number = disk_info['disk_number']
@@ -1412,14 +1473,16 @@ class MainScreen:
                         current_count = self.data_manager.get_disk_count(disk_number)
                         max_capacity = 15  # 디스크당 최대 15칸
                         
+                        print(f"[DEBUG] 자동 할당 디스크 {disk_number} ({meal_name}): {current_count}/{max_capacity}")
+                        
                         # 표시 텍스트 업데이트
                         count_text = f"{current_count}/{max_capacity}"
                         pill_count_label.set_text(count_text)
                         
                         # 개수에 따른 색상 변경
                         pill_count_label.set_style_text_color(lv.color_hex(0x000000), 0)
-                        
-                        # print(f"[DEBUG] 자동 할당 디스크 {disk_number} ({meal_name}): {current_count}/{max_capacity}")
+                    else:
+                        print(f"[DEBUG] 루프 {i}: auto_assigned_disks 범위 초과")
                         
             else:
                 # 자동 할당 정보가 없으면 기존 방식 사용
@@ -1509,7 +1572,7 @@ class MainScreen:
                         
                         self.alarm_system.confirm_dispense(self.current_dose_index)
                         
-                        # 디스크 수량 감소는 _dispense_from_selected_disks()에서 처리됨
+                        # 디스크 수량 감소는 _dispense_from_selected_disks_no_alarm()에서 처리됨
                         # self._decrease_selected_disks_count(self.current_dose_index)  # 중복 제거
                         
                         self._update_schedule_display()
@@ -1671,19 +1734,19 @@ class MainScreen:
             # 케이스 1: 네트워크 연결됨 + 알약 있음
             # print("[INFO] 케이스 1: 네트워크 연결됨 + 알약 있음 - 시간-분 설정으로 재부팅")
             self._update_status("시간-분 설정으로 재부팅...")
-            self._make_screen_white()
+            # self._make_screen_white()
             self._restart_to_dose_time()
         elif is_network_connected and not has_pills_in_disk:
             # 케이스 2: 네트워크 연결됨 + 알약 없음
             # print("[INFO] 케이스 2: 네트워크 연결됨 + 알약 없음 - 복용시간선택으로 재부팅")
             self._update_status("복용시간선택으로 재부팅...")
-            self._make_screen_white()
+            # self._make_screen_white()
             self._restart_to_meal_time()
         else:
             # 케이스 3: 네트워크 연결 안됨 + 알약 없음 (현재 로직)
             # print("[INFO] 케이스 3: 네트워크 연결 안됨 + 알약 없음 - 네트워크 선택으로 재부팅")
             self._update_status("네트워크 선택으로 재부팅...")
-            self._make_screen_white()
+            # self._make_screen_white()
             self._restart_to_wifi_scan()
     
     def _check_network_connection(self):
@@ -1745,7 +1808,8 @@ class MainScreen:
             
             # 시간-분 설정으로 부팅하도록 플래그 설정
             self._set_boot_to_dose_time()
-            
+            # 설정 화면 이동 메시지 표시
+            self._show_transition_to_setup_page_message()
             # 흰색 화면 만들기
             self._make_screen_white()
             
@@ -1768,7 +1832,8 @@ class MainScreen:
             
             # 복용시간선택으로 부팅하도록 플래그 설정
             self._set_boot_to_meal_time()
-            
+            # 설정 화면 이동 메시지 표시
+            self._show_transition_to_setup_page_message()
             # 흰색 화면 만들기
             self._make_screen_white()
             
@@ -1882,6 +1947,9 @@ class MainScreen:
             # 설정 완료 플래그를 false로 변경 (WiFi 스캔 사용 가능하게)
             self._reset_setup_flag()
             
+            # 설정 화면 이동 메시지 표시
+            self._show_transition_to_setup_page_message()
+            
             # print("[INFO] 즉시 재부팅합니다...")
             
             # print("[INFO] ESP 재부팅 시작...")
@@ -1891,6 +1959,49 @@ class MainScreen:
         except Exception as e:
             # print(f"[ERROR] 재부팅 처리 실패: {e}")
             self._update_status("재부팅 실패")
+    
+    def _show_transition_to_setup_page_message(self):
+        """설정 완료 메시지 표시"""
+        try:
+            # print("[INFO] 설정 완료 메시지 표시 시작...")
+            
+            # 새로운 메시지 컨테이너 생성 (기존 컨테이너와 별개)
+            message_container = lv.obj(self.screen_obj)
+            message_container.set_size(128, 160)
+            message_container.align(lv.ALIGN.CENTER, 0, 0)
+            message_container.set_style_bg_color(lv.color_hex(0xFFFFFF), 0)  # 흰색 배경
+            message_container.set_style_bg_opa(255, 0)  # 불투명
+            message_container.set_style_border_width(0, 0)
+            message_container.set_style_pad_all(0, 0)
+            
+            # 스크롤바 비활성화
+            message_container.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
+            message_container.set_scroll_dir(lv.DIR.NONE)
+            
+            # "디바이스를 재시작합니다." 텍스트
+            desc_label = lv.label(message_container)
+            desc_label.set_style_text_align(lv.TEXT_ALIGN.CENTER, 0)
+            desc_label.set_style_text_color(lv.color_hex(0x666666), 0)  # 회색
+            desc_label.align(lv.ALIGN.CENTER, 0, 0)
+            # 노토산스 폰트 직접 적용
+            korean_font = getattr(lv, "font_notosans_kr_regular", None)
+            if korean_font:
+                desc_label.set_style_text_font(korean_font, 0)
+            else:
+                desc_label.set_style_text_font(lv.font_default, 0)
+            desc_label.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
+            desc_label.set_scroll_dir(lv.DIR.NONE)
+            desc_label.set_text("설정 화면으로\n이동합니다.")
+            
+            # 1초 대기
+            import time
+            time.sleep(1.5)
+            
+            # print("[OK] 설정 완료 메시지 표시 완료")
+            
+        except Exception as e:
+            # print(f"[ERROR] 설정 완료 메시지 표시 실패: {e}")
+            pass
     
     def _reset_setup_flag(self):
         """설정 완료 플래그를 false로 리셋 (스타트업 메뉴 사용 가능하게) - boot_target.json 공통 사용"""
@@ -2154,7 +2265,7 @@ class MainScreen:
                 # 알람 시스템에 배출 확인
                 self.alarm_system.confirm_dispense(dose_index)
                 
-                # 디스크 수량 감소는 _dispense_from_selected_disks()에서 처리됨
+                # 디스크 수량 감소는 _dispense_from_selected_disks_no_alarm()에서 처리됨
                 # self._decrease_selected_disks_count(dose_index)  # 중복 제거
                 
                 self._update_status("자동 배출 완료")
@@ -2178,7 +2289,7 @@ class MainScreen:
     
     # def _decrease_selected_disks_count(self, dose_index):
     #     """선택된 디스크들의 약물 수량 감소 (중복 제거됨)"""
-    #     # 이 함수는 _dispense_from_selected_disks()에서 _decrease_disk_count()로 대체됨
+    #     # 이 함수는 _dispense_from_selected_disks_no_alarm()에서 _decrease_disk_count()로 대체됨
     #     # 중복으로 디스크 수량을 감소시키는 문제를 해결하기 위해 비활성화
     #     pass
     
@@ -2532,66 +2643,6 @@ class MainScreen:
             # print(f"[ERROR] 음성 재생 실패: {e}")
             pass
     
-    def _dispense_from_selected_disks(self, motor_system, selected_disks):
-        """선택된 디스크들에서 순차적으로 배출 (알람 포함)"""
-        try:
-            # print(f"[INFO] 선택된 디스크들 순차 배출 시작: {selected_disks}")
-            # print(f"[DEBUG] motor_system 타입: {type(motor_system)}")
-            # print(f"[DEBUG] selected_disks 타입: {type(selected_disks)}, 값: {selected_disks}")
-            
-            # 선택된 디스크가 없으면 실패
-            if not selected_disks:
-                # print(f"[ERROR] 배출할 디스크가 없음")
-                self._update_status("배출할 디스크 없음")
-                return False
-            
-            # 배출 시작 전 안내 (버저 → LED → 음성)
-            self._play_dispense_voice()
-            
-            for i, disk_num in enumerate(selected_disks):
-                # print(f"[INFO] 디스크 {disk_num} 배출 중... ({i+1}/{len(selected_disks)})")
-                self._update_status(f"디스크 {disk_num} 배출 중...")
-                
-                # 배출 전 디스크 수량 재확인 (순차 소진 방식)
-                current_count = self.data_manager.get_disk_count(disk_num)
-                if current_count <= 0:
-                    # print(f"[WARN] 디스크 {disk_num}가 비어있음, 다음 디스크로 넘어감")
-                    continue
-                
-                # 1. 디스크 회전
-                disk_success = motor_system.rotate_disk(disk_num, 1)  # 1칸만 회전
-                if not disk_success:
-                    # print(f"[ERROR] 디스크 {disk_num} 회전 실패")
-                    return False
-                
-                # 2. 배출구 열림 (디스크별 단계)
-                open_success = motor_system.control_motor4_direct(disk_num)  # 디스크 번호 = 단계
-                if not open_success:
-                    # print(f"[ERROR] 디스크 {disk_num} 배출구 열림 실패")
-                    return False
-                
-                # 3. 약이 떨어질 시간 대기
-                import time
-                time.sleep(2)  # 2초 대기
-                
-                # print(f"[OK] 디스크 {disk_num} 배출 완료")
-                
-                # 배출된 디스크의 수량 감소
-                self._decrease_disk_count(disk_num)
-                
-                # 마지막 디스크가 아니면 잠시 대기
-                if i < len(selected_disks) - 1:
-                    time.sleep(1)  # 1초 간격
-            
-            # print(f"[OK] 모든 디스크 배출 완료: {selected_disks}")
-            return True
-            
-        except Exception as e:
-            # print(f"[ERROR] 선택된 디스크 배출 실패: {e}")
-            import sys
-            sys.print_exception(e)
-            return False
-    
     def _dispense_from_selected_disks_no_alarm(self, motor_system, selected_disks):
         """선택된 디스크들에서 순차적으로 배출 (알람 없음)"""
         try:
@@ -2714,43 +2765,3 @@ class MainScreen:
         except Exception as e:
             # print(f"  [ERROR] 일정 표시 업데이트 실패: {e}")
             pass
-
-
-class MockMotorSystem:
-    """모의 모터 시스템"""
-    
-    def __init__(self):
-        self.motor_controller = MockMotorController()
-        # print("[OK] MockMotorSystem 초기화 완료")
-    
-    def control_dispense_slide(self, level):
-        """모의 배출구 슬라이드 제어"""
-        # print(f"🚪 모의 배출구 슬라이드 {level}단 (120도)")
-        return True
-    
-    def rotate_disk(self, disk_num, steps):
-        """모의 디스크 회전"""
-        # print(f"[RETRY] 모의 디스크 {disk_num} 회전: {steps} 스텝")
-        return True
-
-
-class MockMotorController:
-    """모의 모터 컨트롤러"""
-    
-    def __init__(self):
-        self.motor_states = [0, 0, 0, 0]
-        self.motor_steps = [0, 0, 0, 0]
-        self.motor_positions = [0, 0, 0, 0]
-        # print("[OK] MockMotorController 초기화 완료")
-    
-    def test_motor_simple(self, motor_index, steps):
-        """모의 모터 간단 테스트"""
-        # print(f"🧪 모의 모터 {motor_index} 간단 테스트 시작 ({steps}스텝)")
-        # print(f"[OK] 모의 모터 {motor_index} 테스트 성공")
-        return True
-    
-    def test_motor3_only(self, steps=50):
-        """모터 3 전용 테스트 (모의)"""
-        # print(f"🧪 모의 모터 3 전용 테스트 시작 ({steps}스텝)")
-        # print("[OK] 모의 모터 3 테스트 성공")
-        return True
