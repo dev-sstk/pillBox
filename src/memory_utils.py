@@ -97,3 +97,5 @@ def memory_aware_initialization(obj, context=""):
     except Exception as e:
         # print(f"[ERROR] 메모리 인식 초기화 실패: {e}")
         return False
+
+

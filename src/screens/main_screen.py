@@ -2673,13 +2673,13 @@ class MainScreen:
                 if not disk_success:
                     # print(f"[ERROR] 디스크 {disk_num} 회전 실패")
                     return False
-                
+                time.sleep_ms(100)
                 # 2. 배출구 열림 (디스크별 단계)
                 open_success = motor_system.control_motor4_direct(disk_num)  # 디스크 번호 = 단계
                 if not open_success:
                     # print(f"[ERROR] 디스크 {disk_num} 배출구 열림 실패")
                     return False
-                
+                time.sleep_ms(100)
                 # 3. 약이 떨어질 시간 대기
                 import time
                 time.sleep(2)  # 2초 대기
