@@ -741,6 +741,10 @@ class DoseTimeScreen:
             # print(f"[INFO] {self.screen_name} 화면 표시 시작...")
             log_memory("DoseTimeScreen show() 시작")
             
+            # 화면 표시 전에 저장된 시간 정보 불러오기
+            # D버튼 진입 시에도 저장된 시간이 제대로 표시되도록
+            self._setup_current_dose_time()
+            
             if hasattr(self, 'screen_obj') and self.screen_obj:
                 # print(f"[INFO] 화면 객체 존재 확인됨")
                 
