@@ -297,8 +297,27 @@ class MainScreen:
             dose_times = data_manager.get_dose_times()
             print(f"[DEBUG] _init_sample_data에서 dose_times: {dose_times}")
             
-            if auto_assigned_disks:
-                # 자동 할당된 디스크만 표시
+            # dose_times를 우선적으로 사용하여 dose_schedule 생성
+            if dose_times and len(dose_times) > 0:
+                # dose_times에서 dose_schedule 생성
+                self.dose_schedule = []
+                for i, dose_time in enumerate(dose_times):
+                    if isinstance(dose_time, dict):
+                        time_str = dose_time.get('time', '08:00')
+                        meal_name = dose_time.get('meal_name', f'식사{i+1}')
+                        disk_number = dose_time.get('disk_number', i + 1)  # disk_number가 있으면 사용
+                        
+                        self.dose_schedule.append({
+                            "time": time_str,
+                            "status": "pending",
+                            "meal_name": meal_name,
+                            "disk_number": disk_number
+                        })
+                print(f"[DEBUG] _init_sample_data: dose_times에서 dose_schedule 생성: {len(self.dose_schedule)}개")
+                for sched in self.dose_schedule:
+                    print(f"[DEBUG]   - {sched['meal_name']}: {sched['time']} (디스크 {sched['disk_number']})")
+            elif auto_assigned_disks:
+                # 자동 할당된 디스크만 표시 (dose_times가 없을 때만)
                 self.dose_schedule = []
                 for disk_info in auto_assigned_disks:
                     self.dose_schedule.append({
@@ -307,7 +326,7 @@ class MainScreen:
                         "meal_name": disk_info['meal_name'],
                         "disk_number": disk_info['disk_number']
                     })
-                print(f"[DEBUG] 자동 할당된 디스크에서 시간 가져옴: {len(auto_assigned_disks)}개")
+                print(f"[DEBUG] _init_sample_data: 자동 할당된 디스크에서 시간 가져옴: {len(auto_assigned_disks)}개")
                 for disk_info in auto_assigned_disks:
                     print(f"[DEBUG]   - {disk_info['meal_name']}: {disk_info['time']} (디스크 {disk_info['disk_number']})")
             else:
@@ -2213,6 +2232,7 @@ class MainScreen:
     def _check_auto_dispense(self):
         """자동 배출 시간 확인 (메모리 최적화)"""
         if not self.auto_dispense_enabled:
+            print(f"[DEBUG] 자동 배출 비활성화됨")
             return
         
         try:
@@ -2222,32 +2242,68 @@ class MainScreen:
             if current_time == self.last_check_time:
                 return
             
+            # 마지막 체크 시간 업데이트 (일정 확인 전에 업데이트)
             self.last_check_time = current_time
             
-            # 각 일정 확인 (간소화)
+            # dose_schedule 디버깅
+            if not hasattr(self, 'dose_schedule') or not self.dose_schedule:
+                print(f"[DEBUG] dose_schedule이 비어있음")
+                return
+            
+            print(f"[DEBUG] 알람 체크 시작: 현재시간={current_time}, dose_schedule 개수={len(self.dose_schedule)}")
+            for idx, sched in enumerate(self.dose_schedule):
+                print(f"[DEBUG]   일정 {idx+1}: 시간={sched.get('time', 'N/A')}, 상태={sched.get('status', 'N/A')}, 식사={sched.get('meal_name', 'N/A')}")
+            
+            # 각 일정 확인 - 모든 일정을 순회하며 체크
             for i, schedule in enumerate(self.dose_schedule):
-                if schedule["status"] == "pending" and schedule["time"] == current_time:
-                    # 데이터 매니저를 사용하여 같은 시간에 배출 여부 확인
-                    data_manager = self.data_manager
-                    if data_manager and data_manager.was_dispensed_today(i, schedule['time']):
+                schedule_time = schedule.get("time", "")
+                
+                # 일정 상태와 시간 확인
+                if schedule.get("status") != "pending":
+                    print(f"[DEBUG] 일정 {i+1} 스킵: 상태가 pending이 아님 ({schedule.get('status')})")
+                    continue
+                
+                if schedule_time != current_time:
+                    print(f"[DEBUG] 일정 {i+1} 스킵: 시간 불일치 (일정={schedule_time}, 현재={current_time})")
+                    continue
+                
+                # 시간이 일치하는 일정 발견
+                print(f"[DEBUG] 알람 체크: 일정 {i+1}, 시간={schedule_time}, 현재시간={current_time}")
+                
+                # 데이터 매니저를 사용하여 같은 시간에 배출 여부 확인
+                data_manager = self.data_manager
+                if data_manager:
+                    was_dispensed = data_manager.was_dispensed_today(i, schedule['time'])
+                    print(f"[DEBUG] 일정 {i+1} 배출 여부: {was_dispensed}")
+                    if was_dispensed:
+                        # 이미 오늘 배출되었으면 스킵
+                        print(f"[INFO] 일정 {i+1}는 이미 오늘 배출됨 - 스킵")
+                        continue
+                
+                # 이미 알람이 활성화되어 있는지 확인
+                alarm_system = self.alarm_system
+                if alarm_system:
+                    active_alarms = alarm_system.get_active_alarms()
+                    print(f"[DEBUG] 활성 알람: {list(active_alarms.keys())}")
+                    if i in active_alarms:
+                        # 이미 알람이 활성화되어 있으면 스킵
+                        print(f"[INFO] 일정 {i+1}는 이미 알람 활성화됨 - 스킵")
                         continue
                     
-                    # print(f"⏰ 알람 트리거: 일정 {i+1} ({schedule['time']})")
-                    
-                    # 알람 시스템이 로드되어 있으면 알람 트리거
-                    alarm_system = self.alarm_system
-                    if alarm_system:
-                        meal_name = schedule.get('meal_name', f'일정 {i+1}')
-                        alarm_system.trigger_dose_alarm(i, schedule['time'], meal_name)
-                        # print(f"🔔 알람 발생: A버튼을 눌러 복용하세요")
-                    else:
-                        # print(f"🔔 알람 시스템 없음: 수동 배출 필요")
-                        pass
+                    # 알람 트리거
+                    meal_name = schedule.get('meal_name', f'일정 {i+1}')
+                    print(f"[INFO] 알람 트리거: 일정 {i+1} ({schedule['time']}, {meal_name})")
+                    alarm_system.trigger_dose_alarm(i, schedule['time'], meal_name)
+                    print(f"[OK] 알람 발생: 일정 {i+1} - A버튼을 눌러 복용하세요")
                     break
+                else:
+                    print(f"[ERROR] 알람 시스템 없음")
+                    pass
                     
         except Exception as e:
-            # print(f"[ERROR] 자동 배출 확인 실패: {e}")
-            pass
+            print(f"[ERROR] 자동 배출 확인 실패: {e}")
+            import sys
+            sys.print_exception(e)
     
     def _check_reminder_alarms(self):
         """재알람 확인 - 5분 간격으로 최대 5회"""
