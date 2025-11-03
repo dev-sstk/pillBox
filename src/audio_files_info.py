@@ -21,6 +21,12 @@ class AudioFilesInfo:
                 "duration": 2000,
                 "category": "voice",
                 "priority": "high"
+            },
+            "taken_medicine.wav": {
+                "description": "이미 복약하셨습니다 음성",
+                "duration": 2000,
+                "category": "voice",
+                "priority": "high"
             }
         }
         

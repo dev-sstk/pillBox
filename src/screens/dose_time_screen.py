@@ -434,11 +434,16 @@ class DoseTimeScreen:
                     self._setup_current_dose_time()
                     # print(f"  [INFO] 이전 복용 시간으로 되돌아가기: {self.current_dose_index + 1}번째")
                 else:
-                    # 첫 번째 복용 시간이면 복용 시간 선택 화면으로
-                    # print(f"  [INFO] 취소 - 복용 시간 선택 화면으로 이동")
-                    # ScreenManager의 동적 화면 생성 기능 활용
-                    self._request_screen_transition_to_meal_time()
-                    # print(f"  [OK] 복용 시간 선택 화면으로 이동 완료")
+                    # 첫 번째 복용 시간일 때
+                    # D버튼으로 진입한 경우인지 확인
+                    is_d_button_entry = self._is_d_button_entry()
+                    if not is_d_button_entry:
+                        # 일반 설정 과정: 복용 시간 선택 화면으로 돌아가기
+                        # print(f"  [INFO] 취소 - 복용 시간 선택 화면으로 이동")
+                        # ScreenManager의 동적 화면 생성 기능 활용
+                        self._request_screen_transition_to_meal_time()
+                        # print(f"  [OK] 복용 시간 선택 화면으로 이동 완료")
+                    # else: D버튼으로 진입한 경우 아무 동작도 하지 않음 (시간-분 설정 모드 유지)
             else:
                 # 분 설정 중이면 시간 설정으로 되돌아가기
                 self.editing_hour = True

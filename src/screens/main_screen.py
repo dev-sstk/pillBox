@@ -51,6 +51,10 @@ class MainScreen:
         self.auto_dispense_enabled = True
         self.last_dispense_time = {}
         
+        # 배출 완료 상태 추적 (중복 배출 방지용)
+        self.last_dispensed_dose_index = None  # 마지막 배출한 일정 인덱스
+        self.last_dispensed_time = None  # 마지막 배출 시간 (타임스탬프)
+        
         # NTP 동기화 관련 속성
         self._ntp_sync_enabled = False
         self._last_ntp_sync_time = 0
@@ -1529,11 +1533,23 @@ class MainScreen:
             active_alarms = self.alarm_system.get_active_alarms()
             
             if active_alarms:
-                # 활성 알람이 있으면 배출 트리거
+                # 활성 알람이 있으면 배출 트리거 (기존 동작 유지 - 즉시 배출)
                 # print("🔔 활성 알람 감지 - 배출 트리거")
                 self._trigger_dispense_from_alarm()
             else:
                 # 활성 알람이 없으면 수동 배출 실행
+                # 예약 시간 전 수동 배출은 A버튼 3초 이상 눌러야 함
+                if not self._check_button_a_long_press():
+                    # 3초 미만이면 수동 배출 실행하지 않음
+                    return
+                
+                # 중복 배출 방지 체크 (배출시간 지난 경우)
+                if self._check_duplicate_dispense():
+                    # 이미 배출된 경우 음성 재생 후 종료
+                    self._play_taken_medicine_voice()
+                    self._update_status("이미 복약하셨습니다")
+                    return
+                
                 # print("🔵 수동 배출 실행")
                 self._update_status("수동 배출 중...")
                 
@@ -1563,6 +1579,9 @@ class MainScreen:
                     if success:
                         # print(f"  [OK] 모든 디스크 배출 완료")
                         self._update_status("배출 완료")
+                        
+                        # 배출 성공 시 배출 완료 상태 저장 (중복 배출 방지)
+                        self._save_dispense_completed(self.current_dose_index)
                         
                         # 배출 성공 (안내는 배출 전에 이미 재생됨)
                         
@@ -1620,6 +1639,9 @@ class MainScreen:
                 # print(f"[OK] 알람 배출 성공: {alarm_info['meal_name']}")
                 self._update_status("알람 배출 완료")
                 
+                # 배출 성공 시 배출 완료 상태 저장 (중복 배출 방지)
+                self._save_dispense_completed(dose_index)
+                
                 # 알람 배출 성공 (안내는 배출 전에 이미 재생됨)
             else:
                 # print(f"[ERROR] 알람 배출 실패: {alarm_info['meal_name']}")
@@ -1658,6 +1680,9 @@ class MainScreen:
                 # 배출 성공 시 일정 상태 업데이트
                 if dose_index < len(self.dose_schedule):
                     self.dose_schedule[dose_index]["status"] = "completed"
+                    
+                    # 배출 성공 시 배출 완료 상태 저장 (중복 배출 방지)
+                    self._save_dispense_completed(dose_index)
                     
                     # 데이터 매니저에 배출 성공 기록 저장
                     self.data_manager.log_dispense(dose_index, True)
@@ -2643,9 +2668,124 @@ class MainScreen:
             # print(f"[ERROR] 음성 재생 실패: {e}")
             pass
     
+    def _play_taken_medicine_voice(self):
+        """이미 복약하셨습니다 음성 재생 (taken_medicine.wav)"""
+        try:
+            # print("🔊 이미 복약하셨습니다 음성 재생 시작")
+            
+            # 직접 오디오 시스템을 통해 음성 재생 (블로킹 모드로 실제 재생)
+            try:
+                from audio_system import AudioSystem
+                audio_system = AudioSystem()
+                audio_system.play_voice("taken_medicine.wav", blocking=True)
+                # print("🔊 taken_medicine.wav 음성 재생 완료")
+            except Exception as audio_error:
+                # print(f"[WARN] 직접 오디오 시스템 재생 실패: {audio_error}")
+                
+                # 알람 시스템의 오디오 시스템을 통해 음성 재생 (백업)
+                if hasattr(self.alarm_system, 'audio_system') and self.alarm_system.audio_system:
+                    self.alarm_system.audio_system.play_voice("taken_medicine.wav", blocking=True)
+                    # print("🔊 알람 시스템을 통한 taken_medicine.wav 음성 재생 완료")
+                else:
+                    # print("🔊 오디오 시스템 없음, 음성 재생 시뮬레이션")
+                    import time
+                    time.sleep(1)  # 시뮬레이션
+                
+        except Exception as e:
+            # print(f"[ERROR] 이미 복약하셨습니다 음성 재생 실패: {e}")
+            pass
+    
+    def _check_duplicate_dispense(self):
+        """중복 배출 체크 - 배출시간이 지난 경우 중복 배출 방지"""
+        try:
+            # 현재 선택된 일정 인덱스 확인
+            current_index = self.current_dose_index
+            
+            # 최근 배출한 일정과 비교
+            if self.last_dispensed_dose_index is None:
+                # 배출 기록이 없으면 중복 아님
+                return False
+            
+            if self.last_dispensed_dose_index != current_index:
+                # 다른 일정이면 중복 아님
+                return False
+            
+            # 동일한 일정이고 배출 시간이 저장되어 있는 경우
+            if self.last_dispensed_time is not None:
+                import time
+                current_time = time.time()
+                elapsed_time = current_time - self.last_dispensed_time
+                
+                # 1시간 이내에 같은 일정을 다시 배출하려고 하면 중복으로 간주
+                # (배출시간이 지난 경우를 의미)
+                if elapsed_time < 3600:  # 1시간 = 3600초
+                    # print(f"[INFO] 중복 배출 감지: {elapsed_time:.0f}초 전에 배출됨")
+                    return True
+            
+            return False
+            
+        except Exception as e:
+            # print(f"[ERROR] 중복 배출 체크 실패: {e}")
+            return False
+    
+    def _save_dispense_completed(self, dose_index):
+        """배출 완료 상태 저장 (중복 배출 방지용)"""
+        try:
+            import time
+            self.last_dispensed_dose_index = dose_index
+            self.last_dispensed_time = time.time()
+            # print(f"[INFO] 배출 완료 상태 저장: 일정 {dose_index + 1}")
+        except Exception as e:
+            # print(f"[ERROR] 배출 완료 상태 저장 실패: {e}")
+            pass
+    
+    def _check_button_a_long_press(self):
+        """A버튼 3초 이상 누르기 체크"""
+        try:
+            import time
+            
+            # screen_manager를 통해 button_interface 접근
+            button_interface = None
+            if hasattr(self.screen_manager, 'button_interface') and self.screen_manager.button_interface:
+                button_interface = self.screen_manager.button_interface
+            
+            if not button_interface:
+                # button_interface가 없으면 기본 동작 (즉시 배출)
+                return True
+            
+            # A버튼이 눌렸을 때 시작
+            start_time = time.time()
+            press_duration = 0
+            required_duration = 3.0  # 3초
+            
+            # 3초 동안 버튼이 계속 눌려있는지 확인
+            check_interval = 0.1  # 100ms마다 체크
+            while press_duration < required_duration:
+                # 버튼 상태 확인
+                is_pressed = button_interface.get_button_state('A')
+                
+                if not is_pressed:
+                    # 버튼이 떼어졌으면 3초 미만이므로 False 반환
+                    # print(f"[INFO] A버튼 {press_duration:.1f}초만 눌림 - 수동 배출 취소")
+                    return False
+                
+                # 버튼이 계속 눌려있으면 시간 경과
+                time.sleep(check_interval)
+                press_duration = time.time() - start_time
+            
+            # 3초 이상 눌렸으면 True 반환
+            # print(f"[INFO] A버튼 {press_duration:.1f}초 누름 감지 - 수동 배출 실행")
+            return True
+            
+        except Exception as e:
+            # print(f"[ERROR] A버튼 3초 체크 실패: {e}")
+            # 에러 발생 시 기본 동작 (즉시 배출)
+            return True
+    
     def _dispense_from_selected_disks_no_alarm(self, motor_system, selected_disks):
         """선택된 디스크들에서 순차적으로 배출 (알람 없음)"""
         try:
+            import time
             # print(f"[INFO] 선택된 디스크들 순차 배출 시작: {selected_disks}")
             # print(f"[DEBUG] motor_system 타입: {type(motor_system)}")
             # print(f"[DEBUG] selected_disks 타입: {type(selected_disks)}, 값: {selected_disks}")
@@ -2681,7 +2821,6 @@ class MainScreen:
                     return False
                 time.sleep_ms(100)
                 # 3. 약이 떨어질 시간 대기
-                import time
                 time.sleep(2)  # 2초 대기
                 
                 # print(f"[OK] 디스크 {disk_num} 배출 완료")

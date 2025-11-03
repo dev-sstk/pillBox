@@ -13,8 +13,13 @@ class ScreenManager:
         self.current_screen = None
         self.screen_stack = []  # 화면 스택 (뒤로가기 기능)
         self.app = app  # PillBoxApp 참조
+        self.button_interface = None  # 버튼 인터페이스 참조
         
         # print("[OK] ScreenManager 초기화 완료")
+    
+    def set_button_interface(self, button_interface):
+        """버튼 인터페이스 설정"""
+        self.button_interface = button_interface
     
     def register_screen(self, screen_name, screen_instance):
         """화면 등록"""

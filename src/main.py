@@ -290,6 +290,9 @@ def start_application(screen_name, **kwargs):
             from button_interface import ButtonInterface
             button_interface = ButtonInterface()
             
+            # ScreenManager에 button_interface 참조 저장
+            screen_manager.set_button_interface(button_interface)
+            
             # 버튼 콜백 설정 (ScreenManager의 핸들러 사용)
             button_interface.set_callback('A', screen_manager.handle_button_a)
             button_interface.set_callback('B', screen_manager.handle_button_b)
