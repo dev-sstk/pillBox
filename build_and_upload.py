@@ -8,7 +8,7 @@ mpy 빌드 후 mpremote로 ESP32에 업로드하는 스크립트
 4. ESP32 파일 목록 확인
 5. ESP32 파일 전체 삭제
 6. 디스크 상태 초기화 (disk_states.json 업로드)
-7. 오디오 파일 업로드 (dispense_medicine.wav, take_medicine.wav)
+7. 오디오 파일 업로드 (dispense_medicine.wav, take_medicine.wav, taken_medicine.wav)
 8. 기존 upload_to_esp32.py의 모든 기능 포함
 """
 
@@ -700,7 +700,7 @@ def delete_all_esp32_files(port):
     return deleted_count > 0
 
 def upload_audio_files(port):
-    """오디오 파일들 업로드 (dispense_medicine.wav, take_medicine.wav)"""
+    """오디오 파일들 업로드 (dispense_medicine.wav, take_medicine.wav, taken_medicine.wav)"""
     print("\n" + "=" * 60)
     print("오디오 파일 업로드")
     print("=" * 60)
@@ -709,7 +709,8 @@ def upload_audio_files(port):
         # 업로드할 오디오 파일들
         audio_files = [
             ("src/wav/dispense_medicine.wav", "/wav/dispense_medicine.wav"),
-            ("src/wav/take_medicine.wav", "/wav/take_medicine.wav")
+            ("src/wav/take_medicine.wav", "/wav/take_medicine.wav"),
+            ("src/wav/taken_medicine.wav", "/wav/taken_medicine.wav")
         ]
         
         # wav 디렉토리 생성
@@ -821,7 +822,7 @@ def delete_data_files(port):
             "/data/boot_target.json",
             "/data/disk_states.json",
             "/data/medication.json",
-            "/data/settings.json",
+            "/data/settings.json"
         ]
         
         print("🗑️  삭제할 데이터 파일들:")
@@ -1006,8 +1007,8 @@ def main():
     print("  5. ESP32 파일 목록 확인")
     print("  6. ESP32 파일 전체 삭제")
     print("  7. 디스크 상태 초기화 (disk_states.json 업로드)")
-    print("  8. 오디오 파일 업로드 (dispense_medicine.wav, take_medicine.wav)")
-    print("  9. 데이터 파일 삭제 (global_data.json, dispense_log.json, boot_target.json, disk_states.json, medication.json, settings.json, wifi_config.json)")
+    print("  8. 오디오 파일 업로드 (dispense_medicine.wav, take_medicine.wav, taken_medicine.wav)")
+    print("  9. 데이터 파일 삭제 (global_data.json, dispense_log.json, boot_target.json, disk_states.json, medication.json, settings.json)")
     
     choice = input("\n선택 (1-9, Enter=1): ").strip()
     if choice == "":
