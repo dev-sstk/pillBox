@@ -70,6 +70,7 @@ class MainScreen:
         self.load_pill_notification_time = None  # 첫 알림 시간
         self.load_pill_notification_count = 0  # 알림 횟수 (최대 2회)
         self.last_total_pill_count = None  # 마지막 체크 시 총 알약 개수
+        self.load_pill_notification_disabled = False  # 약 충전 알림 비활성화 플래그 (D버튼 등)
         
         # Modern 화면 생성
         self._create_modern_screen()
@@ -1788,6 +1789,10 @@ class MainScreen:
     def on_button_d(self):
         """버튼 D - 네트워크 연결 상태와 디스크 알약 상태에 따른 조건부 재부팅"""
         # print("🟢 버튼 D: 조건부 재부팅 시작")
+        
+        # D버튼 눌렀을 때 약 충전 알림 비활성화
+        self.load_pill_notification_disabled = True
+        
         self._update_status("상태 확인 중...")
         
         # 네트워크 연결 상태 확인
@@ -2818,6 +2823,10 @@ class MainScreen:
     def _check_and_play_load_pill_notification(self):
         """약 충전 알림 체크 및 재생 (배출 후 총합이 0이면 재생)"""
         try:
+            # D버튼 등으로 인해 알림이 비활성화된 경우 스킵
+            if self.load_pill_notification_disabled:
+                return False
+            
             total_count = self._get_total_pill_count()
             
             if total_count == 0:
