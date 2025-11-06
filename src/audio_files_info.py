@@ -27,6 +27,12 @@ class AudioFilesInfo:
                 "duration": 2000,
                 "category": "voice",
                 "priority": "high"
+            },
+            "load_pill.wav": {
+                "description": "약을 충전하세요 음성",
+                "duration": 2000,
+                "category": "voice",
+                "priority": "high"
             }
         }
         

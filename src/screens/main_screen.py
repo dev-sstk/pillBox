@@ -66,6 +66,10 @@ class MainScreen:
         # 알람 상태 모니터링 - 지연 로딩
         self._last_alarm_check = None
         
+        # 약 충전 알림 관련 속성
+        self.load_pill_notification_time = None  # 첫 알림 시간
+        self.load_pill_notification_count = 0  # 알림 횟수 (최대 2회)
+        self.last_total_pill_count = None  # 마지막 체크 시 총 알약 개수
         
         # Modern 화면 생성
         self._create_modern_screen()
@@ -1008,6 +1012,9 @@ class MainScreen:
                 self._check_medication_status()
                 self.last_medication_update = current_time_ms
             
+            # 약 충전 알림 체크 (1초마다) - 3분 후 재알림 포함
+            self._check_and_play_load_pill_notification()
+            
             # 재알람 확인 (1초마다)
             self._check_reminder_alarms()
             
@@ -1562,6 +1569,13 @@ class MainScreen:
                     # 3초 미만이면 수동 배출 실행하지 않음
                     return
                 
+                # 수동 배출 시 총합이 0이면 배출 안 함 (멘트만 재생)
+                total_count = self._get_total_pill_count()
+                if total_count == 0:
+                    self._play_load_pill_voice()
+                    self._update_status("약을 충전하세요")
+                    return
+                
                 # 중복 배출 방지 체크 (배출시간 지난 경우)
                 if self._check_duplicate_dispense():
                     # 이미 배출된 경우 음성 재생 후 종료
@@ -1613,7 +1627,12 @@ class MainScreen:
                         # 디스크 수량 감소는 _dispense_from_selected_disks_no_alarm()에서 처리됨
                         # self._decrease_selected_disks_count(self.current_dose_index)  # 중복 제거
                         
+                        # 알약 수 표시 업데이트 (먼저 실행)
+                        self._update_pill_count_display()
                         self._update_schedule_display()
+                        
+                        # 알약 수 업데이트 후 배출 후 총합이 0이면 약 충전 알림 재생 (1회)
+                        self._check_and_play_load_pill_notification()
                         
                         # print(f"[OK] 수동 배출 성공: 일정 {self.current_dose_index + 1}")
                     else:
@@ -1662,6 +1681,10 @@ class MainScreen:
                 self._save_dispense_completed(dose_index)
                 
                 # 알람 배출 성공 (안내는 배출 전에 이미 재생됨)
+                
+                # 알약 수 표시 업데이트는 _execute_dispense_sequence 내에서 처리됨
+                # 배출 후 총합이 0이면 약 충전 알림 재생 (1회)
+                self._check_and_play_load_pill_notification()
             else:
                 # print(f"[ERROR] 알람 배출 실패: {alarm_info['meal_name']}")
                 self._update_status("알람 배출 실패")
@@ -1706,6 +1729,8 @@ class MainScreen:
                     # 데이터 매니저에 배출 성공 기록 저장
                     self.data_manager.log_dispense(dose_index, True)
                     
+                    # 알약 수 표시 업데이트 (먼저 실행)
+                    self._update_pill_count_display()
                     # UI 업데이트
                     self._update_schedule_display()
                     
@@ -2750,6 +2775,89 @@ class MainScreen:
         except Exception as e:
             # print(f"[ERROR] 이미 복약하셨습니다 음성 재생 실패: {e}")
             pass
+    
+    def _play_load_pill_voice(self):
+        """약을 충전하세요 음성 재생 (load_pill.wav)"""
+        try:
+            # print("🔊 약을 충전하세요 음성 재생 시작")
+            
+            # 직접 오디오 시스템을 통해 음성 재생 (블로킹 모드로 실제 재생)
+            try:
+                from audio_system import AudioSystem
+                audio_system = AudioSystem()
+                audio_system.play_voice("load_pill.wav", blocking=True)
+                # print("🔊 load_pill.wav 음성 재생 완료")
+            except Exception as audio_error:
+                # print(f"[WARN] 직접 오디오 시스템 재생 실패: {audio_error}")
+                
+                # 알람 시스템의 오디오 시스템을 통해 음성 재생 (백업)
+                if hasattr(self.alarm_system, 'audio_system') and self.alarm_system.audio_system:
+                    self.alarm_system.audio_system.play_voice("load_pill.wav", blocking=True)
+                    # print("🔊 알람 시스템을 통한 load_pill.wav 음성 재생 완료")
+                else:
+                    # print("🔊 오디오 시스템 없음, 음성 재생 시뮬레이션")
+                    import time
+                    time.sleep(1)  # 시뮬레이션
+                
+        except Exception as e:
+            # print(f"[ERROR] 약을 충전하세요 음성 재생 실패: {e}")
+            pass
+    
+    def _get_total_pill_count(self):
+        """모든 디스크의 총 알약 개수 계산"""
+        try:
+            total_count = 0
+            for disk_num in [1, 2, 3]:
+                count = self.data_manager.get_disk_count(disk_num)
+                total_count += count
+            return total_count
+        except Exception as e:
+            # print(f"[ERROR] 총 알약 개수 계산 실패: {e}")
+            return 0
+    
+    def _check_and_play_load_pill_notification(self):
+        """약 충전 알림 체크 및 재생 (배출 후 총합이 0이면 재생)"""
+        try:
+            total_count = self._get_total_pill_count()
+            
+            if total_count == 0:
+                # 총합이 0이면 알림 재생
+                import time
+                current_time = time.time()
+                
+                if self.load_pill_notification_count == 0:
+                    # 첫 알림
+                    self.load_pill_notification_time = current_time
+                    self.load_pill_notification_count = 1
+                    self._play_load_pill_voice()
+                    # print("[INFO] 약 충전 알림 1회 재생")
+                    return True
+                elif self.load_pill_notification_count == 1:
+                    # 첫 알림 후 3분 경과 확인
+                    if self.load_pill_notification_time is not None:
+                        elapsed_time = current_time - self.load_pill_notification_time
+                        if elapsed_time >= 180:  # 3분 = 180초
+                            # 3분 후에도 총합이 0이면 재알림 (1회만)
+                            self.load_pill_notification_count = 2  # 더 이상 알림 안 함
+                            self._play_load_pill_voice()
+                            # print("[INFO] 약 충전 재알림 1회 재생 (3분 후)")
+                            return True
+                # 이미 2회 알림했으면 더 이상 알림 안 함
+                return False
+            else:
+                # 총합이 0이 아니면 알림 상태 리셋
+                if total_count != self.last_total_pill_count:
+                    # 총합이 변동되면 알림 상태 리셋
+                    self.load_pill_notification_time = None
+                    self.load_pill_notification_count = 0
+                    # print("[INFO] 약 충전 알림 상태 리셋 (알약 충전됨)")
+                
+                self.last_total_pill_count = total_count
+                return False
+                
+        except Exception as e:
+            # print(f"[ERROR] 약 충전 알림 체크 실패: {e}")
+            return False
     
     def _check_duplicate_dispense(self):
         """중복 배출 체크 - 배출시간이 지난 경우 중복 배출 방지"""
