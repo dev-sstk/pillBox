@@ -165,8 +165,13 @@ class StepperMotorController:
             return is_pressed
         return False
     
-    def shift_out(self, data):
-        """74HC595D에 8비트 데이터 전송"""
+    def shift_out(self, data, latch=True):
+        """74HC595D에 8비트 데이터 전송 (타이밍 안정화 버전)
+        
+        Args:
+            data: 전송할 8비트 데이터
+            latch: True이면 latch 수행, False이면 시프트만 수행 (기본값: True)
+        """
         # 디버깅: 첫 번째 전송에서만 출력
         if not hasattr(self, '_shift_debug_printed'):
             # print(f"  [SEARCH] 74HC595D 전송: 0x{data:02X} ({bin(data)})")
@@ -176,14 +181,20 @@ class StepperMotorController:
             # MSB first
             bit = (data >> (7 - i)) & 1
             self.di.value(bit)
+            time.sleep_us(1)  # 타이밍 안정화를 위한 딜레이
             
-            # Shift clock pulse
+            # Shift clock pulse (타이밍 안정화)
             self.sh_cp.value(1)
+            time.sleep_us(1)  # 타이밍 안정화를 위한 딜레이
             self.sh_cp.value(0)
+            time.sleep_us(1)  # 타이밍 안정화를 위한 딜레이
         
-        # Storage clock pulse (latch)
-        self.st_cp.value(1)
-        self.st_cp.value(0)
+        # Storage clock pulse (latch) - latch=True일 때만 수행
+        if latch:
+            self.st_cp.value(1)
+            time.sleep_us(1)  # 타이밍 안정화를 위한 딜레이
+            self.st_cp.value(0)
+            time.sleep_us(1)  # 타이밍 안정화를 위한 딜레이
     
     def update_motor_output(self):
         """모든 모터 상태를 74HC595D에 출력 (test_74hc595_stepper.py와 동일)"""
@@ -215,8 +226,17 @@ class StepperMotorController:
         #     # print(f"  [SEARCH] 출력 데이터: 0x{upper_byte:02X} 0x{lower_byte:02X}")
         #     self._debug_printed = True
 
-        self.shift_out(upper_byte)
-        self.shift_out(lower_byte)
+        # 상위 바이트 전송 (모터 3, 4 포함) - 두 번째 칩으로 전송
+        # 시프트 레지스터 체인에서는 모든 데이터를 먼저 시프트하고 마지막에 한 번만 latch
+        self.shift_out(upper_byte, latch=False)  # 시프트만 수행 (latch 없음)
+        # 두 번째 칩으로 데이터가 전파되는 시간 확보 (시프트 레지스터 체인 지연)
+        time.sleep_us(10)  # 바이트 전송 간 추가 딜레이 (모터 4 안정화)
+        
+        # 하위 바이트 전송 (모터 1, 2 포함) - 첫 번째 칩으로 전송
+        self.shift_out(lower_byte, latch=True)  # 마지막 바이트 시 latch 수행
+        
+        # Latch 후 안정화 시간 (모든 출력 핀이 안정화될 때까지 대기)
+        time.sleep_us(10)  # 최종 출력 안정화를 위한 추가 딜레이 (모터 4 포함)
     
     def set_motor_step(self, motor_index, step_value, update_output=True):
         """특정 모터의 스텝 설정 (test_74hc595_stepper.py와 동일)"""
@@ -390,6 +410,9 @@ class PillBoxMotorSystem:
         self.num_disks = 3  # 3개 디스크 (모터 1,2,3)
         self.compartments_per_disk = 15  # 디스크당 15칸
         
+        # 도어 위치 추적 (0=닫힘, 1=1단, 2=2단, 3=3단)
+        self.current_door_level = 0  # 초기 상태: 닫혀 있음
+        
         # print("[OK] PillBoxMotorSystem 초기화 완료")
     
     def calibrate_all_disks_simultaneous(self):
@@ -494,75 +517,80 @@ class PillBoxMotorSystem:
             return False
     
     def control_motor4_direct(self, level=1):
-        """모터 4 직접 제어 (배출구 슬라이드 - 4096스텝/360도 기준)"""
+        """모터 4 직접 제어 (배출구 슬라이드) - 기존 호환성 유지용 (deprecated)"""
+        # 기존 코드 호환성을 위해 open_door_to_level() 호출
+        return self.open_door_to_level(level)
+    
+    def open_door_to_level(self, level):
+        """도어를 지정된 레벨까지 열기 (현재 위치에서 목표 레벨로 이동, 닫지 않음)"""
         try:
-            # print(f"🚫 모터 4 블로킹 모드 시작 - 다른 프로세스 중단")
+            # print(f"🚪 도어 열기 시작: 현재 레벨={self.current_door_level}, 목표 레벨={level}")
             
             # [FAST] 모터 4 사용 전 모든 모터 전원 OFF
-            # print(f"  [FAST] 모터 4 사용 전 모든 모터 전원 OFF")
             self.motor_controller.stop_all_motors()
-            # print(f"  [OK] 모든 모터 전원 OFF 완료")
             
             # 모터 4 (배출구 슬라이드) 레벨별 제어
             motor_index = 4
             
-            # 4096스텝/360도 기준으로 각 레벨별 스텝 계산
-            if level == 1:
-                steps = 1593  # 140도 = 4096 ÷ 360° × 140° = 1593스텝
-                degrees = 140
-                # print(f"  [TOOL] 모터 4 배출구 1단계: {degrees}도 ({steps}스텝)")
-            elif level == 2:
-                steps = 3187  # 280도 = 4096 ÷ 360° × 280° = 3187스텝
-                degrees = 280
-                # print(f"  [TOOL] 모터 4 배출구 2단계: {degrees}도 ({steps}스텝)")
-            elif level == 3:
-                steps = 4781  # 420도 = 4096 ÷ 360° × 420° = 4781스텝
-                degrees = 420
-                # print(f"  [TOOL] 모터 4 배출구 3단계: {degrees}도 ({steps}스텝)")
-            else:
-                # print(f"[ERROR] 잘못된 배출구 레벨: {level} (1-3 범위)")
+            # 레벨 범위 확인
+            if level < 0 or level > 3:
+                # print(f"[ERROR] 잘못된 배출구 레벨: {level} (0-3 범위, 0=닫힘)")
                 return False
             
-            # print(f"  [WARN] 모터 동작 중 - UI 업데이트 및 다른 프로세스 중단")
+            # 이미 해당 레벨에 있으면 동작하지 않음
+            if self.current_door_level == level:
+                # print(f"  [INFO] 도어가 이미 레벨 {level}에 있음")
+                return True
             
-            # 1단계: 정방향 회전
-            # print(f"  📍 1단계: 정방향 {degrees}도 회전 시작...")
-            success = self._rotate_motor4_steps(motor_index, 1, steps)
+            # 4096스텝/360도 기준으로 각 레벨별 누적 스텝 계산
+            level_steps = {
+                0: 0,      # 닫힘 (0도)
+                1: 1593,   # 140도 = 4096 ÷ 360° × 140° = 1593스텝
+                2: 3187,   # 280도 = 4096 ÷ 360° × 280° = 3187스텝
+                3: 4781    # 420도 = 4096 ÷ 360° × 420° = 4781스텝
+            }
+            
+            current_steps = level_steps[self.current_door_level]
+            target_steps = level_steps[level]
+            steps_to_move = target_steps - current_steps
+            
+            # print(f"  [INFO] 현재 스텝: {current_steps}, 목표 스텝: {target_steps}, 이동 스텝: {steps_to_move}")
+            
+            if steps_to_move == 0:
+                # 이미 목표 레벨에 있음
+                return True
+            
+            # 방향 결정 (양수=역방향(열기), 음수=정방향(닫기)) - 하드웨어에 맞게 반대 방향
+            direction = -1 if steps_to_move > 0 else 1
+            steps = abs(steps_to_move)
+            
+            # 도어 이동
+            success = self._rotate_motor4_steps(motor_index, direction, steps)
             if not success:
-                # print(f"    [ERROR] 모터 4 정방향 회전 실패")
+                # print(f"    [ERROR] 도어 이동 실패")
                 return False
             
-            # 약이 떨어질 시간 대기
-            # print(f"  ⏳ 약이 떨어질 시간 대기 (2초)...")
-            time.sleep(2)
-            
-            # 2단계: 역방향 회전 (원위치)
-            # print(f"  📍 2단계: 역방향 {degrees}도 회전 시작...")
-            success = self._rotate_motor4_steps(motor_index, -1, steps)
-            if not success:
-                # print(f"    [ERROR] 모터 4 역방향 회전 실패")
-                return False
+            # 도어 위치 업데이트
+            self.current_door_level = level
+            # print(f"  [OK] 도어 레벨 {level}로 이동 완료")
             
             # [FAST] 모터 4 사용 후 모든 모터 전원 OFF
-            # print(f"  [FAST] 모터 4 사용 후 모든 모터 전원 OFF")
             self.motor_controller.stop_all_motors()
-            # print(f"  [OK] 모든 모터 전원 OFF 완료")
             
-            # print(f"  [OK] 모터 4 배출구 {level}단계 완료 ({degrees}도 × 2 = {steps * 2}스텝)")
-            # print(f"🚫 모터 4 블로킹 모드 종료 - 다른 프로세스 재개 가능")
             return True
             
         except Exception as e:
-            # print(f"[ERROR] 모터 4 배출구 제어 실패: {e}")
+            # print(f"[ERROR] 도어 열기 실패: {e}")
             # [FAST] 예외 발생 시에도 모든 모터 전원 OFF
             try:
-                # print(f"  [FAST] 예외 발생 시 모든 모터 전원 OFF")
                 self.motor_controller.stop_all_motors()
-                # print(f"  [OK] 모든 모터 전원 OFF 완료")
             except:
                 pass
-            # print(f"🚫 모터 4 블로킹 모드 종료 (예외)")
             return False
+    
+    def close_door(self):
+        """도어 완전히 닫기 (레벨 0으로 이동)"""
+        return self.open_door_to_level(0)
     
     def _rotate_motor4_steps(self, motor_index, direction, steps):
         """모터 4 스텝 회전 (내부 함수)"""

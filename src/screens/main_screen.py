@@ -55,6 +55,9 @@ class MainScreen:
         self.last_dispensed_dose_index = None  # 마지막 배출한 일정 인덱스
         self.last_dispensed_time = None  # 마지막 배출 시간 (타임스탬프)
         
+        # 도어 초기화 플래그 (첫 배출 시 도어 닫기)
+        self.door_initialized = False
+        
         # NTP 동기화 관련 속성
         self._ntp_sync_enabled = False
         self._last_ntp_sync_time = 0
@@ -1607,7 +1610,7 @@ class MainScreen:
                     # print(f"  📋 필요한 디스크: {required_disks}")
                     
                     # print(f"  [DEBUG] 배출 함수 호출 시작...")
-                    success = self._dispense_from_selected_disks_no_alarm(motor_system, required_disks)
+                    success = self._dispense_from_selected_disks_no_alarm(motor_system, required_disks, self.current_dose_index)
                     # print(f"  [DEBUG] 배출 함수 호출 완료, 결과: {success}")
                     
                     if success:
@@ -1715,7 +1718,7 @@ class MainScreen:
             
             # 3단계: 실제 배출 실행
             # print(f"  [DEBUG] 배출 함수 호출 시작...")
-            success = self._dispense_from_selected_disks_no_alarm(motor_system, required_disks)
+            success = self._dispense_from_selected_disks_no_alarm(motor_system, required_disks, dose_index)
             # print(f"  [DEBUG] 배출 함수 호출 완료, 결과: {success}")
             
             # 4단계: 배출 결과 처리
@@ -1730,8 +1733,7 @@ class MainScreen:
                     # 데이터 매니저에 배출 성공 기록 저장
                     self.data_manager.log_dispense(dose_index, True)
                     
-                    # 알약 수 표시 업데이트 (먼저 실행)
-                    self._update_pill_count_display()
+                    # 약 갯수 업데이트는 _dispense_from_selected_disks_no_alarm()에서 이미 처리됨
                     # UI 업데이트
                     self._update_schedule_display()
                     
@@ -2955,7 +2957,34 @@ class MainScreen:
             # 에러 발생 시 기본 동작 (즉시 배출)
             return True
     
-    def _dispense_from_selected_disks_no_alarm(self, motor_system, selected_disks):
+    def _get_door_level_for_dose(self, dose_index):
+        """복용 일정에 해당하는 도어 레벨 반환 (아침=1단, 점심=2단, 저녁=3단)"""
+        try:
+            # dose_schedule에서 meal_name 가져오기
+            if hasattr(self, 'dose_schedule') and dose_index < len(self.dose_schedule):
+                schedule = self.dose_schedule[dose_index]
+                meal_name = schedule.get('meal_name', '')
+                
+                # meal_name에서 도어 레벨 결정
+                if '아침' in meal_name or 'breakfast' in meal_name.lower():
+                    return 1  # 1단
+                elif '점심' in meal_name or 'lunch' in meal_name.lower():
+                    return 2  # 2단
+                elif '저녁' in meal_name or 'dinner' in meal_name.lower():
+                    return 3  # 3단
+            
+            # meal_name으로 판단 불가능한 경우 디스크 번호로 판단
+            selected_disks = self._get_selected_disks_for_dose(dose_index)
+            if selected_disks and len(selected_disks) > 0:
+                disk_num = selected_disks[0]
+                return disk_num  # 디스크 번호 = 도어 레벨
+            
+            return 1  # 기본값: 1단
+        except Exception as e:
+            # print(f"[ERROR] 도어 레벨 결정 실패: {e}")
+            return 1  # 기본값: 1단
+    
+    def _dispense_from_selected_disks_no_alarm(self, motor_system, selected_disks, dose_index=None):
         """선택된 디스크들에서 순차적으로 배출 (알람 없음)"""
         try:
             import time
@@ -2969,6 +2998,20 @@ class MainScreen:
                 self._update_status("배출할 디스크 없음")
                 return False
             
+            # dose_index가 전달되지 않았으면 현재 선택된 일정 사용
+            if dose_index is None:
+                dose_index = self.current_dose_index if hasattr(self, 'current_dose_index') else 0
+            
+            # 첫 배출 시 도어를 닫히고 시작 (초기 시작 시 기본 닫혀 있는 상태)
+            if not hasattr(self, 'door_initialized') or not self.door_initialized:
+                close_success = motor_system.close_door()
+                if close_success:
+                    self.door_initialized = True
+                    # print(f"[INFO] 첫 배출 시 도어 초기화 완료 (닫힘)")
+            
+            # 도어 레벨 계산 (배출 시작 전에 한 번만)
+            door_level = self._get_door_level_for_dose(dose_index)
+            
             # 알람 없이 바로 배출 시작
             
             for i, disk_num in enumerate(selected_disks):
@@ -2981,18 +3024,22 @@ class MainScreen:
                     # print(f"[WARN] 디스크 {disk_num}가 비어있음, 다음 디스크로 넘어감")
                     continue
                 
-                # 1. 디스크 회전
+                # 1. 디스크 회전 (카트리지 회전)
                 disk_success = motor_system.rotate_disk(disk_num, 1)  # 1칸만 회전
                 if not disk_success:
                     # print(f"[ERROR] 디스크 {disk_num} 회전 실패")
                     return False
                 time.sleep_ms(100)
-                # 2. 배출구 열림 (디스크별 단계)
-                open_success = motor_system.control_motor4_direct(disk_num)  # 디스크 번호 = 단계
-                if not open_success:
-                    # print(f"[ERROR] 디스크 {disk_num} 배출구 열림 실패")
-                    return False
-                time.sleep_ms(100)
+                
+                # 2. 도어 열기 (해당 시간대 레벨로, 첫 번째 디스크일 때만 열기)
+                if i == 0:  # 첫 번째 디스크일 때만 도어 열기
+                    door_success = motor_system.open_door_to_level(door_level)
+                    if not door_success:
+                        # print(f"[ERROR] 도어 레벨 {door_level}로 열기 실패")
+                        # 도어 열기 실패해도 배출은 계속 진행
+                        pass
+                    time.sleep_ms(100)
+                
                 # 3. 약이 떨어질 시간 대기
                 time.sleep(2)  # 2초 대기
                 
@@ -3004,6 +3051,23 @@ class MainScreen:
                 # 마지막 디스크가 아니면 잠시 대기
                 if i < len(selected_disks) - 1:
                     time.sleep(1)  # 1초 간격
+            
+            # 약 갯수 업데이트는 각 디스크마다 _decrease_disk_count()로 이미 처리됨
+            # 모든 약을 다 먹었는지 확인
+            total_count = self._get_total_pill_count()
+            
+            # 약 갯수 업데이트 표시 (배출 후 즉시)
+            self._update_pill_count_display()
+            
+            # 모든 약을 다 먹었는지 확인 및 처리
+            if total_count == 0:
+                # 약을 충전하세요 음성 출력 (모든 약 배출됨)
+                self._check_and_play_load_pill_notification()
+                # 도어 완전히 닫기 (음성 출력 후)
+                close_success = motor_system.close_door()
+                if not close_success:
+                    # print(f"[ERROR] 도어 닫기 실패")
+                    pass
             
             # print(f"[OK] 모든 디스크 배출 완료: {selected_disks}")
             return True
