@@ -542,6 +542,11 @@ class PillBoxMotorSystem:
                 # print(f"  [INFO] 도어가 이미 레벨 {level}에 있음")
                 return True
             
+            # 하위 단수로 내려가지 않도록 체크 (목표 레벨이 현재 레벨보다 낮으면 동작하지 않음)
+            if level < self.current_door_level:
+                # print(f"  [INFO] 도어가 현재 레벨 {self.current_door_level}에 있고, 목표 레벨 {level}은 하위 단수이므로 동작하지 않음")
+                return True
+            
             # 4096스텝/360도 기준으로 각 레벨별 누적 스텝 계산
             level_steps = {
                 0: 0,      # 닫힘 (0도)
@@ -561,8 +566,9 @@ class PillBoxMotorSystem:
                 return True
             
             # 방향 결정 (양수=역방향(열기), 음수=정방향(닫기)) - 하드웨어에 맞게 반대 방향
-            direction = -1 if steps_to_move > 0 else 1
-            steps = abs(steps_to_move)
+            # 하위 단수로 내려가지 않도록 이미 체크했으므로 steps_to_move는 항상 양수
+            direction = -1  # 열기 방향 (역방향)
+            steps = steps_to_move
             
             # 도어 이동
             success = self._rotate_motor4_steps(motor_index, direction, steps)
@@ -589,8 +595,62 @@ class PillBoxMotorSystem:
             return False
     
     def close_door(self):
-        """도어 완전히 닫기 (레벨 0으로 이동)"""
-        return self.open_door_to_level(0)
+        """도어 완전히 닫기 (레벨 0으로 이동) - 강제로 닫기"""
+        try:
+            # print(f"🚪 도어 닫기 시작: 현재 레벨={self.current_door_level}")
+            
+            # [FAST] 모터 4 사용 전 모든 모터 전원 OFF
+            self.motor_controller.stop_all_motors()
+            
+            # 모터 4 (배출구 슬라이드) 레벨별 제어
+            motor_index = 4
+            
+            # 이미 닫혀 있으면 동작하지 않음
+            if self.current_door_level == 0:
+                # print(f"  [INFO] 도어가 이미 닫혀 있음")
+                return True
+            
+            # 4096스텝/360도 기준으로 각 레벨별 누적 스텝 계산
+            level_steps = {
+                0: 0,      # 닫힘 (0도)
+                1: 1593,   # 140도 = 4096 ÷ 360° × 140° = 1593스텝
+                2: 3187,   # 280도 = 4096 ÷ 360° × 280° = 3187스텝
+                3: 4781    # 420도 = 4096 ÷ 360° × 420° = 4781스텝
+            }
+            
+            current_steps = level_steps[self.current_door_level]
+            target_steps = level_steps[0]  # 닫힘 (0도)
+            steps_to_move = target_steps - current_steps  # 음수 (닫기 방향)
+            
+            # print(f"  [INFO] 현재 스텝: {current_steps}, 목표 스텝: {target_steps}, 이동 스텝: {steps_to_move}")
+            
+            # 방향 결정 (양수=역방향(열기), 음수=정방향(닫기)) - 하드웨어에 맞게 반대 방향
+            direction = 1  # 닫기 방향 (정방향)
+            steps = abs(steps_to_move)
+            
+            # 도어 이동
+            success = self._rotate_motor4_steps(motor_index, direction, steps)
+            if not success:
+                # print(f"    [ERROR] 도어 닫기 실패")
+                return False
+            
+            # 도어 위치 업데이트
+            self.current_door_level = 0
+            # print(f"  [OK] 도어 닫기 완료")
+            
+            # [FAST] 모터 4 사용 후 모든 모터 전원 OFF
+            self.motor_controller.stop_all_motors()
+            
+            return True
+            
+        except Exception as e:
+            # print(f"[ERROR] 도어 닫기 실패: {e}")
+            # [FAST] 예외 발생 시에도 모든 모터 전원 OFF
+            try:
+                self.motor_controller.stop_all_motors()
+            except:
+                pass
+            return False
     
     def _rotate_motor4_steps(self, motor_index, direction, steps):
         """모터 4 스텝 회전 (내부 함수)"""
